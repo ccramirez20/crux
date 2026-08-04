@@ -10,9 +10,9 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
-    "db:generate": "pnpm --filter @crux/db drizzle-kit generate",
-    "db:migrate": "pnpm --filter @crux/db drizzle-kit migrate",
-    "db:studio": "pnpm --filter @crux/db drizzle-kit studio",
+    "db:generate": "pnpm --filter @crux/db exec drizzle-kit generate",
+    "db:migrate": "pnpm --filter @crux/db exec drizzle-kit migrate",
+    "db:studio": "pnpm --filter @crux/db exec drizzle-kit studio",
     "format": "prettier --write ."
   },
   "devDependencies": {
