@@ -1,3 +1,10 @@
-import { createDb } from '@crux/db';
+import { createDb, type Db } from '@crux/db';
 
-export const db = createDb(process.env.DATABASE_URL ?? '');
+let db: Db | undefined;
+
+export function getDb(): Db {
+  if (!db) {
+    db = createDb(process.env.DATABASE_URL ?? '');
+  }
+  return db;
+}
