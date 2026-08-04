@@ -5,6 +5,7 @@ out/
 coverage/
 .turbo/
 *.tsbuildinfo
+.worktrees/
 
 .env
 .env.*
