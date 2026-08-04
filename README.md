@@ -6,7 +6,8 @@ Plataforma de competencias deportivas, empezando por escalada
 
 ```bash
 pnpm install
-cp .env.example .env      # completar DATABASE_URL
+cp apps/web/.env.example apps/web/.env.local      # completar DATABASE_URL
+cp packages/db/.env.example packages/db/.env      # completar DATABASE_URL
 pnpm db:migrate
 pnpm dev
 ```
