@@ -1,0 +1,26 @@
+{
+  "name": "@crux/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "echo 'sin lint todavia'",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'sin tests todavia'"
+  },
+  "dependencies": {
+    "next": "^15.5.22",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@tailwindcss/postcss": "^4.3.3",
+    "postcss": "^8.5.25",
+    "tailwindcss": "^4.3.3"
+  }
+}
