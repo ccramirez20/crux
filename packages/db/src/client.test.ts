@@ -8,8 +8,9 @@ describe('createDb', () => {
     );
   });
 
+  // postgres.js connects lazily on first query, so this never touches the network.
   it('returns a drizzle client for a valid connection string', () => {
     const db = createDb('postgresql://user:pass@localhost:5432/test');
-    expect(db).toBeDefined();
+    expect(typeof db.execute).toBe('function');
   });
 });
