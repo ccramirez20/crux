@@ -1,0 +1,12 @@
+{
+  "name": "@crux/scoring",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "lint": "echo 'sin lint todavia'",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'sin tests todavia'"
+  }
+}

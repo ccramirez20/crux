@@ -1,0 +1,19 @@
+node_modules/
+.next/
+dist/
+out/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.log
+
+# Claude Code / Cursor — personal, no compartido
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/local/

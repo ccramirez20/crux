@@ -1,0 +1,10 @@
+---
+description: Reglas del proyecto
+alwaysApply: true
+---
+La fuente de verdad de este repositorio es CLAUDE.md en la raiz.
+Leelo antes de proponer o escribir cualquier cosa y respeta:
+- la tabla de etapas y su estado (no implementar etapas bloqueadas),
+- las reglas de dependencia entre paquetes,
+- la lista de cambios que requieren aprobacion previa.
+No dupliques reglas aqui. Si algo cambia, cambia en CLAUDE.md.
