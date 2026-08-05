@@ -30,7 +30,7 @@ No roles, no multi-org membership model — out of scope for stage 1 per `CLAUDE
 | id | uuid pk | |
 | organizationId | uuid fk → organizations.id | |
 | name | text | |
-| discipline | enum: `boulder`\|`lead`\|`speed` | one discipline per event |
+| discipline | enum: `boulder`\|`lead` | one discipline per event |
 | scoringFormat | text | identifier consumed later by `packages/scoring`'s registry; not validated against anything yet |
 | slug | text, unique | public inscription link |
 | timezone | text | IANA name, e.g. `America/Bogota` — CLAUDE.md requires each event to own its timezone |
@@ -101,6 +101,10 @@ Both `eventId` and `categoryId` are stored even though `categoryId` implies the
 event, matching the domain glossary's literal definition ("Athlete + Event +
 Category") and avoiding a join on the hot leaderboard-read path.
 
+A composite `unique(athleteId, categoryId)` constraint prevents double-registering
+the same athlete in the same category, which would otherwise produce a duplicate
+row for that athlete on the leaderboard.
+
 ### `attempts`
 | column | type | notes |
 |---|---|---|
@@ -128,8 +132,12 @@ editing one. Two ways to make "which row is current" resolvable:
 - **A — explicit chain:** each correcting row carries `supersedesAttemptId` pointing
   at the row it fixes.
 - **B — implicit by recency (chosen):** no link. Whoever computes the leaderboard
-  takes the newest `attempts` row per `(registrationId, problemId)`. Older rows stay
-  in the table as history but are ignored by scoring.
+  takes the `attempts` row with the highest `sequence` per `(registrationId,
+  problemId)`. Older rows stay in the table as history but are ignored by scoring.
+  `sequence` (a `bigserial`), not `capturedAt`/`createdAt`, is the actual ordering
+  column: `capturedAt` is a judge's device clock, and `createdAt` uses Postgres
+  `now()`, which is frozen for the whole transaction, so a correction inserted
+  alongside the row it fixes can share an identical `createdAt`.
 
 B is the full audit trail CLAUDE.md asks for — nothing is destroyed, everything is
 queryable — without a linkage system nobody has asked for yet. Upgrade to A only if
@@ -156,6 +164,8 @@ Pure types mirroring the tables above, no IO, no Drizzle imports:
   field but nothing reads it yet
 - Category eligibility enforcement against age/gender/level
 - Event publish/draft state
+- `speed` discipline — `attempts` has no time-capture column yet; re-add the enum
+  value alongside a speed scoring strategy.
 
 ## Testing
 

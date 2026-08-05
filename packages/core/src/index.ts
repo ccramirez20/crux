@@ -1,4 +1,5 @@
-export const DISCIPLINES = ['boulder', 'lead', 'speed'] as const;
+// 'speed' deferred — see packages/db/src/schema.ts's disciplineEnum comment.
+export const DISCIPLINES = ['boulder', 'lead'] as const;
 export type Discipline = (typeof DISCIPLINES)[number];
 
 export const ROUND_TYPES = ['qualification', 'semifinal', 'final'] as const;
@@ -16,6 +17,8 @@ export type ScoringFormat = string;
 
 export interface Attempt {
   id: string;
+  /** Monotonic tiebreak: the current value for a (registrationId, problemId) pair is the row with the highest sequence. */
+  sequence: number;
   clientAttemptId: string;
   registrationId: string;
   problemId: string;

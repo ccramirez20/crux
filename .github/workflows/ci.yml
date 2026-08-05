@@ -15,3 +15,5 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      - run: pnpm db:generate
+      - run: git diff --exit-code packages/db/drizzle

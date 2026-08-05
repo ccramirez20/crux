@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getTableConfig } from 'drizzle-orm/pg-core';
 import {
   disciplineEnum,
   roundTypeEnum,
@@ -13,7 +14,7 @@ import {
 
 describe('enums', () => {
   it('discipline has the three stage 1 disciplines', () => {
-    expect(disciplineEnum.enumValues).toEqual(['boulder', 'lead', 'speed']);
+    expect(disciplineEnum.enumValues).toEqual(['boulder', 'lead']);
   });
 
   it('roundType has qualification, semifinal, final', () => {
@@ -51,6 +52,14 @@ describe('registrations', () => {
     expect(registrations.eventId.notNull).toBe(true);
     expect(registrations.categoryId.notNull).toBe(true);
   });
+
+  it('enforces one registration per athlete per category', () => {
+    const { uniqueConstraints } = getTableConfig(registrations);
+    const columnSets = uniqueConstraints.map((uc) =>
+      uc.columns.map((c) => c.name).sort().join(','),
+    );
+    expect(columnSets).toContain('athlete_id,category_id');
+  });
 });
 
 describe('attempts', () => {
@@ -65,6 +74,11 @@ describe('attempts', () => {
     expect(attempts.topAttempts.notNull).toBe(false);
     expect(attempts.zoneAttempts.notNull).toBe(false);
     expect(attempts.height.notNull).toBe(false);
+  });
+
+  it('has a monotonic sequence column as the correction tiebreak', () => {
+    expect(attempts.sequence.notNull).toBe(true);
+    expect(attempts.sequence.hasDefault).toBe(true);
   });
 });
 

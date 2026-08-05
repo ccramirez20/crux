@@ -1,4 +1,4 @@
-CREATE TYPE "public"."discipline" AS ENUM('boulder', 'lead', 'speed');--> statement-breakpoint
+CREATE TYPE "public"."discipline" AS ENUM('boulder', 'lead');--> statement-breakpoint
 CREATE TYPE "public"."gender" AS ENUM('male', 'female', 'mixed');--> statement-breakpoint
 CREATE TYPE "public"."round_type" AS ENUM('qualification', 'semifinal', 'final');--> statement-breakpoint
 CREATE TABLE "athletes" (
@@ -11,6 +11,7 @@ CREATE TABLE "athletes" (
 --> statement-breakpoint
 CREATE TABLE "attempts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"sequence" bigserial NOT NULL,
 	"client_attempt_id" uuid NOT NULL,
 	"registration_id" uuid NOT NULL,
 	"problem_id" uuid NOT NULL,
@@ -66,7 +67,8 @@ CREATE TABLE "registrations" (
 	"event_id" uuid NOT NULL,
 	"category_id" uuid NOT NULL,
 	"bib_number" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "registrations_athlete_id_category_id_unique" UNIQUE("athlete_id","category_id")
 );
 --> statement-breakpoint
 CREATE TABLE "rounds" (

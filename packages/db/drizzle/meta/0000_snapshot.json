@@ -1,5 +1,5 @@
 {
-  "id": "2823dc37-254f-408b-8e42-7f241146e679",
+  "id": "68fa56ec-ad9c-4e58-a1c9-4fc3750daa2a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -59,6 +59,12 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "bigserial",
+          "primaryKey": false,
+          "notNull": true
         },
         "client_attempt_id": {
           "name": "client_attempt_id",
@@ -499,7 +505,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "registrations_athlete_id_category_id_unique": {
+          "name": "registrations_athlete_id_category_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "athlete_id",
+            "category_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -564,8 +579,7 @@
       "schema": "public",
       "values": [
         "boulder",
-        "lead",
-        "speed"
+        "lead"
       ]
     },
     "public.gender": {
