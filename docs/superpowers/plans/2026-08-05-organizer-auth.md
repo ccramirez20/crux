@@ -408,6 +408,14 @@ git commit -m "feat(web): add better-auth api route and client sdk"
 - Consumes: `authClient` from `@/lib/auth-client` (Task 4).
 - Produces: `/sign-in` and `/sign-up` routes. Task 6's organizer layout redirects to `/sign-in` when there's no session.
 
+**Correction (found during Task 6's manual verification):** both `router.push('/')`
+calls below originally redirected to `/` on success. That collided with
+`apps/web/app/(public)/page.tsx`, which already owns `/` — Next.js refused to
+build ("You cannot have two parallel pages that resolve to the same path").
+Task 6 moved the organizer landing page to `/panel`, so both redirects below
+now target `/panel` instead of `/` — the code blocks have been updated in
+place to match what was actually committed.
+
 - [ ] **Step 1: Sign-in page**
 
 Create `apps/web/app/sign-in/page.tsx`:
@@ -435,7 +443,7 @@ export default function SignInPage() {
       setError(signInError.message ?? 'No se pudo iniciar sesión.');
       return;
     }
-    router.push('/');
+    router.push('/panel');
   }
 
   return (
@@ -509,7 +517,7 @@ export default function SignUpPage() {
       setError((parsed.success && parsed.data.message) || 'No se pudo crear la cuenta.');
       return;
     }
-    router.push('/');
+    router.push('/panel');
   }
 
   return (
@@ -581,11 +589,19 @@ git commit -m "feat(web): add sign-in and gated sign-up pages"
 
 **Files:**
 - Create: `apps/web/app/(organizer)/layout.tsx`
-- Create: `apps/web/app/(organizer)/page.tsx`
+- Create: `apps/web/app/(organizer)/panel/page.tsx` (corrected path — see note below)
 
 **Interfaces:**
 - Consumes: `getAuth` from `@/lib/auth` (Task 2).
 - Produces: every page placed under `apps/web/app/(organizer)/` in future slices (starting with the create-event screen) is automatically protected by this layout — no per-page auth check needed.
+
+**Correction (found during Step 4's manual verification):** the placeholder page
+was originally planned at `apps/web/app/(organizer)/page.tsx`, which resolves to
+`/` since route groups don't add URL segments. `apps/web/app/(public)/page.tsx`
+already owns `/` — Next.js refused to build ("You cannot have two parallel pages
+that resolve to the same path"). Moved the organizer landing to a real segment,
+`/panel`, and updated Task 5's two `router.push('/')` calls to `router.push('/panel')`
+to match (both already corrected in Task 5's section above).
 
 - [ ] **Step 1: Protected layout**
 
@@ -607,7 +623,7 @@ export default async function OrganizerLayout({ children }: { children: ReactNod
 
 - [ ] **Step 2: Placeholder landing page**
 
-Create `apps/web/app/(organizer)/page.tsx` — just enough to prove the protection works end-to-end; the real content (events list, create button) is the next slice:
+Create `apps/web/app/(organizer)/panel/page.tsx` — just enough to prove the protection works end-to-end; the real content (events list, create button) is the next slice:
 ```typescript
 export default function OrganizerHomePage() {
   return (
@@ -629,18 +645,29 @@ Requires a real `DATABASE_URL` in `apps/web/.env.local` pointing at a reachable 
 ```bash
 pnpm dev
 ```
-Then, in a browser:
-1. Visit `http://localhost:3000/` while logged out — expect a redirect to `/sign-in`.
+Then, in a browser (or via curl with a cookie jar, which is what was actually
+used — see below):
+1. Visit `http://localhost:3000/panel` while logged out — expect a redirect to `/sign-in`. (`/`, the public homepage, should load normally and NOT redirect.)
 2. Visit `/sign-up`, submit with a **wrong** access code — expect an error message, no account created.
-3. Submit `/sign-up` again with the **correct** access code (matching `ORGANIZER_ACCESS_CODE` in `.env.local`) — expect redirect to `/`, and the "Panel del organizador" heading visible (sign-up auto-signs-in per Better Auth's default).
-4. Sign out (via `authClient.signOut()` in the browser console is fine for this manual check — no sign-out button exists yet, that's a future slice) and sign back in at `/sign-in` with the same credentials — expect the same redirect to `/`.
+3. Submit `/sign-up` again with the **correct** access code (matching `ORGANIZER_ACCESS_CODE` in `.env.local`) — expect redirect to `/panel`, and the "Panel del organizador" heading visible (sign-up auto-signs-in per Better Auth's default).
+4. Sign out and sign back in with the same credentials — expect the same redirect to `/panel`.
 
 Report the outcome of all four checks before considering this task done.
+
+**What actually happened:** all four checks were run via curl against a real
+Neon Postgres instance (with the migration applied) rather than a browser,
+using a cookie jar (`-c`/`-b`) to carry the session across requests — this
+proves the same HTTP-level behavior a browser would. Check 1 first caught the
+`/` route collision described above (a genuine bug, not a test artifact).
+After the fix, all four checks passed, including a `sign-out` call, which
+required an `Origin` header matching `BETTER_AUTH_URL` — Better Auth's CSRF
+protection correctly rejects unrecognized origins, which curl doesn't send by
+default the way a browser would.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add "apps/web/app/(organizer)/layout.tsx" "apps/web/app/(organizer)/page.tsx"
+git add "apps/web/app/(organizer)/layout.tsx" "apps/web/app/(organizer)/panel/page.tsx"
 git commit -m "feat(web): protect organizer routes behind a session check"
 ```
 
