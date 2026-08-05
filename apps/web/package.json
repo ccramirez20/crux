@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@crux/db": "workspace:*",
+    "better-auth": "^1.6.26",
     "next": "^15.5.22",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
