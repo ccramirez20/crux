@@ -52,12 +52,12 @@ crux/
 │     ├─ app/
 │     │  ├─ (public)/        # tabla de resultados, perfil de competidor — SIN auth
 │     │  ├─ (organizer)/     # panel del gimnasio: eventos, categorías, rutas — protegido
-│     │  ├─ (judge)/         # captura de intentos, offline-first
+│     │  ├─ (judge)/         # captura de intentos, offline-first — aún no existe
 │     │  ├─ sign-in/, sign-up/  # páginas de autenticación
 │     │  └─ api/
 │     │     ├─ auth/[...all]/   # Better Auth (catch-all)
 │     │     └─ health/
-│     ├─ components/
+│     ├─ components/         # aún no existe
 │     └─ lib/                # getDb(), getAuth() — clientes lazy
 ├─ packages/
 │  ├─ core/                  # dominio puro: tipos y funciones sin IO
