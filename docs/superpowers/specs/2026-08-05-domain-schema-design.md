@@ -109,6 +109,7 @@ row for that athlete on the leaderboard.
 | column | type | notes |
 |---|---|---|
 | id | uuid pk | |
+| sequence | bigserial | monotonic correction tiebreak — see "Corrections" below |
 | clientAttemptId | uuid, unique | idempotency key generated client-side (decision #3) |
 | registrationId | uuid fk → registrations.id | |
 | problemId | uuid fk → problems.id | |
