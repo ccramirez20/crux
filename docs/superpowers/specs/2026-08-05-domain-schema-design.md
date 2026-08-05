@@ -148,7 +148,7 @@ value is.
 
 Pure types mirroring the tables above, no IO, no Drizzle imports:
 
-- `Discipline = 'boulder' | 'lead' | 'speed'`
+- `Discipline = 'boulder' | 'lead'` (`speed` deferred — see below)
 - `RoundType = 'qualification' | 'semifinal' | 'final'`
 - `Gender = 'male' | 'female' | 'mixed'`
 - `ScoringFormat = string` (branded/opaque for now — `packages/scoring` owns the real
