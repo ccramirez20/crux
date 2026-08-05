@@ -33,7 +33,7 @@ Retención y adquisición de consumidor, no ingreso. Solo tiene sentido con base
 
 ## Stack
 
-Node 22, TypeScript estricto, Next.js 15 (App Router), Tailwind + shadcn/ui, Postgres + Drizzle, Better Auth, Vitest + Playwright, pnpm workspaces + Turborepo.
+Node 22, TypeScript estricto, Next.js 15 (App Router), Tailwind + shadcn/ui (shadcn/ui aún no instalado), Postgres + Drizzle, Better Auth, Vitest + Playwright (Playwright aún no instalado; `pnpm test:e2e` no ejecuta nada todavía), pnpm workspaces + Turborepo.
 
 Etapa 2 añade: MediaPipe Tasks Vision (PoseLandmarker) sobre WASM/WebGPU, en Web Worker. Etapa 3 añade: onnxruntime-web.
 
@@ -51,11 +51,14 @@ crux/
 │  └─ web/
 │     ├─ app/
 │     │  ├─ (public)/        # tabla de resultados, perfil de competidor — SIN auth
-│     │  ├─ (organizer)/     # panel del gimnasio: eventos, categorías, rutas
+│     │  ├─ (organizer)/     # panel del gimnasio: eventos, categorías, rutas — protegido
 │     │  ├─ (judge)/         # captura de intentos, offline-first
+│     │  ├─ sign-in/, sign-up/  # páginas de autenticación
 │     │  └─ api/
+│     │     ├─ auth/[...all]/   # Better Auth (catch-all)
+│     │     └─ health/
 │     ├─ components/
-│     └─ lib/
+│     └─ lib/                # getDb(), getAuth() — clientes lazy
 ├─ packages/
 │  ├─ core/                  # dominio puro: tipos y funciones sin IO
 │  ├─ scoring/               # estrategias de puntaje — el corazón del sistema
@@ -110,11 +113,11 @@ pnpm dev              # apps/web en :3000
 pnpm typecheck
 pnpm lint
 pnpm test             # Vitest
-pnpm test:e2e         # Playwright
+pnpm test:e2e         # Playwright — pendiente, aún no instalado (no hace nada todavía)
 pnpm db:generate      # generar migración desde el esquema
 pnpm db:migrate
 pnpm db:studio
-pnpm seed:event       # evento de prueba con 24 atletas y 5 bloques
+pnpm seed:event       # pendiente, aún no implementado
 ```
 
 ## Convenciones
