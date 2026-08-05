@@ -25,6 +25,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@crux/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@crux/db':
         specifier: workspace:*
         version: link:../../packages/db

@@ -57,7 +57,7 @@ crux/
 │     │  └─ api/
 │     │     ├─ auth/[...all]/   # Better Auth (catch-all)
 │     │     └─ health/
-│     ├─ components/         # aún no existe
+│     ├─ components/         # elementos visuales compartidos (ej. motivo topográfico)
 │     └─ lib/                # getDb(), getAuth() — clientes lazy
 ├─ packages/
 │  ├─ core/                  # dominio puro: tipos y funciones sin IO

@@ -3,8 +3,11 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
+import { translateAuthError } from '@/lib/auth-error-messages';
+import { TopographicMotif } from '@/components/topographic-motif';
+import { fieldClass, primaryButtonClass } from '@/lib/ui';
 
-const errorBodySchema = z.object({ message: z.string() }).partial();
+const errorBodySchema = z.object({ code: z.string(), message: z.string() }).partial();
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -28,23 +31,32 @@ export default function SignUpPage() {
     if (!response.ok) {
       const rawBody: unknown = await response.json().catch(() => null);
       const parsed = errorBodySchema.safeParse(rawBody);
-      setError((parsed.success && parsed.data.message) || 'No se pudo crear la cuenta.');
+      setError(
+        translateAuthError(
+          parsed.success ? parsed.data.code : undefined,
+          (parsed.success && parsed.data.message) || 'No se pudo crear la cuenta.',
+        ),
+      );
       return;
     }
     router.push('/panel');
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
+      <div className="w-full max-w-sm">
+        <TopographicMotif />
+      </div>
       <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Crear cuenta de organizador</h1>
+        <div className="font-display text-lg font-bold tracking-wide text-pine">CRUX</div>
+        <h1 className="font-display text-2xl font-bold">Crear cuenta de organizador</h1>
         <input
           type="text"
           placeholder="Nombre"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
-          className="rounded border px-3 py-2"
+          className={fieldClass}
         />
         <input
           type="email"
@@ -52,7 +64,7 @@ export default function SignUpPage() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
-          className="rounded border px-3 py-2"
+          className={fieldClass}
         />
         <input
           type="password"
@@ -61,22 +73,23 @@ export default function SignUpPage() {
           onChange={(event) => setPassword(event.target.value)}
           required
           minLength={8}
-          className="rounded border px-3 py-2"
+          className={fieldClass}
         />
-        <input
-          type="text"
-          placeholder="Código de acceso"
-          value={accessCode}
-          onChange={(event) => setAccessCode(event.target.value)}
-          required
-          className="rounded border px-3 py-2"
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-        >
+        <div className="flex flex-col gap-1">
+          <input
+            type="text"
+            placeholder="Código de acceso"
+            value={accessCode}
+            onChange={(event) => setAccessCode(event.target.value)}
+            required
+            className={fieldClass}
+          />
+          <p className="text-xs text-muted">
+            Te lo comparte quien administra la plataforma — por ahora el registro es solo para organizadores invitados.
+          </p>
+        </div>
+        {error && <p className="text-sm text-red-700">{error}</p>}
+        <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
           Crear cuenta
         </button>
       </form>
