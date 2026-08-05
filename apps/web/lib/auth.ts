@@ -24,7 +24,9 @@ function createAuth() {
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path === '/sign-up/email') {
           const { accessCode } = signUpBodySchema.parse(ctx.body);
-          if (accessCode !== process.env.ORGANIZER_ACCESS_CODE) {
+          // Fail closed: if the env var is ever unset, `undefined !== undefined`
+          // would otherwise let sign-up through ungated.
+          if (!process.env.ORGANIZER_ACCESS_CODE || accessCode !== process.env.ORGANIZER_ACCESS_CODE) {
             throw new APIError('BAD_REQUEST', {
               message: 'Código de acceso inválido.',
             });
