@@ -26,7 +26,11 @@ export const genderEnum = pgEnum('gender', ['male', 'female', 'mixed']);
 
 export const organizations = pgTable('organizations', {
   id: uuid('id').primaryKey().defaultRandom(),
+  ownerId: text('owner_id')
+    .notNull()
+    .references(() => user.id),
   name: text('name').notNull(),
+  location: text('location').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

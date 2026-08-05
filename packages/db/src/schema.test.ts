@@ -4,6 +4,7 @@ import {
   disciplineEnum,
   roundTypeEnum,
   genderEnum,
+  organizations,
   events,
   categories,
   registrations,
@@ -27,6 +28,13 @@ describe('enums', () => {
 
   it('gender has male, female, mixed', () => {
     expect(genderEnum.enumValues).toEqual(['male', 'female', 'mixed']);
+  });
+});
+
+describe('organizations', () => {
+  it('requires an ownerId referencing the auth user table and a location', () => {
+    expect(organizations.ownerId.notNull).toBe(true);
+    expect(organizations.location.notNull).toBe(true);
   });
 });
 
