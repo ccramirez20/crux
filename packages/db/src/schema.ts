@@ -11,6 +11,7 @@ import {
   bigserial,
   unique,
 } from 'drizzle-orm/pg-core';
+import { user } from './auth-schema';
 
 // 'speed' deferred: attempts has no time-capture column yet, so a speed
 // event would be selectable but unscoreable. Re-add when speed scoring
@@ -36,6 +37,9 @@ export const events = pgTable('events', {
   organizationId: uuid('organization_id')
     .notNull()
     .references(() => organizations.id),
+  ownerId: text('owner_id')
+    .notNull()
+    .references(() => user.id),
   name: text('name').notNull(),
   discipline: disciplineEnum('discipline').notNull(),
   scoringFormat: text('scoring_format').notNull(),

@@ -36,6 +36,10 @@ describe('events', () => {
     expect(events.slug.notNull).toBe(true);
     expect(events.slug.isUnique).toBe(true);
   });
+
+  it('requires an ownerId referencing the auth user table', () => {
+    expect(events.ownerId.notNull).toBe(true);
+  });
 });
 
 describe('categories', () => {
