@@ -7,6 +7,9 @@
   "scripts": {
     "lint": "echo 'sin lint todavia'",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'sin tests todavia'"
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }
