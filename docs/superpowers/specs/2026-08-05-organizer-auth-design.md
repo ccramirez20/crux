@@ -50,8 +50,12 @@ machinery than a single shared secret needs at this scale.
   protected organizer page.
 - **`apps/web/app/(organizer)/layout.tsx`** — server component that calls
   `auth.api.getSession({ headers: await headers() })` and redirects to `/sign-in`
-  when there's no session. This is the single choke point that protects every page
-  under `(organizer)/`, including the create-event screen that follows this slice.
+  when there's no session. This protects every *page* under `(organizer)/`,
+  including the create-event screen that follows this slice — but it does **not**
+  cover Server Actions or Route Handlers defined under that group, since those are
+  invoked directly rather than through the parent layout. Any mutation (creating,
+  editing, deleting an event) must call `getAuth().api.getSession()` itself; it
+  needs the session there anyway to check `ownerId`.
 
 ## Schema change (needs explicit sign-off — this is new DB schema)
 

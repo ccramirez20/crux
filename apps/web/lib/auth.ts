@@ -23,7 +23,11 @@ function createAuth() {
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path === '/sign-up/email') {
-          const { accessCode } = signUpBodySchema.parse(ctx.body);
+          // safeParse, not parse: a malformed body (not an object, wrong shape)
+          // must fail the access-code check below, not throw a raw ZodError
+          // that surfaces as a 500 instead of the intended 400.
+          const parsed = signUpBodySchema.safeParse(ctx.body);
+          const accessCode = parsed.success ? parsed.data.accessCode : undefined;
           // Fail closed: if the env var is ever unset, `undefined !== undefined`
           // would otherwise let sign-up through ungated.
           if (!process.env.ORGANIZER_ACCESS_CODE || accessCode !== process.env.ORGANIZER_ACCESS_CODE) {
