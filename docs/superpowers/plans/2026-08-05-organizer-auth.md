@@ -273,6 +273,7 @@ git commit -m "feat(web): configure better-auth with gated sign-up"
 **Files:**
 - Modify: `packages/db/src/schema.ts`
 - Modify: `packages/db/src/schema.test.ts`
+- Modify: `packages/db/drizzle.config.ts` (correction found during execution — see Step 3b)
 - Modify: `packages/db/drizzle/` (regenerated wholesale)
 
 **Interfaces:**
@@ -306,6 +307,19 @@ In `packages/db/src/schema.test.ts`, add a test in the `events` describe block:
 Run: `pnpm --filter @crux/db test`
 Expected: PASS.
 
+- [ ] **Step 3b: Fix `drizzle.config.ts` first (correction found during execution)**
+
+`packages/db/drizzle.config.ts`'s `schema` field only ever pointed at
+`./src/schema.ts`. Task 1 generated `auth-schema.ts` but nothing updated this
+config, so drizzle-kit has never actually seen the auth tables — running
+Step 4 as originally written produces a migration where `events.owner_id`'s
+FK references a `user` table that the same migration never creates (`relation
+"user" does not exist` if ever applied). Fix the config first:
+```typescript
+  schema: ['./src/schema.ts', './src/auth-schema.ts'],
+```
+(single-line change to the `schema` field, was `'./src/schema.ts'`).
+
 - [ ] **Step 4: Regenerate the migration**
 
 The existing `0000_*.sql` was never applied anywhere, so replace it wholesale:
@@ -314,7 +328,7 @@ rm packages/db/drizzle/*.sql
 rm packages/db/drizzle/meta/*.json
 pnpm db:generate
 ```
-Expected: a fresh `0000_*.sql` covering all 8 domain tables, 2 enums (`discipline`, `gender`, `round_type` — three enums, not two; don't miscount), the 4 auth tables, and `events.owner_id` with its FK to `user.id`.
+Expected: a fresh `0000_*.sql` covering all 8 domain tables, 3 enums (`discipline`, `gender`, `round_type` — don't miscount), the 4 auth tables (12 total), and `events.owner_id` with a self-consistent FK to a `user` table that exists in the same file.
 
 - [ ] **Step 5: Verify the generated SQL**
 
@@ -328,7 +342,7 @@ Expected: no errors.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add packages/db/src/schema.ts packages/db/src/schema.test.ts packages/db/drizzle
+git add packages/db/src/schema.ts packages/db/src/schema.test.ts packages/db/drizzle.config.ts packages/db/drizzle
 git commit -m "feat(db): add events.ownerId and regenerate initial migration"
 ```
 
