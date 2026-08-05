@@ -21,7 +21,7 @@ export default function SignInPage() {
       setError(signInError.message ?? 'No se pudo iniciar sesión.');
       return;
     }
-    router.push('/');
+    router.push('/panel');
   }
 
   return (

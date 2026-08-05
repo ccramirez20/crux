@@ -31,7 +31,7 @@ export default function SignUpPage() {
       setError((parsed.success && parsed.data.message) || 'No se pudo crear la cuenta.');
       return;
     }
-    router.push('/');
+    router.push('/panel');
   }
 
   return (
