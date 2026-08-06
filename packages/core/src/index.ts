@@ -9,11 +9,15 @@ export const GENDERS = ['male', 'female', 'mixed'] as const;
 export type Gender = (typeof GENDERS)[number];
 
 /**
- * Identifier for a packages/scoring strategy. The registry of valid values
- * (and the score() function that reads them) lives in packages/scoring, not
- * here — core stays IO- and logic-free.
+ * Identifier for a packages/scoring strategy. The registry mapping each
+ * value to its score() function lives in packages/scoring, not here — core
+ * stays IO- and logic-free.
  */
-export type ScoringFormat = string;
+export type ScoringFormat =
+  | 'ifsc_boulder'
+  | 'classic_tops_zones'
+  | 'league_points'
+  | 'max_height';
 
 export interface Attempt {
   id: string;
@@ -34,3 +38,6 @@ export interface Attempt {
 
 export { isEligible, parseDateOnly } from './eligibility';
 export type { EligibilityCategory } from './eligibility';
+
+export { ok, err } from './result';
+export type { Result } from './result';
