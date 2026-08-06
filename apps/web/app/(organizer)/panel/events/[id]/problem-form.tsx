@@ -72,7 +72,8 @@ export function ProblemForm({
             placeholder="Puntos por top"
             value={topPoints}
             onChange={(event) => setTopPoints(event.target.value)}
-            min={0}
+            required
+            min={1}
             className={`w-32 ${fieldClass}`}
           />
           <input

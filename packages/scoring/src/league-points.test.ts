@@ -74,6 +74,17 @@ describe('scoreLeaguePoints', () => {
     expect(result[0]).toMatchObject({ score: 0 });
   });
 
+  it('scores a zoned-not-topped problem missing from problemPoints as 0', () => {
+    const attempts = [
+      makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, zone: true }),
+    ];
+    const config = { problemIds: ['p1'], registrationIds: ['reg-a'], problemPoints: {} };
+
+    const result = scoreLeaguePoints(attempts, config);
+
+    expect(result[0]).toMatchObject({ score: 0 });
+  });
+
   it('sums scores across multiple problems', () => {
     const attempts = [
       makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, top: true }),

@@ -13,18 +13,15 @@ interface Aggregate {
 }
 
 function problemScoreTenths(attempt: Attempt): number {
-  let scoreTenths = 0;
   if (attempt.top) {
     const topAttemptsUsed = attempt.topAttempts ?? 1;
-    scoreTenths += Math.max(0, TOP_VALUE_TENTHS - (topAttemptsUsed - 1) * DEDUCTION_PER_ATTEMPT_TENTHS);
+    return Math.max(0, TOP_VALUE_TENTHS - (topAttemptsUsed - 1) * DEDUCTION_PER_ATTEMPT_TENTHS);
   }
-  // Topping a problem necessarily passes the zone hold on the way, so it
-  // always counts toward the zone score too, same rule as classic_tops_zones.
-  if (attempt.zone || attempt.top) {
-    const zoneAttemptsUsed = attempt.zoneAttempts ?? attempt.topAttempts ?? 1;
-    scoreTenths += Math.max(0, ZONE_VALUE_TENTHS - (zoneAttemptsUsed - 1) * DEDUCTION_PER_ATTEMPT_TENTHS);
+  if (attempt.zone) {
+    const zoneAttemptsUsed = attempt.zoneAttempts ?? 1;
+    return Math.max(0, ZONE_VALUE_TENTHS - (zoneAttemptsUsed - 1) * DEDUCTION_PER_ATTEMPT_TENTHS);
   }
-  return scoreTenths;
+  return 0;
 }
 
 function aggregate(registrationId: string, currentAttempts: Attempt[]): Aggregate {

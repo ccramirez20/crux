@@ -3,7 +3,7 @@ import { scoreIfscBoulder } from './ifsc-boulder';
 import { makeAttempt } from './test-support';
 
 describe('scoreIfscBoulder', () => {
-  it('scores a first-attempt top as 35 (25 top + 10 zone), additive', () => {
+  it('scores a first-try top as 25 (top value only, not summed with zone)', () => {
     const attempts = [
       makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
     ];
@@ -11,25 +11,23 @@ describe('scoreIfscBoulder', () => {
 
     const result = scoreIfscBoulder(attempts, config);
 
-    expect(result[0]).toMatchObject({ registrationId: 'reg-a', score: 35 });
+    // topAttemptsUsed = 1 -> 250 - (1-1)*1 = 250 tenths = 25.0
+    expect(result[0]).toMatchObject({ registrationId: 'reg-a', score: 25 });
   });
 
-  it('deducts 0.1 per extra attempt from the top score, independent of the zone score', () => {
+  it('deducts 0.1 per extra attempt from a topped problem', () => {
     const attempts = [
-      makeAttempt({
-        registrationId: 'reg-a', problemId: 'p1', sequence: 1,
-        top: true, topAttempts: 3, zone: true, zoneAttempts: 1,
-      }),
+      makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, top: true, topAttempts: 3 }),
     ];
     const config = { problemIds: ['p1'], registrationIds: ['reg-a'] };
 
     const result = scoreIfscBoulder(attempts, config);
 
-    // top: 25 - 0.2 = 24.8; zone: 10 - 0 = 10; total 34.8
-    expect(result[0]).toMatchObject({ score: 34.8 });
+    // topAttemptsUsed = 3 -> 250 - (3-1)*1 = 248 tenths = 24.8
+    expect(result[0]).toMatchObject({ score: 24.8 });
   });
 
-  it('scores zone-only (no top) using just the zone formula', () => {
+  it('scores a zone-only (not topped) problem using the zone formula on its own', () => {
     const attempts = [
       makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, zone: true, zoneAttempts: 2 }),
     ];
@@ -37,7 +35,7 @@ describe('scoreIfscBoulder', () => {
 
     const result = scoreIfscBoulder(attempts, config);
 
-    // zone: 10 - 0.1 = 9.9; no top score
+    // zoneAttemptsUsed = 2 -> 100 - (2-1)*1 = 99 tenths = 9.9
     expect(result[0]).toMatchObject({ score: 9.9 });
   });
 
@@ -52,7 +50,7 @@ describe('scoreIfscBoulder', () => {
     expect(result[0]).toMatchObject({ score: 0 });
   });
 
-  it('floors a component at 0 when attempts are high enough to exceed its value', () => {
+  it('floors a topped problem at 0 when attempts are high enough to exceed its value', () => {
     const attempts = [
       makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, top: true, topAttempts: 300 }),
     ];
@@ -60,7 +58,19 @@ describe('scoreIfscBoulder', () => {
 
     const result = scoreIfscBoulder(attempts, config);
 
-    // top floored at 0 (300 attempts far exceeds 25/0.1=250 break-even); zone credited via top-implies-zone at topAttempts fallback, also floored at 0
+    // topAttemptsUsed = 300 -> 250 - 299 = -49 -> floored to 0
+    expect(result[0]).toMatchObject({ score: 0 });
+  });
+
+  it('floors a zone-only problem at 0 when attempts are high enough to exceed its value', () => {
+    const attempts = [
+      makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, zone: true, zoneAttempts: 200 }),
+    ];
+    const config = { problemIds: ['p1'], registrationIds: ['reg-a'] };
+
+    const result = scoreIfscBoulder(attempts, config);
+
+    // zoneAttemptsUsed = 200 -> 100 - 199 = -99 -> floored to 0
     expect(result[0]).toMatchObject({ score: 0 });
   });
 
@@ -73,8 +83,8 @@ describe('scoreIfscBoulder', () => {
 
     const result = scoreIfscBoulder(attempts, config);
 
-    // p1: 35 (top+zone), p2: 10 (zone only) = 45
-    expect(result[0]).toMatchObject({ score: 45 });
+    // p1 (topped, 1 attempt): 25.0; p2 (zone-only, 1 attempt): 10.0; total 35.0
+    expect(result[0]).toMatchObject({ score: 35 });
   });
 
   it('gives a real tie the same rank', () => {
@@ -89,7 +99,7 @@ describe('scoreIfscBoulder', () => {
     expect(result.map((r) => [r.rank, r.tied])).toEqual([[1, true], [1, true]]);
   });
 
-  it('ranks a registration with zero attempts last, scoring 0', () => {
+  it('ranks a registration with zero attempts (DNS) last, scoring 0', () => {
     const attempts = [
       makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
     ];
