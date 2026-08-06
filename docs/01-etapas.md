@@ -5,9 +5,24 @@ Aqui va el detalle: para cada etapa, el alcance exacto, lo que queda
 explicitamente fuera, y el criterio de desbloqueo de la siguiente.
 
 ## Etapa 1 — ACTIVA
+
 ### Dentro del alcance
+
+- Autenticación de organizador (sign-up con código de acceso, sign-in) — **listo**
+- Panel del organizador: crear evento, categorías, rondas, bloques — **listo**
+- Inscripción pública (`/inscripcion/[slug]`, sin cuenta), con dedupe de atleta por documento y elegibilidad por edad/género contra la fecha del evento — **listo**
+- Captura de intentos por juez, offline-first — **pendiente**
+- Scoring en vivo (`packages/scoring`) — **pendiente**, el paquete sigue vacío
+- Tabla pública de resultados (`Leaderboard`) — **pendiente**
+- Historial de competidor entre eventos — el modelo de datos ya lo soporta (un `Athlete` se reutiliza entre inscripciones por `documentId`); falta la vista pública de perfil
+
 ### Fuera del alcance
+
+Pagos en línea, múltiples organizaciones con roles, notificaciones, exportación a formatos federativos, cualquier deporte que no sea escalada. Ver también CLAUDE.md.
+
 ### Criterio de desbloqueo de la etapa 2
+
+Un gimnasio real corrió un evento con ≥20 inscritos sin soporte manual del desarrollador el día del evento.
 
 ## Ideas registradas para etapa 2 (no implementar aun)
 

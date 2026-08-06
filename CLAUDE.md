@@ -50,7 +50,7 @@ crux/
 ├─ apps/
 │  └─ web/
 │     ├─ app/
-│     │  ├─ (public)/        # tabla de resultados, perfil de competidor — SIN auth
+│     │  ├─ (public)/        # inscripción (/inscripcion/[slug], SIN auth); tabla de resultados y perfil de competidor — aún no existen
 │     │  ├─ (organizer)/     # panel del gimnasio: eventos, categorías, rutas — protegido
 │     │  ├─ (judge)/         # captura de intentos, offline-first — aún no existe
 │     │  ├─ sign-in/, sign-up/  # páginas de autenticación
