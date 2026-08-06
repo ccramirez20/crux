@@ -7,6 +7,12 @@
   "scripts": {
     "lint": "echo 'sin lint todavia'",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'sin tests todavia'"
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@crux/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }
