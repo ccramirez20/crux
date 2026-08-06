@@ -1,4 +1,6 @@
 import type { Attempt } from '@crux/core';
+import { resolveCurrentAttempts } from './resolve-attempts';
+import { assignRanks } from './rank-assignment';
 import type { ClassicTopsZonesResult, RoundScoringConfig } from './types';
 
 interface Aggregate {
@@ -7,19 +9,6 @@ interface Aggregate {
   topAttempts: number;
   zones: number;
   zoneAttempts: number;
-}
-
-function resolveCurrentAttempts(attempts: Attempt[], problemIds: Set<string>): Attempt[] {
-  const currentByKey = new Map<string, Attempt>();
-  for (const attempt of attempts) {
-    if (!problemIds.has(attempt.problemId)) continue;
-    const key = `${attempt.registrationId}:${attempt.problemId}`;
-    const existing = currentByKey.get(key);
-    if (!existing || attempt.sequence > existing.sequence) {
-      currentByKey.set(key, attempt);
-    }
-  }
-  return [...currentByKey.values()];
 }
 
 function aggregate(registrationId: string, currentAttempts: Attempt[]): Aggregate {
@@ -62,30 +51,16 @@ export function scoreClassicTopsZones(
     .map((registrationId) => aggregate(registrationId, currentAttempts))
     .sort(compareAggregates);
 
-  const results: ClassicTopsZonesResult[] = [];
-  for (let index = 0; index < aggregates.length; index++) {
-    const current = aggregates[index]!;
-    const previous = index > 0 ? aggregates[index - 1]! : null;
-    const tiedWithPrevious = previous !== null && compareAggregates(current, previous) === 0;
-    const rank = tiedWithPrevious ? results[index - 1]!.rank : index + 1;
-    results.push({
-      format: 'classic_tops_zones',
-      rank,
-      tied: false,
-      registrationId: current.registrationId,
-      tops: current.tops,
-      topAttempts: current.topAttempts,
-      zones: current.zones,
-      zoneAttempts: current.zoneAttempts,
-    });
-  }
+  const ranks = assignRanks(aggregates, (a, b) => compareAggregates(a, b) === 0);
 
-  for (let index = 0; index < results.length; index++) {
-    const sharesRankWithPrevious = index > 0 && results[index]!.rank === results[index - 1]!.rank;
-    const sharesRankWithNext =
-      index < results.length - 1 && results[index]!.rank === results[index + 1]!.rank;
-    results[index]!.tied = sharesRankWithPrevious || sharesRankWithNext;
-  }
-
-  return results;
+  return aggregates.map((current, index) => ({
+    format: 'classic_tops_zones',
+    rank: ranks[index]!.rank,
+    tied: ranks[index]!.tied,
+    registrationId: current.registrationId,
+    tops: current.tops,
+    topAttempts: current.topAttempts,
+    zones: current.zones,
+    zoneAttempts: current.zoneAttempts,
+  }));
 }
