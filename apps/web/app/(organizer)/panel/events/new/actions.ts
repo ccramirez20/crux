@@ -26,6 +26,7 @@ const createEventInputSchema = z.object({
   ]),
   slug: z.string().regex(/^[a-z0-9-]+$/),
   timezone: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 type CreateEventInput = z.infer<typeof createEventInputSchema>;

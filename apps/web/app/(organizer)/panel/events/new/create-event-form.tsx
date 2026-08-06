@@ -61,6 +61,7 @@ export function CreateEventForm({
     DEFAULT_SCORING_FORMAT.boulder,
   );
   const [timezone, setTimezone] = useState('America/Bogota');
+  const [date, setDate] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,6 +92,7 @@ export function CreateEventForm({
       scoringFormat,
       slug,
       timezone,
+      date: date || undefined,
     });
     setIsSubmitting(false);
     if (result && !result.ok) {
@@ -183,6 +185,17 @@ export function CreateEventForm({
           className={fieldClass}
         />
         <p className="text-xs text-muted">Así se verá en el enlace público del evento.</p>
+      </div>
+      <div className="flex flex-col gap-1">
+        <input
+          type="date"
+          value={date}
+          onChange={(event) => setDate(event.target.value)}
+          className={fieldClass}
+        />
+        <p className="text-xs text-muted">
+          Cuándo es el evento — se usa para calcular las categorías por edad.
+        </p>
       </div>
       <select
         value={discipline}
