@@ -33,8 +33,20 @@ export interface LeaguePointsResult {
   score: number;
 }
 
+export interface MaxHeightResult {
+  format: 'max_height';
+  rank: number;
+  tied: boolean;
+  registrationId: string;
+  height: number;
+}
+
 // Union of one today; each shipped strategy adds its own variant here.
-export type RankedResult = ClassicTopsZonesResult | IfscBoulderResult | LeaguePointsResult;
+export type RankedResult =
+  | ClassicTopsZonesResult
+  | IfscBoulderResult
+  | LeaguePointsResult
+  | MaxHeightResult;
 
 export interface ScoringError {
   format: ScoringFormat;
