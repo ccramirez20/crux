@@ -19,9 +19,11 @@ function isGender(value: string): value is Gender {
 
 export function RegistrationForm({
   eventId,
+  eventDate,
   categories,
 }: {
   eventId: string;
+  eventDate: string | null;
   categories: Category[];
 }) {
   const [fullName, setFullName] = useState('');
@@ -33,9 +35,12 @@ export function RegistrationForm({
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const referenceDate = eventDate ? parseDateOnly(eventDate) : undefined;
   const eligibleCategories =
     birthDate && gender
-      ? categories.filter((category) => isEligible(category, parseDateOnly(birthDate), gender))
+      ? categories.filter((category) =>
+          isEligible(category, parseDateOnly(birthDate), gender, referenceDate),
+        )
       : [];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -45,21 +50,26 @@ export function RegistrationForm({
     }
     setError(null);
     setIsSubmitting(true);
-    const result = await registerAthlete({
-      eventId,
-      categoryId,
-      fullName,
-      documentId,
-      birthDate,
-      gender,
-    });
-    setIsSubmitting(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = await registerAthlete({
+        eventId,
+        categoryId,
+        fullName,
+        documentId,
+        birthDate,
+        gender,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      const category = categories.find((c) => c.id === categoryId);
+      setSuccess(`Quedaste inscrito en ${category?.name ?? 'la categoría seleccionada'}.`);
+    } catch {
+      setError('No se pudo completar la inscripción, intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
-    const category = categories.find((c) => c.id === categoryId);
-    setSuccess(`Quedaste inscrito en ${category?.name ?? 'la categoría seleccionada'}.`);
   }
 
   if (success) {

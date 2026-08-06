@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { GENDERS, isEligible, parseDateOnly } from '@crux/core';
-import { athletes, categories, eq, registrations } from '@crux/db';
+import { athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -48,34 +48,71 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
       gender: categories.gender,
       minAge: categories.minAge,
       maxAge: categories.maxAge,
+      eventDate: events.date,
     })
     .from(categories)
+    .innerJoin(events, eq(categories.eventId, events.id))
     .where(eq(categories.id, categoryId));
   if (!category || category.eventId !== eventId) {
     return { ok: false, error: 'Esa categoría no existe para este evento.' };
   }
 
-  if (!isEligible(category, parseDateOnly(birthDate), gender)) {
-    return { ok: false, error: 'Esa categoría no corresponde a tu edad o género.' };
+  async function findExistingAthlete() {
+    const [row] = await db
+      .select({ id: athletes.id, birthDate: athletes.birthDate, gender: athletes.gender })
+      .from(athletes)
+      .where(eq(athletes.documentId, documentId));
+    return row;
   }
 
-  const [existingAthlete] = await db
-    .select({ id: athletes.id })
-    .from(athletes)
-    .where(eq(athletes.documentId, documentId));
+  function athleteMismatch(existing: { birthDate: string | null; gender: string | null }): boolean {
+    return existing.birthDate !== birthDate || existing.gender !== gender;
+  }
+
+  const existingAthlete = await findExistingAthlete();
 
   let athleteId: string;
   if (existingAthlete) {
+    if (athleteMismatch(existingAthlete)) {
+      return {
+        ok: false,
+        error: 'Ese documento ya está registrado con una fecha de nacimiento o género diferente.',
+      };
+    }
     athleteId = existingAthlete.id;
   } else {
-    const [newAthlete] = await db
-      .insert(athletes)
-      .values({ fullName, documentId, birthDate, gender })
-      .returning({ id: athletes.id });
-    if (!newAthlete) {
-      throw new Error('Failed to create athlete');
+    try {
+      const [newAthlete] = await db
+        .insert(athletes)
+        .values({ fullName, documentId, birthDate, gender })
+        .returning({ id: athletes.id });
+      if (!newAthlete) {
+        throw new Error('Failed to create athlete');
+      }
+      athleteId = newAthlete.id;
+    } catch (error) {
+      if (!isUniqueViolation(error)) {
+        throw error;
+      }
+      // Two concurrent registrations raced on the same documentId; the other
+      // request's insert won, so re-fetch the row it just created.
+      const racedAthlete = await findExistingAthlete();
+      if (!racedAthlete) {
+        throw error;
+      }
+      if (athleteMismatch(racedAthlete)) {
+        return {
+          ok: false,
+          error: 'Ese documento ya está registrado con una fecha de nacimiento o género diferente.',
+        };
+      }
+      athleteId = racedAthlete.id;
     }
-    athleteId = newAthlete.id;
+  }
+
+  const referenceDate = category.eventDate ? parseDateOnly(category.eventDate) : undefined;
+  if (!isEligible(category, parseDateOnly(birthDate), gender, referenceDate)) {
+    return { ok: false, error: 'Esa categoría no corresponde a tu edad o género.' };
   }
 
   try {

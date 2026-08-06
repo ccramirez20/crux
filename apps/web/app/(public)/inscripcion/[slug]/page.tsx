@@ -13,7 +13,7 @@ export default async function InscripcionPage({
   const db = getDb();
 
   const [event] = await db
-    .select({ id: events.id, name: events.name })
+    .select({ id: events.id, name: events.name, date: events.date })
     .from(events)
     .where(eq(events.slug, slug));
   if (!event) {
@@ -43,7 +43,7 @@ export default async function InscripcionPage({
           Inscripciones aún no disponibles para este evento.
         </p>
       ) : (
-        <RegistrationForm eventId={event.id} categories={eventCategories} />
+        <RegistrationForm eventId={event.id} eventDate={event.date} categories={eventCategories} />
       )}
     </main>
   );
