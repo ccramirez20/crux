@@ -99,8 +99,10 @@ Per problem, using the current attempt:
   not a tiebreak nicety) **and** `problemPoints?.[problemId]?.zonePoints` is
   a number (not `null`/absent) → that value.
 - Otherwise → 0.
-- Top and zone points are **not** additive here (unlike `ifsc_boulder`): a
-  topped problem scores `topPoints` only. `zonePoints: null` on a block (or
+- Top and zone points are **not** additive here either (same "best
+  achievement wins" shape as `ifsc_boulder`, just via an organizer-set
+  lookup table instead of a formula): a topped problem scores `topPoints`
+  only. `zonePoints: null` on a block (or
   the block missing from `problemPoints` entirely) means "this block gives
   no partial credit for zoning" — this is the per-block on/off toggle the
   product decision asked for; there's no separate boolean column for it.
