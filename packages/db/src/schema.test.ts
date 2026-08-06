@@ -94,6 +94,13 @@ describe('attempts', () => {
   });
 });
 
+describe('problems', () => {
+  it('leaves topPoints and zonePoints optional (only league_points events set them)', () => {
+    expect(problems.topPoints.notNull).toBe(false);
+    expect(problems.zonePoints.notNull).toBe(false);
+  });
+});
+
 describe('column naming', () => {
   it('uses snake_case column names in Postgres', () => {
     expect(problems.roundId.name).toBe('round_id');

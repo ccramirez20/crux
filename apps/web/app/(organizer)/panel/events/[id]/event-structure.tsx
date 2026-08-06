@@ -30,10 +30,12 @@ export function EventStructure({
   eventId,
   categories,
   isOwner,
+  scoringFormat,
 }: {
   eventId: string;
   categories: Category[];
   isOwner: boolean;
+  scoringFormat: string;
 }) {
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
   const [openRounds, setOpenRounds] = useState<Record<string, boolean>>({});
@@ -83,7 +85,14 @@ export function EventStructure({
 
                       {openRounds[round.id] && (
                         <div className="mt-3 flex flex-col gap-2 border-l-2 border-sage pl-4">
-                          {isOwner && <ProblemForm eventId={eventId} roundId={round.id} nextNumber={round.problems.length + 1} />}
+                          {isOwner && (
+                            <ProblemForm
+                              eventId={eventId}
+                              roundId={round.id}
+                              nextNumber={round.problems.length + 1}
+                              scoringFormat={scoringFormat}
+                            />
+                          )}
                           <ul className="text-sm">
                             {round.problems.map((problem) => (
                               <li key={problem.id}>

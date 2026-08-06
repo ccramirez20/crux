@@ -83,6 +83,11 @@ export const problems = pgTable('problems', {
     .references(() => rounds.id),
   number: integer('number').notNull(),
   name: text('name'),
+  // Only meaningful for league_points events; every other format leaves
+  // these null. zonePoints: null is the per-block "no partial credit for
+  // zoning" toggle — there is no separate boolean column for it.
+  topPoints: integer('top_points'),
+  zonePoints: integer('zone_points'),
 });
 
 export const athletes = pgTable('athletes', {

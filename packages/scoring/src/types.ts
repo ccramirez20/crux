@@ -3,6 +3,7 @@ import type { Attempt, Result, ScoringFormat } from '@crux/core';
 export interface RoundScoringConfig {
   problemIds: string[];
   registrationIds: string[];
+  problemPoints?: Record<string, { topPoints: number; zonePoints: number | null }>;
 }
 
 export interface ClassicTopsZonesResult {
@@ -16,8 +17,36 @@ export interface ClassicTopsZonesResult {
   zoneAttempts: number;
 }
 
+export interface IfscBoulderResult {
+  format: 'ifsc_boulder';
+  rank: number;
+  tied: boolean;
+  registrationId: string;
+  score: number;
+}
+
+export interface LeaguePointsResult {
+  format: 'league_points';
+  rank: number;
+  tied: boolean;
+  registrationId: string;
+  score: number;
+}
+
+export interface MaxHeightResult {
+  format: 'max_height';
+  rank: number;
+  tied: boolean;
+  registrationId: string;
+  height: number;
+}
+
 // Union of one today; each shipped strategy adds its own variant here.
-export type RankedResult = ClassicTopsZonesResult;
+export type RankedResult =
+  | ClassicTopsZonesResult
+  | IfscBoulderResult
+  | LeaguePointsResult
+  | MaxHeightResult;
 
 export interface ScoringError {
   format: ScoringFormat;

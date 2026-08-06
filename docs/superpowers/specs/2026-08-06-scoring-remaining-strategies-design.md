@@ -46,24 +46,24 @@ Per problem, using the current (highest-`sequence`) attempt:
 - Topped if `attempt.top`. Attempts-to-top: `attempt.topAttempts ?? 1` (same
   null-defaulting rule as `classic_tops_zones` — a top can't happen in zero
   attempts).
-- Zoned if `attempt.zone || attempt.top` (topping implies the zone hold was
-  passed — same rule as `classic_tops_zones`). Attempts-to-zone:
-  `attempt.zoneAttempts ?? attempt.topAttempts ?? 1`.
-- Top score (in tenths of a point, to avoid float drift): topped ?
-  `max(0, 250 - 10*... )`
-
-  Concretely, in tenths: `topTenths = topped ? Math.max(0, 250 - (topAttemptsUsed - 1) * 1) : 0`
-  (25.0 points = 250 tenths; each attempt after the first costs 0.1 point = 1 tenth; floor 0).
-- Zone score (tenths): `zoneTenths = zoned ? Math.max(0, 100 - (zoneAttemptsUsed - 1) * 1) : 0`
-  (10.0 points = 100 tenths).
-- **Top and zone points are additive** — topping a problem in one attempt is
-  worth 35.0 points (25 + 10), not 25. This matches the real IFSC
-  post-2018 scoring format; it's the one place this format's math diverges
-  from `classic_tops_zones`' zone-crediting (which doesn't award separate
-  points, only tiebreak position).
-- Problem score = `topTenths + zoneTenths`. Registration score = sum of
-  problem scores across `config.problemIds`, converted to points
-  (`totalTenths / 10`) only at the very end, so all arithmetic before that
+- Not topped, but zoned if `attempt.zone`. Attempts-to-zone:
+  `attempt.zoneAttempts ?? 1`.
+- **Top and zone points are NOT additive** (this corrects an earlier draft
+  of this spec, which claimed IFSC sums them — it doesn't; real IFSC scores
+  a boulder at the value of the *highest* achievement reached, the same
+  "best achievement wins" shape `league_points` already uses, not a sum).
+  A topped problem scores `max(0, 250 - (topAttemptsUsed - 1) * 1)` tenths
+  (25.0 points = 250 tenths; each attempt after the first costs 0.1 point =
+  1 tenth; floored at 0). A zoned-not-topped problem scores
+  `max(0, 100 - (zoneAttemptsUsed - 1) * 1)` tenths (10.0 = 100 tenths,
+  same deduction/floor). Neither → 0. Since only one of the two formulas
+  ever applies to a given problem, there is no "topping implies zone" rule
+  here — unlike `classic_tops_zones`, zoning is never separately credited
+  once a problem is topped.
+- Registration score = sum of each problem's score (across different
+  problems, scores DO add — the non-additivity is within one problem's
+  top-vs-zone choice, not across the round). Converted to points
+  (`totalTenths / 10`) only at the very end; all arithmetic before that
   stays in integer tenths.
 
 Ranking: score desc. A real tie (identical total score) shares a rank — no
@@ -75,7 +75,7 @@ export interface IfscBoulderResult {
   rank: number;
   tied: boolean;
   registrationId: string;
-  score: number; // e.g. 35, or 47.3
+  score: number; // e.g. 25 (a clean top), or 34.7
 }
 ```
 
@@ -99,8 +99,10 @@ Per problem, using the current attempt:
   not a tiebreak nicety) **and** `problemPoints?.[problemId]?.zonePoints` is
   a number (not `null`/absent) → that value.
 - Otherwise → 0.
-- Top and zone points are **not** additive here (unlike `ifsc_boulder`): a
-  topped problem scores `topPoints` only. `zonePoints: null` on a block (or
+- Top and zone points are **not** additive here either (same "best
+  achievement wins" shape as `ifsc_boulder`, just via an organizer-set
+  lookup table instead of a formula): a topped problem scores `topPoints`
+  only. `zonePoints: null` on a block (or
   the block missing from `problemPoints` entirely) means "this block gives
   no partial credit for zoning" — this is the per-block on/off toggle the
   product decision asked for; there's no separate boolean column for it.
@@ -138,13 +140,21 @@ with how the rest of this package treats missing optional judge data).
 ### UI change
 
 `apps/web/app/(organizer)/panel/events/[id]/problem-form.tsx` gains two
-optional number inputs, **shown only when the event's `scoringFormat` is
+number inputs, **shown only when the event's `scoringFormat` is
 `'league_points'`** (the form needs the event's `scoringFormat` passed down
 as a new prop from the page that renders it — currently it only receives
-`eventId`, `roundId`, `nextNumber`). `createProblem`'s Zod schema
+`eventId`, `roundId`, `nextNumber`). `topPoints` is **required** whenever
+it's shown (a `league_points` block with no top value would score less for
+topping than for zoning, an inverted leaderboard — leaving it optional
+would let that ship); `zonePoints` stays optional (that's the block's
+zone-credit toggle, `null`/unset is a valid "off" state, not a data gap).
+`createProblem`'s Zod schema
 (`apps/web/app/(organizer)/panel/events/[id]/actions.ts`) gains
-`topPoints: z.number().int().optional()` and
-`zonePoints: z.number().int().optional()`.
+`topPoints: z.number().int().nonnegative().optional()` and
+`zonePoints: z.number().int().nonnegative().optional()` — both stay
+`.optional()` at the Zod/DB level since they're meaningless for the other 3
+formats; the `required` HTML attribute enforces the league_points-specific
+rule client-side, in the same conditionally-rendered block.
 
 ## `max_height`
 
@@ -189,8 +199,10 @@ export const SCORING_STRATEGIES: Record<ScoringFormat, ScoringStrategyFn> = {
 ```
 
 No more `Result`-returning error paths remain in this package once this
-ships — `notImplemented` and the `ScoringError` type stay defined (a future
-5th format would use them again) but nothing currently constructs an `err`.
+ships. The `notImplemented` helper is deleted along with it (dead code —
+nothing calls it once all 4 formats are real); `ScoringError` stays defined
+since `ScoringStrategyFn`'s signature still returns `Result<RankedResult[],
+ScoringError>` and a future 5th format would construct one again.
 
 `RankedResult` grows to a 4-member union:
 
@@ -210,12 +222,12 @@ export type RankedResult =
 Per format, real scenarios (CLAUDE.md's bar):
 
 **`ifsc_boulder`:**
-- Top in 1 attempt scores 35 (25 top + 10 zone), both floors untested (no deduction).
-- Top in 3 attempts: top score floored/deducted correctly (25 - 0.2 = 24.8), zone score uses its own (possibly different) attempt count.
-- Zone only (no top): only the 10-point zone formula applies, deducted by zone attempts.
+- Top in 1 attempt scores 25 (no deduction), not 35 — confirms top-only, not additive.
+- Top in 3 attempts: score deducted correctly (25 - 0.2 = 24.8).
+- Zone only (no top): the 10-point zone formula applies on its own, deducted by zone attempts.
 - Neither top nor zone: 0.
-- A deduction run long enough to hit the 0 floor (attempts count high enough that `250 - (n-1) < 0`).
-- Multiple problems summed correctly into one registration score.
+- A deduction run long enough to hit the 0 floor (attempts count high enough that `250 - (n-1) < 0`), for both the top and the zone formula independently.
+- Multiple problems summed correctly into one registration score (scores add across *different* problems; the non-additivity is only within one problem's top-vs-zone choice).
 - Real tie: two registrations with identical total score share a rank.
 - DNS: zero attempts scores 0, ranks last.
 - `resolveCurrentAttempts`'s correction-resolution behavior carries over correctly (one shared test via the extracted helper, not re-proven per strategy).
@@ -224,8 +236,9 @@ Per format, real scenarios (CLAUDE.md's bar):
 - Topped problem scores its configured `topPoints`.
 - Zoned-not-topped problem with `zonePoints` set scores that value.
 - Zoned-not-topped problem with `zonePoints: null` scores 0 (toggle off for that block).
-- Topped problem does NOT additionally score `zonePoints` (not additive — the one behavioral difference from `ifsc_boulder` to pin with a test).
-- A problem missing from `problemPoints` entirely scores 0 regardless of top/zone.
+- Zoned-not-topped problem missing from `problemPoints` entirely scores 0 (same as the `null` case, via a different code path — both need a test, since it's a different branch).
+- Topped problem does NOT additionally score `zonePoints` (not additive — pin this with a test; `ifsc_boulder` shares the same "best achievement wins" shape but via a formula instead of an organizer-set table).
+- A topped problem missing from `problemPoints` entirely scores 0.
 - Real tie on total score.
 - DNS.
 

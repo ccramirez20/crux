@@ -8,15 +8,21 @@ export function ProblemForm({
   eventId,
   roundId,
   nextNumber,
+  scoringFormat,
 }: {
   eventId: string;
   roundId: string;
   nextNumber: number;
+  scoringFormat: string;
 }) {
   const [number, setNumber] = useState(String(nextNumber));
   const [name, setName] = useState('');
+  const [topPoints, setTopPoints] = useState('');
+  const [zonePoints, setZonePoints] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isLeaguePoints = scoringFormat === 'league_points';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,6 +34,8 @@ export function ProblemForm({
       roundId,
       number: submittedNumber,
       name: name || undefined,
+      topPoints: isLeaguePoints && topPoints ? Number(topPoints) : undefined,
+      zonePoints: isLeaguePoints && zonePoints ? Number(zonePoints) : undefined,
     });
     setIsSubmitting(false);
     if (!result.ok) {
@@ -36,6 +44,8 @@ export function ProblemForm({
     }
     setNumber(String(submittedNumber + 1));
     setName('');
+    setTopPoints('');
+    setZonePoints('');
   }
 
   return (
@@ -55,6 +65,27 @@ export function ProblemForm({
         onChange={(event) => setName(event.target.value)}
         className={fieldClass}
       />
+      {isLeaguePoints && (
+        <>
+          <input
+            type="number"
+            placeholder="Puntos por top"
+            value={topPoints}
+            onChange={(event) => setTopPoints(event.target.value)}
+            required
+            min={1}
+            className={`w-32 ${fieldClass}`}
+          />
+          <input
+            type="number"
+            placeholder="Puntos por zona (opcional)"
+            value={zonePoints}
+            onChange={(event) => setZonePoints(event.target.value)}
+            min={0}
+            className={`w-40 ${fieldClass}`}
+          />
+        </>
+      )}
       {error && <p className="text-sm text-red-700">{error}</p>}
       <button type="submit" disabled={isSubmitting} className={secondaryButtonClass}>
         Agregar bloque
