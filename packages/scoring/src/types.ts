@@ -16,8 +16,16 @@ export interface ClassicTopsZonesResult {
   zoneAttempts: number;
 }
 
+export interface IfscBoulderResult {
+  format: 'ifsc_boulder';
+  rank: number;
+  tied: boolean;
+  registrationId: string;
+  score: number;
+}
+
 // Union of one today; each shipped strategy adds its own variant here.
-export type RankedResult = ClassicTopsZonesResult;
+export type RankedResult = ClassicTopsZonesResult | IfscBoulderResult;
 
 export interface ScoringError {
   format: ScoringFormat;
