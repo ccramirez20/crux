@@ -16,9 +16,9 @@ entirely inside `packages/scoring` (plus one type narrowing in
 
 Given a round's current `Attempt` rows, rank every registration in that round
 according to one of four formats. Only `classic_tops_zones` computes a real
-ranking today; the other three are registered but throw — the registry
-exists for all four (validating CLAUDE.md's "≥3 concrete uses" bar for the
-abstraction) without pretending the unimplemented ones work.
+ranking today; the other three are registered but return a `Result` error —
+the registry exists for all four (validating CLAUDE.md's "≥3 concrete uses"
+bar for the abstraction) without pretending the unimplemented ones work.
 
 - `classic_tops_zones`: fully implemented, with tie-break tests against real
   scenarios.
@@ -144,10 +144,17 @@ judge UI) use — they never reach into `SCORING_STRATEGIES` directly.
    zoneAttempts: 0`, ranked last).
 4. Per registration, aggregate across its resolved current attempts:
    - `tops` = count of problems where the current attempt has `top: true`.
-   - `topAttempts` = sum of `topAttempts` **only** for problems actually
-     topped (a failed problem's spent attempts don't count against the
-     tiebreak — the miss is already punished by a lower `tops`).
-   - `zones` / `zoneAttempts` computed the same way against `zone`.
+   - `topAttempts` = sum, over problems actually topped, of `topAttempts ??
+     1` (a top can't happen in zero attempts, so a judge row that recorded
+     `top: true` without a count defaults to the best case — 1 — rather
+     than letting a missing count silently outrank someone who legitimately
+     flashed the problem).
+   - **Topping a problem always counts its zone too** (`zone: true` **or**
+     `top: true`) — climbing a problem to the top necessarily passes the
+     zone hold on the way, so this holds regardless of whether the judge UI
+     also set `zone: true` on that row. `zoneAttempts` sums the same way as
+     `topAttempts` (defaulting a missing count to `1`) over every problem
+     credited with a zone by this rule.
 5. Sort by: `tops` desc → `topAttempts` asc → `zones` desc → `zoneAttempts`
    asc.
 6. Assign standard competition ranking: identical stats on all four fields
