@@ -15,6 +15,13 @@
       "when": 1785957958400,
       "tag": "0001_stiff_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786027647048,
+      "tag": "0002_giant_mordo",
+      "breakpoints": true
     }
   ]
 }

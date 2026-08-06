@@ -49,6 +49,7 @@ export const events = pgTable('events', {
   scoringFormat: text('scoring_format').notNull(),
   slug: text('slug').notNull().unique(),
   timezone: text('timezone').notNull(),
+  date: date('date'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -87,7 +88,7 @@ export const problems = pgTable('problems', {
 export const athletes = pgTable('athletes', {
   id: uuid('id').primaryKey().defaultRandom(),
   fullName: text('full_name').notNull(),
-  documentId: text('document_id'),
+  documentId: text('document_id').unique(),
   birthDate: date('birth_date'),
   gender: genderEnum('gender'),
 });
