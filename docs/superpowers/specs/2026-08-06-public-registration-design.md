@@ -30,6 +30,10 @@ row — that's what makes "historial por competidor" (CLAUDE.md) possible later.
    matches any age.
 3. Athlete picks one eligible category and submits.
 4. Server action:
+   - Re-validates eligibility server-side with the same `isEligible()` used to
+     filter the client's category list (see Architecture) — a submitted
+     `categoryId` that doesn't match the submitted birthdate/gender is rejected
+     even if the client-side filter was somehow bypassed.
    - Looks up `athletes` by `documentId`. Reuses the row if found; otherwise inserts
      a new one from the submitted name/document/birthdate/gender.
    - Inserts into `registrations` (`athleteId`, `categoryId`). `bibNumber` stays
@@ -60,10 +64,16 @@ same shape as everything else already in the codebase (`category-form.tsx`,
 - **`apps/web/app/(public)/inscripcion/[slug]/actions.ts`** — the server action
   described above (`'use server'`), same file-next-to-page convention as every other
   route under `(organizer)/panel`.
-- **Eligibility check** — a pure function (`isEligible(category, birthDate, gender)`)
-  colocated in `registration-form.tsx` since it's UI filtering logic, not domain
-  scoring logic; it doesn't belong in `packages/core` (no IO either way, but it's a
-  one-off form concern, not a reusable domain rule with three call sites).
+- **Eligibility check** — a pure function `isEligible(category, birthDate, gender,
+  today?)` in `packages/core` (new file `packages/core/src/eligibility.ts`, exported
+  from `packages/core/src/index.ts`). It's IO-free, so it satisfies `packages/core`'s
+  dependency rule, and — unlike the earlier draft of this doc, which colocated it in
+  `registration-form.tsx` — it needs to run in *two* places: client-side to filter
+  the category list, and server-side inside the registration action, which must not
+  trust a client-computed category id. One function, two callers, is exactly the
+  "at least three uses" bar CLAUDE.md sets for abstractions... except here the
+  reason isn't reuse-count, it's that skipping the shared function would mean either
+  duplicating the age/gender logic or trusting unvalidated client input server-side.
 
 ## Data model
 
@@ -79,6 +89,8 @@ exists.
   message: "no hay categorías disponibles para tu edad/género en este evento."
 - Duplicate `(athleteId, categoryId)` → caught Postgres unique-violation, friendly
   message, not a 500.
+- Submitted `categoryId` fails server-side `isEligible()` re-check → "esa categoría
+  no corresponde a tu edad o género" — distinct message from the duplicate case.
 - All other insert failures → generic "no se pudo completar la inscripción, intenta
   de nuevo" — same bar as the existing panel server actions, none of which have
   bespoke error taxonomies yet.
@@ -87,13 +99,13 @@ exists.
 
 `isEligible()` is a pure function with real edge cases (no age bounds, only
 `minAge`, only `maxAge`, `gender: null` meaning open, exact boundary ages) — gets a
-Vitest unit test, same bar CLAUDE.md sets for `packages/core`/`packages/scoring` even
-though this one lives in `apps/web` since it's UI-only filtering. Everything else
-(the page, the form, the server action) is verified manually: register with a valid
-combination, attempt a duplicate, attempt an out-of-range category (shouldn't even be
-selectable), submit with zero categories on the event. `apps/web` still has no
-automated test runner wired up (per the auth design's deferral) — not changing that
-here.
+Vitest unit test in `packages/core`, same bar CLAUDE.md already sets for that
+package. Everything else (the page, the form, the server action) is verified
+manually: register with a valid combination, attempt a duplicate, attempt an
+out-of-range category (shouldn't even be selectable client-side, and rejected
+server-side if forced), submit with zero categories on the event. `apps/web` still
+has no automated test runner wired up (per the auth design's deferral) — not
+changing that here.
 
 ## Explicitly deferred out of this slice
 
