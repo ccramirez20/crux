@@ -1,4 +1,4 @@
-export { scoreRound, SCORING_STRATEGIES } from './registry';
+export { scoreRound } from './registry';
 export { scoreClassicTopsZones } from './classic-tops-zones';
 export type {
   ClassicTopsZonesResult,

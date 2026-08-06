@@ -34,9 +34,13 @@ describe('scoreClassicTopsZones', () => {
 
     const result = scoreClassicTopsZones(attempts, config);
 
+    // reg-a: p1 top (topAttempts 1) + p2 top (topAttempts 2) => tops=2, topAttempts=3;
+    // both tops also credit their zone (fallback to topAttempts) => zones=2, zoneAttempts=1+2=3.
+    // reg-b: p1 top (topAttempts 1) => tops=1, topAttempts=1, plus its implied zone (1);
+    // p2 explicit zone (zoneAttempts 1) => zones=2, zoneAttempts=1+1=2.
     expect(result).toEqual([
-      { format: 'classic_tops_zones', rank: 1, tied: false, registrationId: 'reg-a', tops: 2, topAttempts: 3, zones: 0, zoneAttempts: 0 },
-      { format: 'classic_tops_zones', rank: 2, tied: false, registrationId: 'reg-b', tops: 1, topAttempts: 1, zones: 1, zoneAttempts: 1 },
+      { format: 'classic_tops_zones', rank: 1, tied: false, registrationId: 'reg-a', tops: 2, topAttempts: 3, zones: 2, zoneAttempts: 3 },
+      { format: 'classic_tops_zones', rank: 2, tied: false, registrationId: 'reg-b', tops: 1, topAttempts: 1, zones: 2, zoneAttempts: 2 },
     ]);
   });
 
@@ -54,6 +58,28 @@ describe('scoreClassicTopsZones', () => {
       ['reg-a', 1, true],
       ['reg-b', 1, true],
       ['reg-c', 3, false],
+    ]);
+  });
+
+  it('gives a 3-way tie the same rank and skips the next rank by the group size', () => {
+    const attempts = [
+      makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
+      makeAttempt({ registrationId: 'reg-b', problemId: 'p1', sequence: 2, top: true, topAttempts: 1 }),
+      makeAttempt({ registrationId: 'reg-c', problemId: 'p1', sequence: 3, top: true, topAttempts: 1 }),
+      makeAttempt({ registrationId: 'reg-d', problemId: 'p1', sequence: 4, top: false }),
+    ];
+    const config = {
+      problemIds: ['p1'],
+      registrationIds: ['reg-a', 'reg-b', 'reg-c', 'reg-d'],
+    };
+
+    const result = scoreClassicTopsZones(attempts, config);
+
+    expect(result.map((r) => [r.registrationId, r.rank, r.tied])).toEqual([
+      ['reg-a', 1, true],
+      ['reg-b', 1, true],
+      ['reg-c', 1, true],
+      ['reg-d', 4, false],
     ]);
   });
 
@@ -116,6 +142,36 @@ describe('scoreClassicTopsZones', () => {
     const result = scoreClassicTopsZones(attempts, config);
 
     expect(result[0]).toMatchObject({ tops: 1, topAttempts: 4 });
+  });
+
+  it('defaults a missing topAttempts count to 1, not 0', () => {
+    const attempts = [
+      makeAttempt({ registrationId: 'reg-a', problemId: 'p1', sequence: 1, top: true, topAttempts: null }),
+    ];
+    const config = { problemIds: ['p1'], registrationIds: ['reg-a'] };
+
+    const result = scoreClassicTopsZones(attempts, config);
+
+    expect(result[0]).toMatchObject({ tops: 1, topAttempts: 1 });
+  });
+
+  it('credits the zone when a problem is topped without an explicit zone flag, falling back to topAttempts for the count', () => {
+    const attempts = [
+      makeAttempt({
+        registrationId: 'reg-a',
+        problemId: 'p1',
+        sequence: 1,
+        top: true,
+        topAttempts: 3,
+        zone: false,
+        zoneAttempts: null,
+      }),
+    ];
+    const config = { problemIds: ['p1'], registrationIds: ['reg-a'] };
+
+    const result = scoreClassicTopsZones(attempts, config);
+
+    expect(result[0]).toMatchObject({ tops: 1, topAttempts: 3, zones: 1, zoneAttempts: 3 });
   });
 
   it('ignores attempts for a problem outside the round', () => {

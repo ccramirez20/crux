@@ -31,11 +31,14 @@ function aggregate(registrationId: string, currentAttempts: Attempt[]): Aggregat
   for (const attempt of forRegistration) {
     if (attempt.top) {
       tops += 1;
-      topAttempts += attempt.topAttempts ?? 0;
+      topAttempts += attempt.topAttempts ?? 1;
     }
-    if (attempt.zone) {
+    // Topping a problem necessarily passes the zone hold on the way, so it
+    // always counts toward zones too, even if the judge row didn't also set
+    // `zone: true`.
+    if (attempt.zone || attempt.top) {
       zones += 1;
-      zoneAttempts += attempt.zoneAttempts ?? 0;
+      zoneAttempts += attempt.zoneAttempts ?? attempt.topAttempts ?? 1;
     }
   }
   return { registrationId, tops, topAttempts, zones, zoneAttempts };
@@ -46,15 +49,6 @@ function compareAggregates(a: Aggregate, b: Aggregate): number {
   if (a.topAttempts !== b.topAttempts) return a.topAttempts - b.topAttempts;
   if (a.zones !== b.zones) return b.zones - a.zones;
   return a.zoneAttempts - b.zoneAttempts;
-}
-
-function isTiedWith(a: Aggregate, b: Aggregate): boolean {
-  return (
-    a.tops === b.tops &&
-    a.topAttempts === b.topAttempts &&
-    a.zones === b.zones &&
-    a.zoneAttempts === b.zoneAttempts
-  );
 }
 
 export function scoreClassicTopsZones(
@@ -72,7 +66,7 @@ export function scoreClassicTopsZones(
   for (let index = 0; index < aggregates.length; index++) {
     const current = aggregates[index]!;
     const previous = index > 0 ? aggregates[index - 1]! : null;
-    const tiedWithPrevious = previous !== null && isTiedWith(current, previous);
+    const tiedWithPrevious = previous !== null && compareAggregates(current, previous) === 0;
     const rank = tiedWithPrevious ? results[index - 1]!.rank : index + 1;
     results.push({
       format: 'classic_tops_zones',
