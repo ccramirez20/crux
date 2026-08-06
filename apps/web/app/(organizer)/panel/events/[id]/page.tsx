@@ -21,7 +21,7 @@ export default async function EventDetailPage({
   const db = getDb();
 
   const [event] = await db
-    .select({ id: events.id, name: events.name, ownerId: events.ownerId })
+    .select({ id: events.id, name: events.name, ownerId: events.ownerId, scoringFormat: events.scoringFormat })
     .from(events)
     .where(eq(events.id, eventId));
   if (!event) {
@@ -77,6 +77,7 @@ export default async function EventDetailPage({
         eventId={event.id}
         categories={structuredCategories}
         isOwner={event.ownerId === session.user.id}
+        scoringFormat={event.scoringFormat}
       />
     </main>
   );

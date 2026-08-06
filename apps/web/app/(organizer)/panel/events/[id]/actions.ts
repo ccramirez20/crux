@@ -93,6 +93,8 @@ const createProblemInputSchema = z.object({
   roundId: z.string().uuid(),
   number: z.number().int().positive(),
   name: z.string().min(1).optional(),
+  topPoints: z.number().int().nonnegative().optional(),
+  zonePoints: z.number().int().nonnegative().optional(),
 });
 type CreateProblemInput = z.infer<typeof createProblemInputSchema>;
 
