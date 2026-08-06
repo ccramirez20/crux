@@ -31,3 +31,6 @@ export interface Attempt {
   capturedAt: Date;
   createdAt: Date;
 }
+
+export { isEligible, parseDateOnly } from './eligibility';
+export type { EligibilityCategory } from './eligibility';
