@@ -57,6 +57,11 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
     return { ok: false, error: 'Esa categoría no existe para este evento.' };
   }
 
+  const referenceDate = category.eventDate ? parseDateOnly(category.eventDate) : undefined;
+  if (!isEligible(category, parseDateOnly(birthDate), gender, referenceDate)) {
+    return { ok: false, error: 'Esa categoría no corresponde a tu edad o género.' };
+  }
+
   async function findExistingAthlete() {
     const [row] = await db
       .select({ id: athletes.id, birthDate: athletes.birthDate, gender: athletes.gender })
@@ -108,11 +113,6 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
       }
       athleteId = racedAthlete.id;
     }
-  }
-
-  const referenceDate = category.eventDate ? parseDateOnly(category.eventDate) : undefined;
-  if (!isEligible(category, parseDateOnly(birthDate), gender, referenceDate)) {
-    return { ok: false, error: 'Esa categoría no corresponde a tu edad o género.' };
   }
 
   try {
