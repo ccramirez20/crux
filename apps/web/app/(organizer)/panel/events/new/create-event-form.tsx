@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { createEvent } from './actions';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
+import { DISCIPLINE_LABEL, labelFor } from '@/lib/labels';
 
 const DISCIPLINES = ['boulder', 'lead'] as const;
 type Discipline = (typeof DISCIPLINES)[number];
@@ -263,8 +264,11 @@ export function CreateEventForm({
           }}
           className={fieldClass}
         >
-          <option value="boulder">Búlder</option>
-          <option value="lead">Dificultad</option>
+          {DISCIPLINES.map((value) => (
+            <option key={value} value={value}>
+              {labelFor(DISCIPLINE_LABEL, value)}
+            </option>
+          ))}
         </select>
       </div>
 

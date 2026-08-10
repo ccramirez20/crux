@@ -8,7 +8,7 @@ Teléfono real, wifi de casa, servidor de desarrollo por IP de LAN.
 
 | Paso | Resultado |
 |---|---|
-| A-1 … A-5 · búlder | Todo bien, incluida la corrección que no reemplaza |
+| A-1 … A-5 · boulder | Todo bien, incluida la corrección que no reemplaza |
 | B-6 … B-8 | La altura se rechaza si falta. **Falló el decimal**, ver abajo |
 | C-9 … C-11 · sin conexión | **Aprobado**, y repetido con la pantalla bloqueada |
 | D-12 · aislamiento | Comportamiento correcto, el paso estaba mal escrito |
@@ -27,7 +27,7 @@ puntaje sale absurdo. El campo pasó a ser de texto con `inputMode="decimal"` y
 multiplica una altura por diez es exactamente lo que arruina una final.
 
 ### Lo que no era un error: D-12
-El teléfono no volvió a pedir el código al abrir el evento de búlder, pero es lo
+El teléfono no volvió a pedir el código al abrir el evento de boulder, pero es lo
 correcto: ese mismo teléfono ya lo había desbloqueado en A-2, y los códigos se
 guardan por evento (`crux-judge-code:<slug>`). La prueba real del aislamiento ya
 había pasado en B-6, cuando pidió `CUERDA26` para Copa Cuerda **teniendo ya**
@@ -58,7 +58,7 @@ esa.
 
 | Evento | Modalidad | Slug | Código de juez |
 |---|---|---|---|
-| Evento de prueba | búlder | `evento-prueba` | `PARAMO26` |
+| Evento de prueba | boulder | `evento-prueba` | `PARAMO26` |
 | Copa Cuerda 2026 | dificultad | `copa-cuerda` | `CUERDA26` |
 
 - **Evento de prueba**: categorías *Avanzado Masculino* (dorsal 11, Beto Prueba)
@@ -71,7 +71,7 @@ esa.
 
 ## Guion de prueba
 
-### A. Búlder
+### A. Boulder
 - **A-1.** Panel → Evento de prueba → **QR para juzgar** del Bloque 1 → escanear.
 - **A-2.** Escribir un código incorrecto: debe rechazarlo. Luego `PARAMO26`.
 - **A-3.** Poner nombre de juez → aparece el roster con dorsal 11 y "Sin juzgar".
@@ -83,7 +83,7 @@ esa.
 
 ### B. Dificultad
 - **B-6.** Copa Cuerda → QR de *Ruta Chingaza* → debe pedir código **aunque el
-  teléfono ya tenga guardado el de búlder**, y solo aceptar `CUERDA26`. Esta es
+  teléfono ya tenga guardado el de boulder**, y solo aceptar `CUERDA26`. Esta es
   la prueba de aislamiento entre eventos.
 - **B-7.** Tocar a 31 Laura: **no debe haber Zona**, sí un interruptor "Llegó al
   top" y el campo de altura. Guardar `18,5` **con coma** — debe quedar 18,5, no
