@@ -13,6 +13,7 @@
   "dependencies": {
     "@crux/core": "workspace:*",
     "@crux/db": "workspace:*",
+    "@crux/scoring": "workspace:*",
     "better-auth": "^1.6.26",
     "next": "^15.5.22",
     "qrcode": "^1.5.4",

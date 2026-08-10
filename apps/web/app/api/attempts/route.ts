@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { attempts, eq, problems, registrations, rounds, type Db } from '@crux/db';
+import { resolveCurrentAttempts } from '@crux/scoring';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
 
@@ -48,6 +49,45 @@ async function belongToSameCategory(
   }
 
   return registrationRow.categoryId === problemRow.categoryId;
+}
+
+export interface CurrentAttempt {
+  registrationId: string;
+  judgeLabel: string;
+  top: boolean;
+  topAttempts: number | null;
+  zone: boolean;
+  zoneAttempts: number | null;
+  height: number | null;
+}
+
+type RosterResult = { ok: true; attempts: CurrentAttempt[] } | { ok: false; error: string };
+
+// Lets a judge see who on the wall has already been scored — including by a
+// different judge on a different phone, which is the whole point. Which row
+// counts as current is a domain rule, so it comes from @crux/scoring rather
+// than being re-derived here in SQL.
+export async function GET(request: Request): Promise<NextResponse<RosterResult>> {
+  const problemId = new URL(request.url).searchParams.get('problemId');
+  if (!problemId || !z.string().uuid().safeParse(problemId).success) {
+    return NextResponse.json({ ok: false, error: 'Bloque inválido.' }, { status: 400 });
+  }
+
+  const rows = await getDb().select().from(attempts).where(eq(attempts.problemId, problemId));
+  const current = resolveCurrentAttempts(rows, new Set([problemId]));
+
+  return NextResponse.json({
+    ok: true,
+    attempts: current.map((attempt) => ({
+      registrationId: attempt.registrationId,
+      judgeLabel: attempt.judgeLabel,
+      top: attempt.top,
+      topAttempts: attempt.topAttempts,
+      zone: attempt.zone,
+      zoneAttempts: attempt.zoneAttempts,
+      height: attempt.height,
+    })),
+  });
 }
 
 export async function POST(request: Request): Promise<NextResponse<SyncResult>> {
