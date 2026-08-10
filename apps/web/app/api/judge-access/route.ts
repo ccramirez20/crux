@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
+import { clientKey, isRateLimited, recordFailure } from '@/lib/rate-limit';
 
 const inputSchema = z.object({
   slug: z.string().min(1),
@@ -30,6 +31,14 @@ export async function POST(request: Request): Promise<NextResponse<AccessResult>
     return NextResponse.json({ ok: false, error: 'Datos inválidos.' }, { status: 400 });
   }
 
+  const key = clientKey(request);
+  if (isRateLimited(key)) {
+    return NextResponse.json(
+      { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
+      { status: 429 },
+    );
+  }
+
   const db = getDb();
   const [event] = await db
     .select({ id: events.id, judgeCode: events.judgeCode })
@@ -43,6 +52,7 @@ export async function POST(request: Request): Promise<NextResponse<AccessResult>
     event.judgeCode === null ||
     parsed.data.code.trim().toUpperCase() === event.judgeCode.toUpperCase();
   if (!matches) {
+    recordFailure(key);
     return NextResponse.json(
       { ok: false, error: 'Ese código no corresponde a este evento.' },
       { status: 403 },

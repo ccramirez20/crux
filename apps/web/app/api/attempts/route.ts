@@ -4,6 +4,7 @@ import { attempts, categories, eq, events, problems, registrations, rounds, type
 import { resolveCurrentAttempts } from '@crux/scoring';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
+import { clientKey, isRateLimited, recordFailure } from '@/lib/rate-limit';
 
 const attemptInputSchema = z.object({
   clientAttemptId: z.string().uuid(),
@@ -119,7 +120,19 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
   const input: AttemptInput = parsed.data;
   const db = getDb();
 
+  // 429, not 403: the queue treats 403 as "the code changed, go ask again" and
+  // clears it. Being throttled is temporary, so it has to stay non-terminal —
+  // the pending attempts wait on the phone and the next tick retries.
+  const key = clientKey(request);
+  if (isRateLimited(key)) {
+    return NextResponse.json(
+      { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
+      { status: 429 },
+    );
+  }
+
   if (!(await judgeCodeAccepted(db, input.problemId, input.judgeCode))) {
+    recordFailure(key);
     return NextResponse.json(
       { ok: false, error: 'El código del evento no es correcto.' },
       { status: 403 },
