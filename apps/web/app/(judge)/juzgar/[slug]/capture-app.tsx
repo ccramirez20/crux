@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { cardClass, fieldClass, primaryButtonClass } from '@/lib/ui';
+import { AttemptCapture } from './attempt-capture';
 import { BlockPicker } from './block-picker';
 
 export type JudgeProblem = { id: string; number: number; name: string | null };
@@ -131,8 +132,14 @@ export function CaptureApp({
         />
       )}
 
-      {/* ponytail: discipline drives the capture fields; the form lands in the next commit. */}
-      {active && isLocked && <p className="text-sm text-muted">Modalidad: {event.discipline}</p>}
+      {active && isLocked && (
+        <AttemptCapture
+          discipline={event.discipline}
+          problemId={active.problem.id}
+          judgeName={judgeName}
+          registrations={registrations.filter((r) => r.categoryId === active.categoryId)}
+        />
+      )}
     </div>
   );
 }
