@@ -1,21 +1,43 @@
-# Pendiente: prueba en celular de la captura de jueces
+# Prueba en celular de la captura de jueces
 
-Fecha: 2026-08-10 · Estado: **sin probar en dispositivo real**
+Fecha: 2026-08-10 · Estado: **corrida en hardware real y aprobada**
 
-Todo lo de abajo está commiteado y en `main`, con `pnpm test` y `pnpm typecheck`
-en verde y build de producción compilando.
+## Resultado de la corrida
 
-**Nada de la captura de jueces se ha probado en un teléfono real.** Lo verificado
-hasta hoy fue por HTTP contra el servidor de desarrollo y consultando la base:
-eso demuestra que el servidor acepta y guarda lo correcto, y **no** demuestra
-nada sobre el navegador del teléfono — ni IndexedDB, ni el evento `online`, ni
-el comportamiento al bloquear la pantalla, ni Safari. El guion de abajo es
-exactamente esa verificación que falta, y es lo único que queda para cerrar el
-criterio de "terminado" de la etapa 1.
+Teléfono real, wifi de casa, servidor de desarrollo por IP de LAN.
 
-El caso que más importa confirmar en hardware es **C-11**: capturar sin señal en
-una ruta, cambiarse a otra, y que al volver la conexión sincronice también lo de
-la primera.
+| Paso | Resultado |
+|---|---|
+| A-1 … A-5 · búlder | Todo bien, incluida la corrección que no reemplaza |
+| B-6 … B-8 | La altura se rechaza si falta. **Falló el decimal**, ver abajo |
+| C-9 … C-11 · sin conexión | **Aprobado**, y repetido con la pantalla bloqueada |
+| D-12 · aislamiento | Comportamiento correcto, el paso estaba mal escrito |
+| E · base | `sequence` en orden, correcciones por encima |
+
+**C-11 quedó confirmado en hardware**, que era lo único que faltaba para el
+criterio de "terminado" de la etapa 1: capturar sin señal en una ruta, cambiarse
+a otra, bloquear el teléfono, y que al volver la señal se sincronice todo —
+incluida la ruta que ya se había dejado atrás.
+
+### Lo que salió mal: el separador decimal
+Escribir `18,5` guardaba **185**. El teclado en español entrega coma, y un
+`<input type="number">` la descarta en silencio; nadie ve nada raro hasta que el
+puntaje sale absurdo. El campo pasó a ser de texto con `inputMode="decimal"` y
+`apps/web/lib/height.ts` acepta coma y punto. Un error de captura silencioso que
+multiplica una altura por diez es exactamente lo que arruina una final.
+
+### Lo que no era un error: D-12
+El teléfono no volvió a pedir el código al abrir el evento de búlder, pero es lo
+correcto: ese mismo teléfono ya lo había desbloqueado en A-2, y los códigos se
+guardan por evento (`crux-judge-code:<slug>`). La prueba real del aislamiento ya
+había pasado en B-6, cuando pidió `CUERDA26` para Copa Cuerda **teniendo ya**
+`PARAMO26` guardado. El paso quedó reescrito abajo para que verifique eso.
+
+El guion queda como regresión: se vuelve a correr entero antes de cualquier
+evento real, y después de tocar la cola de sincronización o el formulario.
+
+**Sigue sin probarse en iOS/Safari.** Todo lo de arriba es un solo teléfono. Un
+segundo modelo, y sobre todo Safari, es la próxima verificación pendiente.
 
 ## Cómo levantar el entorno
 
@@ -60,10 +82,14 @@ esa.
   reemplazo.
 
 ### B. Dificultad
-- **B-6.** Copa Cuerda → QR de *Ruta Chingaza* → `CUERDA26`.
-- **B-7.** Tocar a 31 Laura: **no debe haber Top ni Zona**, solo altura en
-  metros. Guardar `18.5`.
-- **B-8.** Guardar sin altura: debe pedirla.
+- **B-6.** Copa Cuerda → QR de *Ruta Chingaza* → debe pedir código **aunque el
+  teléfono ya tenga guardado el de búlder**, y solo aceptar `CUERDA26`. Esta es
+  la prueba de aislamiento entre eventos.
+- **B-7.** Tocar a 31 Laura: **no debe haber Zona**, sí un interruptor "Llegó al
+  top" y el campo de altura. Guardar `18,5` **con coma** — debe quedar 18,5, no
+  185. Repetir con punto en otra competidora: las dos formas valen.
+- **B-8.** Guardar sin altura y sin top: debe pedir la altura. Encender "Llegó al
+  top" y guardar sin altura: **ahora sí debe dejar**, y la lista debe decir "Top".
 
 ### C. Sin conexión (lo que de verdad importa)
 - **C-9.** Modo avión → debe aparecer la franja "Sin conexión…".
@@ -72,20 +98,20 @@ esa.
   Laura. Después quitar el modo avión: debe sincronizar **todo, incluida la Ruta
   Chingaza que ya se había dejado atrás**.
 
-> **C-11 es el paso que hay que confirmar en hardware.** Fue un bug corregido
-> sobre el plan original — la cola drenaba solo el bloque activo — y el arreglo
-> nunca se ha ejercitado en un teléfono de verdad. Si algo de todo el guion va a
-> fallar el día del evento, es esto: es el único paso donde el teléfono tiene que
-> recordar trabajo de una pantalla que el juez ya cerró. Vale la pena repetirlo
-> dos veces, y una de ellas bloqueando la pantalla mientras está en modo avión.
+> **C-11 es el paso crítico y ya pasó en hardware** (2026-08-10), incluida la
+> variante de bloquear la pantalla en modo avión antes de volver a la señal. Fue
+> un bug corregido sobre el plan original — la cola drenaba solo el bloque
+> activo — y es el único paso donde el teléfono tiene que recordar trabajo de una
+> pantalla que el juez ya cerró. Repetirlo siempre que se toque la cola.
 
-### D. Aislamiento entre eventos
-- **D-12.** Con el teléfono ya desbloqueado en Copa Cuerda, abrir el QR del
-  evento de búlder: debe pedir `PARAMO26` otra vez (los códigos se guardan por
-  evento).
-- **D-13.** Escribir mal el código diez veces seguidas: al onceavo debe salir
-  "Demasiados intentos seguidos" (freno nuevo, ver ADR 0002). Se libera solo a
-  los 5 minutos, o reiniciando `pnpm dev` — el contador vive en memoria.
+### D. Códigos
+- **D-12.** Volver al QR de un evento **ya desbloqueado en este teléfono**: no
+  debe pedir el código otra vez. El código se guarda por evento y sigue ahí. El
+  aislamiento entre eventos se prueba en B-6, no aquí.
+- **D-13.** En un evento sin desbloquear (o después de borrar los datos del
+  sitio), escribir mal el código **cinco veces seguidas**: a la sexta debe salir
+  "Demasiados intentos seguidos" (ver ADR 0002). Se libera solo a los 5 minutos,
+  o reiniciando `pnpm dev` — el contador vive en memoria.
 
 ### E. Verificación final
 `pnpm db:studio` → tabla `attempts`: `sequence` en el mismo orden en que se
@@ -106,7 +132,7 @@ corrige.
 
 ## Deuda cerrada el 2026-08-10 (después de escribir este guion)
 
-- **Rate limiting.** `apps/web/lib/rate-limit.ts`: 10 códigos fallidos por IP en
+- **Rate limiting.** `apps/web/lib/rate-limit.ts`: 5 códigos fallidos por IP en
   5 minutos → 429. Solo cuenta fallos, nunca capturas válidas. Ver ADR 0002 y el
   paso D-13.
 - **Un organizador podía leer eventos ajenos.** `/panel/events/[id]` filtraba por
@@ -127,6 +153,21 @@ Falta poner la variable en `apps/web/.env.example` (no la puedo escribir yo):
 # si la app se sirve desde un dominio distinto al de BETTER_AUTH_URL.
 BETTER_AUTH_TRUSTED_ORIGINS=
 ```
+
+## Cambios que salieron de la corrida
+
+- **Decimal con coma** en la altura (`apps/web/lib/height.ts`, con tests).
+- **Top en dificultad**: interruptor en el formulario y en el scoring, un top
+  gana sobre cualquier altura y dos tops empatan. Ver ADR 0003.
+- **El freno bajó de 10 a 5** códigos fallidos.
+- **Feedback al abrir un evento**: `loading.tsx` con la silueta de la página, en
+  vez de la lista congelada mientras corren las consultas.
+- **Panel del organizador rediseñado**: la estructura se lee como una vía —
+  línea vertical con un nodo por nivel y un color por nivel (pine categoría,
+  bark ronda, gold bloque) — los formularios se pliegan detrás de un botón y
+  tienen etiquetas reales en vez de placeholders. El QR se abre centrado.
+- **"Ruta" en vez de "bloque"** cuando la modalidad es dificultad
+  (`problemUnit` en `lib/labels.ts`). En el código sigue siendo `Problem`.
 
 ## Lo que sigue después
 
