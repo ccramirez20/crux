@@ -5,6 +5,7 @@ import { cardClass } from '@/lib/ui';
 import { CategoryForm } from './category-form';
 import { RoundForm } from './round-form';
 import { ProblemForm } from './problem-form';
+import { ProblemQr } from './problem-qr';
 
 type Problem = { id: string; number: number; name: string | null };
 type Round = { id: string; type: string; order: number; problems: Problem[] };
@@ -31,11 +32,13 @@ export function EventStructure({
   categories,
   isOwner,
   scoringFormat,
+  slug,
 }: {
   eventId: string;
   categories: Category[];
   isOwner: boolean;
   scoringFormat: string;
+  slug: string;
 }) {
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
   const [openRounds, setOpenRounds] = useState<Record<string, boolean>>({});
@@ -93,10 +96,13 @@ export function EventStructure({
                               scoringFormat={scoringFormat}
                             />
                           )}
-                          <ul className="text-sm">
+                          <ul className="flex flex-col gap-2 text-sm">
                             {round.problems.map((problem) => (
-                              <li key={problem.id}>
-                                #{problem.number} {problem.name ?? ''}
+                              <li key={problem.id} className="flex items-start justify-between gap-2">
+                                <span>
+                                  #{problem.number} {problem.name ?? ''}
+                                </span>
+                                <ProblemQr slug={slug} problemId={problem.id} />
                               </li>
                             ))}
                           </ul>
