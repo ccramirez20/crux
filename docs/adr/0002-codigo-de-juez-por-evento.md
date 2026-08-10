@@ -40,9 +40,16 @@ recibe un booleano `requiresJudgeCode`.
   Util, pero no previene: se entera despues de que paso.
 
 ## Consecuencias
-- **No hay rate limiting** en `POST /api/attempts` ni en `/api/judge-access`.
-  Con 8 caracteres sobre 32 simbolos son ~10^12 combinaciones, suficiente por
-  ahora, pero el dia que haya un evento con publico hostil hay que ponerlo.
+- ~~**No hay rate limiting**~~ **Resuelto el 2026-08-10.** `apps/web/lib/rate-limit.ts`
+  cuenta *solo los codigos fallidos* por IP (10 en 5 minutos) y responde 429 en
+  `POST /api/attempts` y en `/api/judge-access`. Cuenta solo los fallos a
+  proposito: un juez que vuelve de una zona sin senal drena la cola en rafaga y
+  frenar eso perderia capturas reales. El 429 es deliberadamente distinto del
+  403 porque la cola trata el 403 como "cambiaron el codigo" y lo borra,
+  mientras que estar frenado es temporal y debe reintentarse. El contador vive
+  en memoria del proceso: se reinicia con el servidor y con mas de una instancia
+  cada una lleva el suyo. Alcanza para un evento en una maquina; el dia que haya
+  varias instancias, el contador se mueve a una tabla.
 - El codigo se guarda en `localStorage`, legible por JS en ese dispositivo. Es
   un secreto compartido de evento, no una contrasena personal; se acepta.
 - Un codigo equivocado devuelve 403 y la cola **no** se descarta: los intentos

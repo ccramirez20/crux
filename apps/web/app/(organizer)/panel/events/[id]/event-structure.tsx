@@ -51,13 +51,11 @@ function problemCount(category: Category): string {
 export function EventStructure({
   eventId,
   categories,
-  isOwner,
   scoringFormat,
   slug,
 }: {
   eventId: string;
   categories: Category[];
-  isOwner: boolean;
   scoringFormat: string;
   slug: string;
 }) {
@@ -73,7 +71,7 @@ export function EventStructure({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-4">
-      {isOwner && <CategoryForm eventId={eventId} />}
+      <CategoryForm eventId={eventId} />
 
       {categories.length === 0 && (
         <p className={`${cardClass} text-sm text-muted`}>
@@ -103,7 +101,7 @@ export function EventStructure({
 
             {openCategories[category.id] && (
               <div className="mt-4 flex flex-col gap-3 border-l-2 border-sage pl-4">
-                {isOwner && <RoundForm eventId={eventId} categoryId={category.id} />}
+                <RoundForm eventId={eventId} categoryId={category.id} />
                 {category.rounds.length === 0 && (
                   <p className="text-sm text-muted">
                     Sin rondas. Agrega al menos la clasificatoria para poder crear bloques.
@@ -130,14 +128,12 @@ export function EventStructure({
 
                       {openRounds[round.id] && (
                         <div className="mt-3 flex flex-col gap-2 border-l-2 border-sage pl-4">
-                          {isOwner && (
-                            <ProblemForm
-                              eventId={eventId}
-                              roundId={round.id}
-                              nextNumber={round.problems.length + 1}
-                              scoringFormat={scoringFormat}
-                            />
-                          )}
+                          <ProblemForm
+                            eventId={eventId}
+                            roundId={round.id}
+                            nextNumber={round.problems.length + 1}
+                            scoringFormat={scoringFormat}
+                          />
                           {round.problems.length === 0 ? (
                             <p className="text-sm text-muted">
                               Sin bloques todavía. Cada bloque que agregues genera su propio QR

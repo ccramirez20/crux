@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { categories, eq, events, problems, rounds } from '@crux/db';
+import { and, categories, eq, events, problems, rounds } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
@@ -24,11 +24,15 @@ export default async function EventDetailPage({
 
   const db = getDb();
 
+  // Scoped by owner, not just by id: this page hands out every problem id of the
+  // event, and a problem id is the judge-capture URL. Filtering only the edit
+  // forms left any signed-in organizer able to read — and then write attempts
+  // into — someone else's competition by guessing nothing more than the event id.
+  // An event that isn't yours is indistinguishable from one that doesn't exist.
   const [event] = await db
     .select({
       id: events.id,
       name: events.name,
-      ownerId: events.ownerId,
       scoringFormat: events.scoringFormat,
       discipline: events.discipline,
       date: events.date,
@@ -36,7 +40,7 @@ export default async function EventDetailPage({
       judgeCode: events.judgeCode,
     })
     .from(events)
-    .where(eq(events.id, eventId));
+    .where(and(eq(events.id, eventId), eq(events.ownerId, session.user.id)));
   if (!event) {
     redirect('/panel');
   }
@@ -127,7 +131,7 @@ export default async function EventDetailPage({
 
       <div className="flex w-full max-w-2xl flex-col gap-3">
         <ShareLink slug={event.slug} />
-        {event.ownerId === session.user.id && event.judgeCode && (
+        {event.judgeCode && (
           <div className={`${cardClass} flex flex-col gap-1`}>
             <span className="font-display font-semibold">Código para los jueces</span>
             <p className="text-sm text-muted">
@@ -152,7 +156,6 @@ export default async function EventDetailPage({
       <EventStructure
         eventId={event.id}
         categories={structuredCategories}
-        isOwner={event.ownerId === session.user.id}
         scoringFormat={event.scoringFormat}
         slug={event.slug}
       />

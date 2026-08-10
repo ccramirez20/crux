@@ -21,6 +21,7 @@
     "typescript": "^5.7.2"
   },
   "pnpm": {
+    "comment": "Pines de seguridad. Duplicados en pnpm-workspace.yaml: pnpm 9 (el de packageManager) solo lee estos; pnpm 10 solo lee los de alla. Si cambias uno, cambia el otro.",
     "overrides": {
       "postcss": ">=8.5.23",
       "sharp": ">=0.35.0",

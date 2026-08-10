@@ -8,7 +8,7 @@
     "build": "next build",
     "lint": "echo 'sin lint todavia'",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'sin tests todavia'"
+    "test": "vitest run"
   },
   "dependencies": {
     "@crux/core": "workspace:*",
@@ -29,6 +29,7 @@
     "@types/react-dom": "^19.2.4",
     "dotenv": "^17.4.2",
     "postcss": "^8.5.25",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "vitest": "^4.1.10"
   }
 }

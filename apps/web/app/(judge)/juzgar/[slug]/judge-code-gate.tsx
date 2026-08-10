@@ -35,7 +35,11 @@ export function JudgeCodeGate({
         onUnlocked(code.trim().toUpperCase(), roster);
         return;
       }
-      setError('Ese código no corresponde a este evento. Pídeselo a quien organiza.');
+      setError(
+        response.status === 429
+          ? 'Demasiados intentos seguidos. Espera unos minutos antes de volver a probar.'
+          : 'Ese código no corresponde a este evento. Pídeselo a quien organiza.',
+      );
     } catch {
       setError(
         'No hay conexión para comprobar el código. Conéctate un momento: la lista de competidores se descarga una sola vez.',

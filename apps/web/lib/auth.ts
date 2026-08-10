@@ -26,7 +26,7 @@ function configuredTrustedOrigins(): string[] {
     .filter(Boolean);
 }
 
-function trustedOrigins(request?: Request): string[] {
+export function trustedOrigins(request?: Request): string[] {
   const allowed = configuredTrustedOrigins();
   if (!request || process.env.NODE_ENV === 'production') {
     return allowed;
