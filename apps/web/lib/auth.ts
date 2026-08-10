@@ -10,6 +10,31 @@ const signUpBodySchema = z.object({
   accessCode: z.string().optional(),
 });
 
+// A judge's phone reaches the dev server by LAN IP, not localhost, and Better
+// Auth rejects any origin that isn't its baseURL — which is what "Invalid
+// origin" means when you open the panel from another device on the wifi.
+// Private-range origins are trusted in development so that works out of the
+// box; a public origin is never trusted here, so a random internet page still
+// can't drive your dev session. Production reads an explicit allowlist.
+const PRIVATE_ORIGIN =
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/;
+
+function configuredTrustedOrigins(): string[] {
+  return (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function trustedOrigins(request?: Request): string[] {
+  const allowed = configuredTrustedOrigins();
+  if (!request || process.env.NODE_ENV === 'production') {
+    return allowed;
+  }
+  const origin = request.headers.get('origin');
+  return origin && PRIVATE_ORIGIN.test(origin) ? [...allowed, origin] : allowed;
+}
+
 function createAuth() {
   return betterAuth({
     database: drizzleAdapter(getDb(), {
@@ -20,6 +45,7 @@ function createAuth() {
       enabled: true,
       requireEmailVerification: false,
     },
+    trustedOrigins,
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path === '/sign-up/email') {

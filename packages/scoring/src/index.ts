@@ -1,4 +1,5 @@
 export { scoreRound } from './registry';
+export { resolveCurrentAttempts } from './resolve-attempts';
 export { scoreClassicTopsZones } from './classic-tops-zones';
 export { scoreIfscBoulder } from './ifsc-boulder';
 export { scoreLeaguePoints } from './league-points';

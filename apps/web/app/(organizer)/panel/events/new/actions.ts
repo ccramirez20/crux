@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { eq, events, organizations } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
+import { isUniqueViolation } from '@/lib/db-errors';
 
 const createEventInputSchema = z.object({
   organization: z.discriminatedUnion('mode', [
@@ -25,6 +26,7 @@ const createEventInputSchema = z.object({
     'max_height',
   ]),
   slug: z.string().regex(/^[a-z0-9-]+$/),
+  judgeCode: z.string().min(4).max(32),
   timezone: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
@@ -32,10 +34,6 @@ const createEventInputSchema = z.object({
 type CreateEventInput = z.infer<typeof createEventInputSchema>;
 
 type CreateEventResult = { ok: true } | { ok: false; error: string };
-
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
-}
 
 export async function createEvent(input: CreateEventInput): Promise<CreateEventResult> {
   const parsed = createEventInputSchema.safeParse(input);
