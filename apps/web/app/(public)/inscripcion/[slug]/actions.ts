@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { GENDERS, isEligible, parseDateOnly } from '@crux/core';
 import { athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
+import { isUniqueViolation } from '@/lib/db-errors';
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -16,21 +17,6 @@ const registerInputSchema = z.object({
   gender: z.enum(GENDERS),
 });
 type RegisterAthleteInput = z.infer<typeof registerInputSchema>;
-
-function hasPostgresUniqueCode(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
-}
-
-// Drizzle wraps the driver error in a query-failure Error whose `.cause` holds
-// the real postgres.js PostgresError (where `.code` actually lives) — checking
-// only the top-level error lets a duplicate registration crash as a 500 instead
-// of returning the friendly message below.
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    hasPostgresUniqueCode(error) ||
-    (typeof error === 'object' && error !== null && 'cause' in error && hasPostgresUniqueCode(error.cause))
-  );
-}
 
 export async function registerAthlete(input: RegisterAthleteInput): Promise<ActionResult> {
   const parsed = registerInputSchema.safeParse(input);
