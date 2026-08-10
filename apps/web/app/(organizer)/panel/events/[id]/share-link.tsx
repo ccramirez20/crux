@@ -37,7 +37,15 @@ async function copyToClipboard(text: string): Promise<boolean> {
 
 type CopyState = 'idle' | 'copied' | 'failed';
 
-export function ShareLink({ slug }: { slug: string }) {
+export function ShareLink({
+  path,
+  title,
+  description,
+}: {
+  path: string;
+  title: string;
+  description: string;
+}) {
   const [state, setState] = useState<CopyState>('idle');
   const [url, setUrl] = useState('');
 
@@ -45,8 +53,8 @@ export function ShareLink({ slug }: { slug: string }) {
   // already using: localhost in dev, the LAN IP at the gym, the real domain
   // later. Read after mount so the server render and the client agree.
   useEffect(() => {
-    setUrl(`${window.location.origin}/inscripcion/${slug}`);
-  }, [slug]);
+    setUrl(`${window.location.origin}${path}`);
+  }, [path]);
 
   useEffect(() => {
     if (state === 'idle') {
@@ -58,13 +66,11 @@ export function ShareLink({ slug }: { slug: string }) {
 
   return (
     <div className={`${cardClass} flex flex-col gap-2`}>
-      <span className="font-display font-semibold">Enlace de inscripción</span>
-      <p className="text-sm text-muted">
-        Compártelo por WhatsApp o redes. Quien lo abra se inscribe sin crear cuenta.
-      </p>
+      <span className="font-display font-semibold">{title}</span>
+      <p className="text-sm text-muted">{description}</p>
       <div className="flex flex-wrap items-center gap-2">
         <code className="min-w-0 flex-1 truncate rounded bg-stone px-3 py-2 text-sm" title={url}>
-          {url || `/inscripcion/${slug}`}
+          {url || path}
         </code>
         <button
           type="button"

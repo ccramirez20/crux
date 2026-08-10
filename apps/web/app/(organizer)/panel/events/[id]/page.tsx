@@ -136,7 +136,16 @@ export default async function EventDetailPage({
       </div>
 
       <div className="flex w-full max-w-2xl flex-col gap-3">
-        <ShareLink slug={event.slug} />
+        <ShareLink
+          path={`/inscripcion/${event.slug}`}
+          title="Enlace de inscripción"
+          description="Compártelo por WhatsApp o redes. Quien lo abra se inscribe sin crear cuenta."
+        />
+        <ShareLink
+          path={`/resultados/${event.slug}`}
+          title="Tabla de resultados"
+          description="La pantalla pública, para proyectar el día del evento. Se actualiza sola y no pide cuenta."
+        />
         {event.judgeCode && (
           <div className={`${cardClass} flex flex-col gap-1`}>
             <span className="font-display font-semibold">Código para los jueces</span>

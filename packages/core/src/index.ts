@@ -12,12 +12,18 @@ export type Gender = (typeof GENDERS)[number];
  * Identifier for a packages/scoring strategy. The registry mapping each
  * value to its score() function lives in packages/scoring, not here — core
  * stays IO- and logic-free.
+ *
+ * A list and not just a union because `events.scoring_format` is a plain text
+ * column: whoever reads it has to check the value against something at
+ * runtime before handing it to the registry.
  */
-export type ScoringFormat =
-  | 'ifsc_boulder'
-  | 'classic_tops_zones'
-  | 'league_points'
-  | 'max_height';
+export const SCORING_FORMATS = [
+  'ifsc_boulder',
+  'classic_tops_zones',
+  'league_points',
+  'max_height',
+] as const;
+export type ScoringFormat = (typeof SCORING_FORMATS)[number];
 
 export interface Attempt {
   id: string;
