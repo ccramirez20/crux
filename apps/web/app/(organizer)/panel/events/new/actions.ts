@@ -26,6 +26,7 @@ const createEventInputSchema = z.object({
     'max_height',
   ]),
   slug: z.string().regex(/^[a-z0-9-]+$/),
+  judgeCode: z.string().min(4).max(32),
   timezone: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });

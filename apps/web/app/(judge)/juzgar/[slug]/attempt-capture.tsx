@@ -26,12 +26,16 @@ export function AttemptCapture({
   discipline,
   problemId,
   judgeName,
+  judgeCode,
   registrations,
+  onCodeRejected,
 }: {
   discipline: string;
   problemId: string;
   judgeName: string;
+  judgeCode: string | null;
   registrations: JudgeRegistration[];
+  onCodeRejected: () => void;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
@@ -82,6 +86,14 @@ export function AttemptCapture({
           break;
         }
 
+        // A wrong event code is fixable, and the captures are real work — keep
+        // them queued, stop sending, and send the judge back to the code
+        // screen. Silently retrying forever would strand a whole round.
+        if (response.status === 403) {
+          onCodeRejected();
+          break;
+        }
+
         // A 400 is the server refusing this payload permanently (bad shape, or
         // a registration and block from different categories). Retrying it
         // forever would pin a zombie row in the queue, so drop it and let the
@@ -118,7 +130,7 @@ export function AttemptCapture({
     } finally {
       drainingRef.current = false;
     }
-  }, [problemId]);
+  }, [problemId, onCodeRejected]);
 
   useEffect(() => {
     void sync();
@@ -181,6 +193,7 @@ export function AttemptCapture({
       registrationId: selected.id,
       problemId,
       judgeLabel: judgeName,
+      judgeCode,
       capturedAt: new Date().toISOString(),
       ...values,
     };

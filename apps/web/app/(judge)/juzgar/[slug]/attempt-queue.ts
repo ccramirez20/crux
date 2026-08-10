@@ -19,6 +19,8 @@ export interface PendingAttempt {
   zoneAttempts: number | null;
   height: number | null;
   capturedAt: string;
+  /** The event's judge code, carried per attempt so a queued capture still authenticates on sync. */
+  judgeCode: string | null;
 }
 
 // crypto.randomUUID() only exists in a secure context, and a judge reaches the

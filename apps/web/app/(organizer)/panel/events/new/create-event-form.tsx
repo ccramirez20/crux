@@ -31,6 +31,17 @@ const DEFAULT_SCORING_FORMAT: Record<Discipline, ScoringFormat> = {
   lead: 'max_height',
 };
 
+// No I/O/0/1: these get read off a printed sheet and typed on a phone at the
+// wall. 8 characters from a 32-symbol alphabet is ~10^12 combinations, which
+// is what stands between the code and someone guessing it — there is no rate
+// limiting on the sync endpoint yet.
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generateJudgeCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, (byte) => CODE_ALPHABET[byte % CODE_ALPHABET.length]).join('');
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -71,6 +82,7 @@ export function CreateEventForm({
   const [scoringFormat, setScoringFormat] = useState<ScoringFormat>(
     DEFAULT_SCORING_FORMAT.boulder,
   );
+  const [judgeCode, setJudgeCode] = useState(generateJudgeCode);
   const [timezone, setTimezone] = useState('America/Bogota');
   const [showAllTimezones, setShowAllTimezones] = useState(false);
   const [date, setDate] = useState('');
@@ -103,6 +115,7 @@ export function CreateEventForm({
       discipline,
       scoringFormat,
       slug,
+      judgeCode,
       timezone,
       date: date || undefined,
     });
@@ -277,6 +290,35 @@ export function CreateEventForm({
         </select>
         <p className="text-xs text-muted">
           Define cómo se ordena la tabla de resultados y cómo se resuelven los empates.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="judge-code" className="text-sm font-medium text-bark">
+          Código para los jueces
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            id="judge-code"
+            type="text"
+            value={judgeCode}
+            onChange={(event) => setJudgeCode(event.target.value.toUpperCase())}
+            required
+            minLength={4}
+            maxLength={32}
+            className={`${fieldClass} min-w-0 flex-1 font-display font-bold tracking-widest`}
+          />
+          <button
+            type="button"
+            onClick={() => setJudgeCode(generateJudgeCode())}
+            className="shrink-0 rounded-lg border-[1.5px] border-pine px-3 py-2 text-sm font-semibold text-pine transition hover:bg-pine hover:text-white"
+          >
+            Otro
+          </button>
+        </div>
+        <p className="text-xs text-muted">
+          Quien escanee el QR de un bloque tendrá que escribirlo antes de poder registrar intentos.
+          Dáselo solo a tus jueces.
         </p>
       </div>
 

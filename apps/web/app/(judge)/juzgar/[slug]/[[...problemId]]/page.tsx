@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { athletes, categories, eq, events, problems, registrations, rounds } from '@crux/db';
+import { athletes, categories, eq, events, problems, registrations, rounds, sql } from '@crux/db';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
 import { CaptureApp, type JudgeCategory } from '../capture-app';
@@ -22,7 +22,14 @@ export default async function JuzgarPage({
   const db = getDb();
 
   const [event] = await db
-    .select({ id: events.id, slug: events.slug, discipline: events.discipline })
+    // judgeCode itself is never sent to this page — it is public, and shipping
+    // the secret to the screen that asks for it would be theatre.
+    .select({
+      id: events.id,
+      slug: events.slug,
+      discipline: events.discipline,
+      requiresJudgeCode: sql<boolean>`${events.judgeCode} is not null`,
+    })
     .from(events)
     .where(eq(events.slug, slug));
   if (!event) {
@@ -108,6 +115,7 @@ export default async function JuzgarPage({
         categories={structuredCategories}
         registrations={eventRegistrations}
         lockedProblemId={lockedProblemId}
+        requiresJudgeCode={event.requiresJudgeCode}
       />
     </main>
   );

@@ -6,6 +6,7 @@ import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
 import { DISCIPLINE_LABEL, SCORING_FORMAT_LABEL, formatEventDate, labelFor } from '@/lib/labels';
+import { cardClass } from '@/lib/ui';
 import { EventStructure } from './event-structure';
 import { ShareLink } from './share-link';
 
@@ -32,6 +33,7 @@ export default async function EventDetailPage({
       discipline: events.discipline,
       date: events.date,
       slug: events.slug,
+      judgeCode: events.judgeCode,
     })
     .from(events)
     .where(eq(events.id, eventId));
@@ -123,8 +125,20 @@ export default async function EventDetailPage({
         </p>
       </div>
 
-      <div className="w-full max-w-2xl">
+      <div className="flex w-full max-w-2xl flex-col gap-3">
         <ShareLink slug={event.slug} />
+        {event.ownerId === session.user.id && event.judgeCode && (
+          <div className={`${cardClass} flex flex-col gap-1`}>
+            <span className="font-display font-semibold">Código para los jueces</span>
+            <p className="text-sm text-muted">
+              Quien escanee el QR de un bloque tendrá que escribirlo antes de registrar intentos.
+              Dáselo solo a tus jueces, no lo pegues junto al QR.
+            </p>
+            <code className="mt-1 w-fit rounded bg-stone px-3 py-2 font-display text-xl font-bold tracking-widest">
+              {event.judgeCode}
+            </code>
+          </div>
+        )}
       </div>
 
       <div className="w-full max-w-2xl">

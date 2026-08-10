@@ -48,6 +48,10 @@ export const events = pgTable('events', {
   discipline: disciplineEnum('discipline').notNull(),
   scoringFormat: text('scoring_format').notNull(),
   slug: text('slug').notNull().unique(),
+  // Shared secret a judge types once per device before capturing. Null means
+  // the event predates this column and stays open — the check only applies
+  // when the organizer set a code.
+  judgeCode: text('judge_code'),
   timezone: text('timezone').notNull(),
   date: date('date'),
   createdAt: timestamp('created_at', { withTimezone: true })

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { cardClass, fieldClass, primaryButtonClass } from '@/lib/ui';
 import { AttemptCapture } from './attempt-capture';
 import { BlockPicker } from './block-picker';
+import { JudgeCodeGate } from './judge-code-gate';
 
 export type JudgeProblem = { id: string; number: number; name: string | null };
 export type JudgeRound = { id: string; type: string; order: number; problems: JudgeProblem[] };
@@ -17,6 +18,12 @@ export type JudgeRegistration = {
 export type JudgeEvent = { id: string; slug: string; discipline: string };
 
 const JUDGE_NAME_KEY = 'crux-judge-name';
+
+// Per event: a judge working two events on the same phone shouldn't have one
+// code silently shadow the other.
+function judgeCodeKey(slug: string): string {
+  return `crux-judge-code:${slug}`;
+}
 
 function findProblem(
   categories: JudgeCategory[],
@@ -38,13 +45,16 @@ export function CaptureApp({
   categories,
   registrations,
   lockedProblemId,
+  requiresJudgeCode,
 }: {
   event: JudgeEvent;
   categories: JudgeCategory[];
   registrations: JudgeRegistration[];
   lockedProblemId: string | null;
+  requiresJudgeCode: boolean;
 }) {
   const [judgeName, setJudgeName] = useState<string | null>(null);
+  const [judgeCode, setJudgeCode] = useState<string | null>(null);
   const [nameLoaded, setNameLoaded] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -56,8 +66,9 @@ export function CaptureApp({
   // page load for a judge who already set it.
   useEffect(() => {
     setJudgeName(localStorage.getItem(JUDGE_NAME_KEY));
+    setJudgeCode(localStorage.getItem(judgeCodeKey(event.slug)));
     setNameLoaded(true);
-  }, []);
+  }, [event.slug]);
 
   function storeJudgeName(name: string) {
     const trimmed = name.trim();
@@ -72,9 +83,24 @@ export function CaptureApp({
     return null;
   }
 
+  // Access first, identity second: asking someone to introduce themselves and
+  // only then telling them they can't come in is the wrong order.
+  if (requiresJudgeCode && judgeCode === null) {
+    return (
+      <JudgeCodeGate
+        slug={event.slug}
+        onUnlocked={(code) => {
+          localStorage.setItem(judgeCodeKey(event.slug), code);
+          setJudgeCode(code);
+        }}
+      />
+    );
+  }
+
   if (judgeName === null) {
     return (
       <div className="flex w-full max-w-sm flex-col gap-3">
+        <h2 className="font-display text-xl font-bold">¿Quién va a juzgar?</h2>
         <p className="text-sm text-muted">
           Tu nombre queda guardado en cada intento que registres, para poder resolver dudas
           después.
@@ -87,7 +113,7 @@ export function CaptureApp({
           className={fieldClass}
         />
         <button type="button" onClick={() => storeJudgeName(nameDraft)} className={primaryButtonClass}>
-          Empezar a juzgar
+          Continuar
         </button>
       </div>
     );
@@ -168,7 +194,12 @@ export function CaptureApp({
           discipline={event.discipline}
           problemId={active.problem.id}
           judgeName={judgeName}
+          judgeCode={judgeCode}
           registrations={registrations.filter((r) => r.categoryId === active.categoryId)}
+          onCodeRejected={() => {
+            localStorage.removeItem(judgeCodeKey(event.slug));
+            setJudgeCode(null);
+          }}
         />
       )}
     </div>

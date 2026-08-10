@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { attempts, eq, problems, registrations, rounds, type Db } from '@crux/db';
+import { attempts, categories, eq, events, problems, registrations, rounds, type Db } from '@crux/db';
 import { resolveCurrentAttempts } from '@crux/scoring';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
@@ -16,6 +16,7 @@ const attemptInputSchema = z.object({
   zoneAttempts: z.number().int().positive().nullable(),
   height: z.number().nonnegative().nullable(),
   capturedAt: z.string().datetime(),
+  judgeCode: z.string().nullable(),
 });
 type AttemptInput = z.infer<typeof attemptInputSchema>;
 
@@ -49,6 +50,24 @@ async function belongToSameCategory(
   }
 
   return registrationRow.categoryId === problemRow.categoryId;
+}
+
+// The judge screen has no login — the QR is public and anyone at the gym can
+// scan it — so this is the only place the event's code is actually enforced.
+// The client checks it too, but only to fail fast; a client check protects
+// nobody.
+async function judgeCodeAccepted(db: Db, problemId: string, given: string | null): Promise<boolean> {
+  const [row] = await db
+    .select({ judgeCode: events.judgeCode })
+    .from(problems)
+    .innerJoin(rounds, eq(problems.roundId, rounds.id))
+    .innerJoin(categories, eq(rounds.categoryId, categories.id))
+    .innerJoin(events, eq(categories.eventId, events.id))
+    .where(eq(problems.id, problemId));
+  if (!row || row.judgeCode === null) {
+    return true;
+  }
+  return given !== null && given.trim().toUpperCase() === row.judgeCode.toUpperCase();
 }
 
 export interface CurrentAttempt {
@@ -99,6 +118,13 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
 
   const input: AttemptInput = parsed.data;
   const db = getDb();
+
+  if (!(await judgeCodeAccepted(db, input.problemId, input.judgeCode))) {
+    return NextResponse.json(
+      { ok: false, error: 'El código del evento no es correcto.' },
+      { status: 403 },
+    );
+  }
 
   const inScope = await belongToSameCategory(db, input.registrationId, input.problemId);
   if (!inScope) {
