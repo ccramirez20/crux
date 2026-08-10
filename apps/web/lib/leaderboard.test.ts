@@ -126,6 +126,46 @@ describe('buildLeaderboard', () => {
     expect(round.rows).toEqual([]);
   });
 
+  it('reconstruye el adelantamiento re-puntuando la ronda por prefijos', () => {
+    // Beto topa los dos bloques primero; después Ana topa los dos y lo pasa por
+    // haber usado menos intentos. La línea de tiempo tiene que mostrar el cruce,
+    // no solo el resultado final.
+    const round = qualification([
+      attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 1, top: true, topAttempts: 3 }),
+      attempt({ registrationId: 'reg-beto', problemId: 'p2', sequence: 2, top: true, topAttempts: 3 }),
+      attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 3, top: true, topAttempts: 1 }),
+      attempt({ registrationId: 'reg-ana', problemId: 'p2', sequence: 4, top: true, topAttempts: 1 }),
+    ]);
+
+    const first = round.timeline[0]!;
+    const last = round.timeline.at(-1)!;
+    expect(first.ranks['reg-beto']).toBe(1);
+    expect(last.ranks['reg-ana']).toBe(1);
+    expect(last.ranks['reg-beto']).toBe(2);
+    expect(last.attempts).toBe(4);
+  });
+
+  it('no repite un punto de la línea de tiempo cuando hay menos intentos que pasos', () => {
+    const round = qualification([
+      attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
+      attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 2, zone: true, zoneAttempts: 1 }),
+    ]);
+
+    expect(round.timeline.map((p) => p.attempts)).toEqual([1, 2]);
+  });
+
+  it('mide la dificultad de cada bloque por lo que hizo el campo, sin contar el top como zona', () => {
+    const round = qualification([
+      attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
+      attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 2, zone: true, zoneAttempts: 2 }),
+    ]);
+
+    const p1 = round.problemStats.find((s) => s.problemId === 'p1')!;
+    expect(p1).toMatchObject({ tops: 1, zones: 1, field: 2 });
+    // Nadie tocó el segundo bloque: sigue en la gráfica, en cero.
+    expect(round.problemStats.find((s) => s.problemId === 'p2')).toMatchObject({ tops: 0, zones: 0, field: 2 });
+  });
+
   it('no inventa un podio en una ronda que todavía no tiene bloques', () => {
     const payload = buildLeaderboard(event, [treeRow({})], registrations, []);
 

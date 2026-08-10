@@ -5,6 +5,7 @@ import type { RankedResult } from '@crux/scoring';
 import { TopographicMotif } from '@/components/topographic-motif';
 import { DISCIPLINE_LABEL, ROUND_TYPE_LABEL, formatEventDate, labelFor, problemUnit } from '@/lib/labels';
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
+import { LeaderboardCharts } from './leaderboard-charts';
 
 const REFRESH_MS = 5000;
 
@@ -319,6 +320,8 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             <p className="text-base text-muted">
               Toca una fila para ver el detalle {unit.singular} por {unit.singular}.
             </p>
+
+            {round && !round.error && <LeaderboardCharts round={round} unit={unit} />}
           </>
         )}
       </div>
