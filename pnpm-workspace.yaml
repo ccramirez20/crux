@@ -1,3 +1,13 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Pines de seguridad, duplicados a proposito con el campo "pnpm" de package.json.
+# pnpm 9 (el fijado en packageManager) solo lee los de package.json; pnpm 10 dejo
+# de leer ese campo y solo lee estos. Quitarlos de package.json probado: el arbol
+# vuelve a resolver postcss 8.4.31, sharp 0.34.5 y esbuild 0.18.20, todos con CVE.
+# Si cambias uno, cambia el otro.
+overrides:
+  postcss: ">=8.5.23"
+  sharp: ">=0.35.0"
+  esbuild: ">=0.25.0"
