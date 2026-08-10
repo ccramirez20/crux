@@ -9,6 +9,7 @@ explicitamente fuera, y el criterio de desbloqueo de la siguiente.
 ### Dentro del alcance
 
 - Autenticación de organizador (sign-up con código de acceso, sign-in) — **listo**
+- Recuperación de contraseña ("olvidé mi clave") para cuentas con clave — **pendiente**. Hoy no existe: la clave se guarda hasheada con scrypt, así que una cuenta sin acceso solo se recupera tocando la base a mano. Es tapón real, no comodidad: el organizador entra al panel una vez cada varios meses, justo antes de un evento, que es el peor momento para quedar afuera. Requiere decidir cómo se manda el correo (proveedor + dominio); esa decisión es lo único que lo bloquea, no el código.
 - Panel del organizador: crear evento, categorías, rondas, bloques — **listo**
 - Inscripción pública (`/inscripcion/[slug]`, sin cuenta), con dedupe de atleta por documento y elegibilidad por edad/género contra la fecha del evento — **listo**
 - Captura de intentos por juez, offline-first — **en curso**
