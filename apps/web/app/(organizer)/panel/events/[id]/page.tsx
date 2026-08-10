@@ -5,7 +5,13 @@ import { and, categories, eq, events, problems, rounds } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
-import { DISCIPLINE_LABEL, SCORING_FORMAT_LABEL, formatEventDate, labelFor } from '@/lib/labels';
+import {
+  DISCIPLINE_LABEL,
+  SCORING_FORMAT_LABEL,
+  formatEventDate,
+  labelFor,
+  problemUnit,
+} from '@/lib/labels';
 import { cardClass } from '@/lib/ui';
 import { EventStructure } from './event-structure';
 import { ShareLink } from './share-link';
@@ -135,8 +141,8 @@ export default async function EventDetailPage({
           <div className={`${cardClass} flex flex-col gap-1`}>
             <span className="font-display font-semibold">Código para los jueces</span>
             <p className="text-sm text-muted">
-              Quien escanee el QR de un bloque tendrá que escribirlo antes de registrar intentos.
-              Dáselo solo a tus jueces, no lo pegues junto al QR.
+              Quien escanee un QR tendrá que escribirlo antes de registrar intentos. Dáselo solo a
+              tus jueces, no lo pegues junto al QR.
             </p>
             <code className="mt-1 w-fit rounded bg-stone px-3 py-2 font-display text-xl font-bold tracking-widest">
               {event.judgeCode}
@@ -149,13 +155,14 @@ export default async function EventDetailPage({
         <h2 className="font-display text-xl font-bold">Estructura de la competencia</h2>
         <p className="mt-1 text-sm text-muted">
           Cada categoría agrupa competidores por edad, género o nivel. Dentro van sus rondas, y
-          dentro de cada ronda, los bloques que los jueces puntúan.
+          dentro de cada ronda, {problemUnit(event.discipline).plural} que los jueces puntúan.
         </p>
       </div>
 
       <EventStructure
         eventId={event.id}
         categories={structuredCategories}
+        discipline={event.discipline}
         scoringFormat={event.scoringFormat}
         slug={event.slug}
       />

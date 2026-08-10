@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { cardClass } from '@/lib/ui';
-import { GENDER_LABEL, ROUND_TYPE_LABEL, labelFor } from '@/lib/labels';
+import { cardClass, eyebrowClass } from '@/lib/ui';
+import { GENDER_LABEL, ROUND_TYPE_LABEL, labelFor, problemUnit } from '@/lib/labels';
 import { CategoryForm } from './category-form';
 import { RoundForm } from './round-form';
 import { ProblemForm } from './problem-form';
-import { ProblemQr } from './problem-qr';
+import { ProblemCard } from './problem-qr';
 
 type Problem = { id: string; number: number; name: string | null };
 type Round = { id: string; type: string; order: number; problems: Problem[] };
@@ -38,29 +38,39 @@ function categorySummary(category: Category): string {
   return parts.length ? parts.join(' · ') : 'Abierta a todos';
 }
 
-function problemCount(category: Category): string {
-  const total = category.rounds.reduce((sum, round) => sum + round.problems.length, 0);
-  if (category.rounds.length === 0) {
-    return 'Sin rondas todavía';
-  }
-  const rondas = category.rounds.length === 1 ? '1 ronda' : `${category.rounds.length} rondas`;
-  const bloques = total === 1 ? '1 bloque' : `${total} bloques`;
-  return `${rondas} · ${bloques}`;
+function countLabel(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+// Un nodo sobre la línea que baja por la estructura. La jerarquía del evento es
+// una cadena — categoría lleva a ronda, ronda lleva a bloque — y dibujarla como
+// tres cajas blancas idénticas era justo lo que la volvía ilegible.
+function SpineNode({ tone }: { tone: 'round' | 'problem' }) {
+  const color = tone === 'round' ? 'border-bark bg-stone' : 'border-gold bg-gold';
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute -left-[7px] top-3 h-3 w-3 rounded-full border-2 ${color}`}
+    />
+  );
 }
 
 export function EventStructure({
   eventId,
   categories,
+  discipline,
   scoringFormat,
   slug,
 }: {
   eventId: string;
   categories: Category[];
+  discipline: string;
   scoringFormat: string;
   slug: string;
 }) {
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
   const [openRounds, setOpenRounds] = useState<Record<string, boolean>>({});
+  const unit = problemUnit(discipline);
 
   function toggleCategory(id: string) {
     setOpenCategories((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -71,100 +81,152 @@ export function EventStructure({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-4">
-      <CategoryForm eventId={eventId} />
-
       {categories.length === 0 && (
         <p className={`${cardClass} text-sm text-muted`}>
-          Todavía no hay categorías. Crea la primera arriba — sin categorías nadie puede
-          inscribirse, porque al inscribirse cada persona elige la suya.
+          Todavía no hay categorías. Crea la primera abajo — sin categorías nadie puede inscribirse,
+          porque al inscribirse cada persona elige la suya.
         </p>
       )}
 
       <ul className="flex flex-col gap-3">
-        {categories.map((category) => (
-          <li key={category.id} className={cardClass}>
-            <button
-              type="button"
-              onClick={() => toggleCategory(category.id)}
-              className="flex w-full items-center justify-between text-left"
+        {categories.map((category) => {
+          const isOpen = openCategories[category.id] ?? false;
+          const totalProblems = category.rounds.reduce(
+            (sum, round) => sum + round.problems.length,
+            0,
+          );
+
+          return (
+            <li
+              key={category.id}
+              className={`overflow-hidden rounded-lg border bg-white transition ${
+                isOpen ? 'border-pine' : 'border-cardborder'
+              }`}
             >
-              <span className="min-w-0">
-                <span className="block font-display text-base font-semibold">{category.name}</span>
-                <span className="block text-sm text-muted">
-                  {categorySummary(category)} · {problemCount(category)}
+              <button
+                type="button"
+                onClick={() => toggleCategory(category.id)}
+                aria-expanded={isOpen}
+                className="flex w-full items-center gap-3 p-5 text-left"
+              >
+                {/* La barra de color es el ancla del nivel: donde empieza la
+                    categoría, y de dónde cuelga todo lo que va dentro. */}
+                <span aria-hidden="true" className="h-10 w-1 shrink-0 rounded-full bg-pine" />
+                <span className="min-w-0 flex-1">
+                  <span className={`${eyebrowClass} block`}>Categoría</span>
+                  <span className="block truncate font-display text-lg font-bold">
+                    {category.name}
+                  </span>
+                  <span className="block text-sm text-muted">{categorySummary(category)}</span>
                 </span>
-              </span>
-              <span className="shrink-0 text-lg text-bark" aria-hidden="true">
-                {openCategories[category.id] ? '−' : '+'}
-              </span>
-            </button>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="hidden text-right text-xs text-muted sm:block">
+                    {category.rounds.length === 0 ? (
+                      'Sin rondas'
+                    ) : (
+                      <>
+                        {countLabel(category.rounds.length, 'ronda', 'rondas')}
+                        <br />
+                        {countLabel(totalProblems, unit.singular, unit.plural)}
+                      </>
+                    )}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`font-display text-xl text-pine transition-transform ${
+                      isOpen ? 'rotate-45' : ''
+                    }`}
+                  >
+                    +
+                  </span>
+                </span>
+              </button>
 
-            {openCategories[category.id] && (
-              <div className="mt-4 flex flex-col gap-3 border-l-2 border-sage pl-4">
-                <RoundForm eventId={eventId} categoryId={category.id} />
-                {category.rounds.length === 0 && (
-                  <p className="text-sm text-muted">
-                    Sin rondas. Agrega al menos la clasificatoria para poder crear bloques.
-                  </p>
-                )}
-                <ul className="flex flex-col gap-2">
-                  {category.rounds.map((round) => (
-                    <li key={round.id} className="rounded-lg border border-cardborder bg-stone p-3">
-                      <button
-                        type="button"
-                        onClick={() => toggleRound(round.id)}
-                        className="flex w-full items-center justify-between text-left text-sm font-medium"
-                      >
-                        <span>
-                          {labelFor(ROUND_TYPE_LABEL, round.type)}
-                          <span className="ml-2 font-normal text-muted">
-                            {round.problems.length === 1
-                              ? '1 bloque'
-                              : `${round.problems.length} bloques`}
-                          </span>
-                        </span>
-                        <span className="text-bark">{openRounds[round.id] ? '−' : '+'}</span>
-                      </button>
+              {isOpen && (
+                <div className="border-t border-cardborder bg-stone/40 px-5 py-4">
+                  <div className="relative flex flex-col gap-3 border-l-2 border-sage pl-5">
+                    {category.rounds.length === 0 && (
+                      <p className="text-sm text-muted">
+                        Esta categoría no tiene rondas. Agrega al menos la clasificatoria: los{' '}
+                        {unit.plural} viven dentro de una ronda.
+                      </p>
+                    )}
 
-                      {openRounds[round.id] && (
-                        <div className="mt-3 flex flex-col gap-2 border-l-2 border-sage pl-4">
-                          <ProblemForm
-                            eventId={eventId}
-                            roundId={round.id}
-                            nextNumber={round.problems.length + 1}
-                            scoringFormat={scoringFormat}
-                          />
-                          {round.problems.length === 0 ? (
-                            <p className="text-sm text-muted">
-                              Sin bloques todavía. Cada bloque que agregues genera su propio QR
-                              para que el juez entre directo a puntuarlo.
-                            </p>
-                          ) : (
-                            <ul className="flex flex-col gap-2 text-sm">
+                    {category.rounds.map((round) => {
+                      const roundIsOpen = openRounds[round.id] ?? false;
+                      return (
+                        <div key={round.id} className="relative">
+                          <SpineNode tone="round" />
+                          <button
+                            type="button"
+                            onClick={() => toggleRound(round.id)}
+                            aria-expanded={roundIsOpen}
+                            className="flex w-full items-center justify-between gap-3 rounded-lg border border-cardborder bg-white px-4 py-3 text-left"
+                          >
+                            <span>
+                              <span className={`${eyebrowClass} block`}>Ronda</span>
+                              <span className="font-display font-semibold">
+                                {labelFor(ROUND_TYPE_LABEL, round.type)}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-3 text-sm text-muted">
+                              {countLabel(round.problems.length, unit.singular, unit.plural)}
+                              <span
+                                aria-hidden="true"
+                                className={`font-display text-lg text-bark transition-transform ${
+                                  roundIsOpen ? 'rotate-45' : ''
+                                }`}
+                              >
+                                +
+                              </span>
+                            </span>
+                          </button>
+
+                          {roundIsOpen && (
+                            <div className="relative mt-3 flex flex-col gap-2 border-l-2 border-sage pl-5">
+                              {round.problems.length === 0 && (
+                                <p className="text-sm text-muted">
+                                  Sin {unit.plural}. Cada {unit.singular} que agregues genera su
+                                  propio QR para que el juez entre directo a puntuarlo.
+                                </p>
+                              )}
+
                               {round.problems.map((problem) => (
-                                <li
-                                  key={problem.id}
-                                  className="flex items-start justify-between gap-2"
-                                >
-                                  <span className="font-medium">
-                                    Bloque {problem.number}
-                                    {problem.name ? ` · ${problem.name}` : ''}
-                                  </span>
-                                  <ProblemQr slug={slug} problemId={problem.id} />
-                                </li>
+                                <div key={problem.id} className="relative">
+                                  <SpineNode tone="problem" />
+                                  <ProblemCard
+                                    slug={slug}
+                                    problemId={problem.id}
+                                    number={problem.number}
+                                    name={problem.name}
+                                    unit={unit}
+                                  />
+                                </div>
                               ))}
-                            </ul>
+
+                              <ProblemForm
+                                eventId={eventId}
+                                roundId={round.id}
+                                nextNumber={round.problems.length + 1}
+                                scoringFormat={scoringFormat}
+                                unit={unit}
+                              />
+                            </div>
                           )}
                         </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </li>
-        ))}
+                      );
+                    })}
+
+                    <RoundForm eventId={eventId} categoryId={category.id} />
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
+
+      <CategoryForm eventId={eventId} />
     </div>
   );
 }
