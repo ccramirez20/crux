@@ -3,9 +3,15 @@ import type { PendingAttempt } from './attempt-queue';
 export type AttemptStatus = 'pending' | 'rejected' | 'synced';
 
 const STATUS_LABEL: Record<AttemptStatus, string | null> = {
-  pending: 'sin sincronizar',
-  rejected: 'rechazado',
-  synced: null,
+  pending: 'por enviar',
+  rejected: 'no se pudo enviar',
+  synced: 'enviado',
+};
+
+const STATUS_TONE: Record<AttemptStatus, string> = {
+  pending: 'text-muted',
+  rejected: 'text-red-700',
+  synced: 'text-pine',
 };
 
 function summarize(attempt: PendingAttempt): string {
@@ -40,8 +46,10 @@ export function RecentAttempts({
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-sm font-medium text-bark">Últimos intentos</p>
-      <p className="text-xs text-muted">Toca uno para corregirlo.</p>
+      <p className="text-sm font-medium text-bark">Lo que llevas registrado en este bloque</p>
+      <p className="text-xs text-muted">
+        ¿Te equivocaste? Toca el intento y vuelve a guardarlo con el dato correcto.
+      </p>
       <ul className="flex flex-col gap-1 text-sm">
         {sorted.map((attempt) => {
           const status = statusFor(attempt.clientAttemptId);
@@ -58,11 +66,7 @@ export function RecentAttempts({
                   {summarize(attempt)}
                 </span>
                 {label && (
-                  <span
-                    className={`shrink-0 text-xs ${status === 'rejected' ? 'text-red-700' : 'text-muted'}`}
-                  >
-                    {label}
-                  </span>
+                  <span className={`shrink-0 text-xs ${STATUS_TONE[status]}`}>{label}</span>
                 )}
               </button>
             </li>

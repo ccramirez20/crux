@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import { athletes, categories, eq, events, inArray, problems, registrations, rounds } from '@crux/db';
+import { athletes, categories, eq, events, problems, registrations, rounds } from '@crux/db';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
-import { CaptureApp } from '../capture-app';
+import { CaptureApp, type JudgeCategory } from '../capture-app';
 
 // One optional catch-all instead of two pages: `/juzgar/[slug]` (free
 // navigation) and `/juzgar/[slug]/[problemId]` (arrived by QR, block
@@ -29,58 +29,73 @@ export default async function JuzgarPage({
     notFound();
   }
 
-  const eventCategories = await db
-    .select({ id: categories.id, name: categories.name })
-    .from(categories)
-    .where(eq(categories.eventId, event.id))
-    .orderBy(categories.name);
-  const categoryIds = eventCategories.map((category) => category.id);
+  // Two round trips, not five. Every query here costs a ~85ms hop to the
+  // database, and a judge opening this on gym wifi feels each one: the old
+  // categories → rounds → problems → registrations chain spent most of a
+  // second waiting. The tree comes back as one joined result, and
+  // registrations filter on eventId directly so they don't have to wait for
+  // the category ids.
+  const [treeRows, eventRegistrations] = await Promise.all([
+    db
+      .select({
+        categoryId: categories.id,
+        categoryName: categories.name,
+        roundId: rounds.id,
+        roundType: rounds.type,
+        roundOrder: rounds.order,
+        problemId: problems.id,
+        problemNumber: problems.number,
+        problemName: problems.name,
+      })
+      .from(categories)
+      .leftJoin(rounds, eq(rounds.categoryId, categories.id))
+      .leftJoin(problems, eq(problems.roundId, rounds.id))
+      .where(eq(categories.eventId, event.id))
+      .orderBy(categories.name, rounds.order, problems.number),
+    db
+      .select({
+        id: registrations.id,
+        bibNumber: registrations.bibNumber,
+        categoryId: registrations.categoryId,
+        athleteFullName: athletes.fullName,
+      })
+      .from(registrations)
+      .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
+      .where(eq(registrations.eventId, event.id)),
+  ]);
 
-  const categoryRounds = categoryIds.length
-    ? await db
-        .select({ id: rounds.id, type: rounds.type, order: rounds.order, categoryId: rounds.categoryId })
-        .from(rounds)
-        .where(inArray(rounds.categoryId, categoryIds))
-        .orderBy(rounds.order)
-    : [];
-  const roundIds = categoryRounds.map((round) => round.id);
-
-  const roundProblems = roundIds.length
-    ? await db
-        .select({ id: problems.id, number: problems.number, name: problems.name, roundId: problems.roundId })
-        .from(problems)
-        .where(inArray(problems.roundId, roundIds))
-        .orderBy(problems.number)
-    : [];
+  const structuredCategories: JudgeCategory[] = [];
+  for (const row of treeRows) {
+    let category = structuredCategories.find((c) => c.id === row.categoryId);
+    if (!category) {
+      category = { id: row.categoryId, name: row.categoryName, rounds: [] };
+      structuredCategories.push(category);
+    }
+    // A category with no rounds, or a round with no blocks, still comes back
+    // from the left join — with null columns. Both are ordinary states while
+    // an organizer is still setting the event up.
+    if (row.roundId === null || row.roundType === null || row.roundOrder === null) {
+      continue;
+    }
+    let round = category.rounds.find((r) => r.id === row.roundId);
+    if (!round) {
+      round = { id: row.roundId, type: row.roundType, order: row.roundOrder, problems: [] };
+      category.rounds.push(round);
+    }
+    if (row.problemId === null || row.problemNumber === null) {
+      continue;
+    }
+    round.problems.push({ id: row.problemId, number: row.problemNumber, name: row.problemName });
+  }
 
   // A QR for another event's block must not open here, or a judge could
   // capture against a block this page never listed.
-  if (lockedProblemId && !roundProblems.some((problem) => problem.id === lockedProblemId)) {
+  const knownProblem = structuredCategories.some((category) =>
+    category.rounds.some((round) => round.problems.some((problem) => problem.id === lockedProblemId)),
+  );
+  if (lockedProblemId && !knownProblem) {
     notFound();
   }
-
-  const structuredCategories = eventCategories.map((category) => ({
-    ...category,
-    rounds: categoryRounds
-      .filter((round) => round.categoryId === category.id)
-      .map((round) => ({
-        ...round,
-        problems: roundProblems.filter((problem) => problem.roundId === round.id),
-      })),
-  }));
-
-  const eventRegistrations = categoryIds.length
-    ? await db
-        .select({
-          id: registrations.id,
-          bibNumber: registrations.bibNumber,
-          categoryId: registrations.categoryId,
-          athleteFullName: athletes.fullName,
-        })
-        .from(registrations)
-        .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
-        .where(inArray(registrations.categoryId, categoryIds))
-    : [];
 
   return (
     <main className="flex min-h-screen flex-col items-center gap-6 px-4 py-12">

@@ -47,6 +47,7 @@ export function CaptureApp({
   const [judgeName, setJudgeName] = useState<string | null>(null);
   const [nameLoaded, setNameLoaded] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
   const [activeProblemId, setActiveProblemId] = useState<string | null>(lockedProblemId);
   const [isLocked, setIsLocked] = useState(lockedProblemId !== null);
 
@@ -74,7 +75,10 @@ export function CaptureApp({
   if (judgeName === null) {
     return (
       <div className="flex w-full max-w-sm flex-col gap-3">
-        <p className="text-sm text-muted">Tu nombre queda en cada intento que registres.</p>
+        <p className="text-sm text-muted">
+          Tu nombre queda guardado en cada intento que registres, para poder resolver dudas
+          después.
+        </p>
         <input
           type="text"
           placeholder="Tu nombre"
@@ -93,33 +97,60 @@ export function CaptureApp({
 
   return (
     <div className="flex w-full max-w-sm flex-col gap-4">
-      <p className="text-sm text-muted">
-        Juez: {judgeName}{' '}
-        <button
-          type="button"
-          className="text-pine underline"
-          onClick={() => {
-            const next = prompt('Nuevo nombre', judgeName);
-            if (next !== null) {
-              storeJudgeName(next);
-            }
-          }}
-        >
-          cambiar
-        </button>
-      </p>
+      {isEditingName ? (
+        <div className="flex flex-col gap-2">
+          <label htmlFor="judge-name" className="text-sm font-medium text-bark">
+            ¿Quién está juzgando?
+          </label>
+          <input
+            id="judge-name"
+            type="text"
+            value={nameDraft}
+            onChange={(event) => setNameDraft(event.target.value)}
+            className={fieldClass}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              storeJudgeName(nameDraft);
+              setIsEditingName(false);
+            }}
+            className={primaryButtonClass}
+          >
+            Guardar nombre
+          </button>
+        </div>
+      ) : (
+        <p className="text-sm text-muted">
+          Juzga {judgeName}.{' '}
+          <button
+            type="button"
+            className="font-medium text-pine underline"
+            onClick={() => {
+              setNameDraft(judgeName);
+              setIsEditingName(true);
+            }}
+          >
+            No soy yo
+          </button>
+        </p>
+      )}
 
       {active && isLocked ? (
-        <div className={`${cardClass} flex items-center justify-between gap-2 py-3`}>
-          <span className="font-display font-semibold">
-            Bloque #{active.problem.number} {active.problem.name ?? ''}
+        <div className={`${cardClass} flex items-center justify-between gap-3 py-3`}>
+          <span>
+            <span className="block text-xs uppercase tracking-wide text-muted">Estás juzgando</span>
+            <span className="font-display text-lg font-semibold">
+              Bloque {active.problem.number}
+              {active.problem.name ? ` · ${active.problem.name}` : ''}
+            </span>
           </span>
           <button
             type="button"
-            className="shrink-0 text-sm text-pine underline"
+            className="shrink-0 font-medium text-sm text-pine underline"
             onClick={() => setIsLocked(false)}
           >
-            cambiar
+            Cambiar
           </button>
         </div>
       ) : (
