@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { eq, events } from '@crux/db';
+import { athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
 
 const inputSchema = z.object({
@@ -8,12 +8,21 @@ const inputSchema = z.object({
   code: z.string().min(1),
 });
 
-type AccessResult = { ok: true } | { ok: false; error: string };
+export interface JudgeRosterEntry {
+  id: string;
+  bibNumber: string | null;
+  categoryId: string;
+  athleteFullName: string;
+}
 
-// Only so a judge learns the code is wrong when they type it, instead of
-// discovering it after capturing a round's worth of attempts. The real
-// enforcement is in POST /api/attempts — this endpoint refusing is not what
-// keeps anyone out.
+type AccessResult =
+  | { ok: true; registrations: JudgeRosterEntry[] }
+  | { ok: false; error: string };
+
+// Two jobs: tell a judge immediately that the code is wrong, and hand back the
+// competitor list. The list only travels once the code checks out — it is the
+// names of everyone registered, so it cannot ride along on the public judge
+// page where any passer-by who scans the QR would receive it.
 export async function POST(request: Request): Promise<NextResponse<AccessResult>> {
   const body: unknown = await request.json().catch(() => null);
   const parsed = inputSchema.safeParse(body);
@@ -21,22 +30,36 @@ export async function POST(request: Request): Promise<NextResponse<AccessResult>
     return NextResponse.json({ ok: false, error: 'Datos inválidos.' }, { status: 400 });
   }
 
-  const [event] = await getDb()
-    .select({ judgeCode: events.judgeCode })
+  const db = getDb();
+  const [event] = await db
+    .select({ id: events.id, judgeCode: events.judgeCode })
     .from(events)
     .where(eq(events.slug, parsed.data.slug));
   if (!event) {
     return NextResponse.json({ ok: false, error: 'Ese evento no existe.' }, { status: 404 });
   }
-  if (event.judgeCode === null) {
-    return NextResponse.json({ ok: true });
+
+  const matches =
+    event.judgeCode === null ||
+    parsed.data.code.trim().toUpperCase() === event.judgeCode.toUpperCase();
+  if (!matches) {
+    return NextResponse.json(
+      { ok: false, error: 'Ese código no corresponde a este evento.' },
+      { status: 403 },
+    );
   }
 
-  const matches = parsed.data.code.trim().toUpperCase() === event.judgeCode.toUpperCase();
-  return matches
-    ? NextResponse.json({ ok: true })
-    : NextResponse.json(
-        { ok: false, error: 'Ese código no corresponde a este evento.' },
-        { status: 403 },
-      );
+  const roster = await db
+    .select({
+      id: registrations.id,
+      bibNumber: registrations.bibNumber,
+      categoryId: registrations.categoryId,
+      athleteFullName: athletes.fullName,
+    })
+    .from(registrations)
+    .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
+    .innerJoin(categories, eq(registrations.categoryId, categories.id))
+    .where(eq(registrations.eventId, event.id));
+
+  return NextResponse.json({ ok: true, registrations: roster });
 }

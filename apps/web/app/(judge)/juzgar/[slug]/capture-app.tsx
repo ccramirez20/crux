@@ -55,6 +55,7 @@ export function CaptureApp({
 }) {
   const [judgeName, setJudgeName] = useState<string | null>(null);
   const [judgeCode, setJudgeCode] = useState<string | null>(null);
+  const [roster, setRoster] = useState<JudgeRegistration[]>(registrations);
   const [nameLoaded, setNameLoaded] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -69,6 +70,47 @@ export function CaptureApp({
     setJudgeCode(localStorage.getItem(judgeCodeKey(event.slug)));
     setNameLoaded(true);
   }, [event.slug]);
+
+  // On reload the code is remembered but the competitor list is not — it never
+  // came with the page. Fetch it again with the stored code. A rejection here
+  // means the organizer changed the code, so drop it and ask again.
+  useEffect(() => {
+    if (!requiresJudgeCode || judgeCode === null || roster.length > 0) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch('/api/judge-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: event.slug, code: judgeCode }),
+        });
+        if (cancelled) return;
+        if (response.status === 403) {
+          localStorage.removeItem(judgeCodeKey(event.slug));
+          setJudgeCode(null);
+          return;
+        }
+        const body: unknown = await response.json();
+        if (
+          !cancelled &&
+          typeof body === 'object' &&
+          body !== null &&
+          'registrations' in body &&
+          Array.isArray(body.registrations)
+        ) {
+          setRoster(body.registrations);
+        }
+      } catch {
+        // Offline: the capture screen still works for whoever is already
+        // listed, and the queue keeps everything until there is signal.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [requiresJudgeCode, judgeCode, roster.length, event.slug]);
 
   function storeJudgeName(name: string) {
     const trimmed = name.trim();
@@ -89,9 +131,10 @@ export function CaptureApp({
     return (
       <JudgeCodeGate
         slug={event.slug}
-        onUnlocked={(code) => {
+        onUnlocked={(code, unlockedRoster) => {
           localStorage.setItem(judgeCodeKey(event.slug), code);
           setJudgeCode(code);
+          setRoster(unlockedRoster);
         }}
       />
     );
@@ -195,10 +238,11 @@ export function CaptureApp({
           problemId={active.problem.id}
           judgeName={judgeName}
           judgeCode={judgeCode}
-          registrations={registrations.filter((r) => r.categoryId === active.categoryId)}
+          registrations={roster.filter((r) => r.categoryId === active.categoryId)}
           onCodeRejected={() => {
             localStorage.removeItem(judgeCodeKey(event.slug));
             setJudgeCode(null);
+            setRoster([]);
           }}
         />
       )}

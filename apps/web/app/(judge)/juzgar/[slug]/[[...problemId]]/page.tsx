@@ -59,16 +59,21 @@ export default async function JuzgarPage({
       .leftJoin(problems, eq(problems.roundId, rounds.id))
       .where(eq(categories.eventId, event.id))
       .orderBy(categories.name, rounds.order, problems.number),
-    db
-      .select({
-        id: registrations.id,
-        bibNumber: registrations.bibNumber,
-        categoryId: registrations.categoryId,
-        athleteFullName: athletes.fullName,
-      })
-      .from(registrations)
-      .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
-      .where(eq(registrations.eventId, event.id)),
+    // Not even fetched when the event is gated: this page is a QR taped to a
+    // wall, and the competitor list is the name of every person registered.
+    // It arrives from /api/judge-access once the code is accepted.
+    event.requiresJudgeCode
+      ? []
+      : db
+          .select({
+            id: registrations.id,
+            bibNumber: registrations.bibNumber,
+            categoryId: registrations.categoryId,
+            athleteFullName: athletes.fullName,
+          })
+          .from(registrations)
+          .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
+          .where(eq(registrations.eventId, event.id)),
   ]);
 
   const structuredCategories: JudgeCategory[] = [];

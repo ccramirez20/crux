@@ -3,12 +3,14 @@
 import { useState, type FormEvent } from 'react';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 
+import type { JudgeRegistration } from './capture-app';
+
 export function JudgeCodeGate({
   slug,
   onUnlocked,
 }: {
   slug: string;
-  onUnlocked: (code: string) => void;
+  onUnlocked: (code: string, registrations: JudgeRegistration[]) => void;
 }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -25,15 +27,19 @@ export function JudgeCodeGate({
         body: JSON.stringify({ slug, code }),
       });
       if (response.ok) {
-        onUnlocked(code.trim().toUpperCase());
+        const body: unknown = await response.json();
+        const roster =
+          typeof body === 'object' && body !== null && 'registrations' in body && Array.isArray(body.registrations)
+            ? body.registrations
+            : [];
+        onUnlocked(code.trim().toUpperCase(), roster);
         return;
       }
       setError('Ese código no corresponde a este evento. Pídeselo a quien organiza.');
     } catch {
-      // No signal to check against. Let them through rather than block capture
-      // at the wall: every attempt carries the code, so the server still
-      // refuses it on sync if it turns out to be wrong.
-      onUnlocked(code.trim().toUpperCase());
+      setError(
+        'No hay conexión para comprobar el código. Conéctate un momento: la lista de competidores se descarga una sola vez.',
+      );
     } finally {
       setIsChecking(false);
     }
