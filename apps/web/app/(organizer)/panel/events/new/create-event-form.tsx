@@ -39,7 +39,18 @@ function slugify(value: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-const TIMEZONES = Intl.supportedValuesOf('timeZone');
+// The full IANA list is ~400 entries and turns a one-second decision into
+// scrolling. Colombia has a single zone and is the only market in stage 1;
+// the rest of the list stays reachable behind "Otra zona horaria".
+const COMMON_TIMEZONES = [
+  { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
+  { value: 'America/Mexico_City', label: 'México (Ciudad de México)' },
+  { value: 'America/Lima', label: 'Perú (Lima)' },
+  { value: 'America/Santiago', label: 'Chile (Santiago)' },
+  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
+  { value: 'Europe/Madrid', label: 'España (Madrid)' },
+];
+const ALL_TIMEZONES = Intl.supportedValuesOf('timeZone');
 
 export function CreateEventForm({
   organizations,
@@ -61,6 +72,7 @@ export function CreateEventForm({
     DEFAULT_SCORING_FORMAT.boulder,
   );
   const [timezone, setTimezone] = useState('America/Bogota');
+  const [showAllTimezones, setShowAllTimezones] = useState(false);
   const [date, setDate] = useState('');
 
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +114,13 @@ export function CreateEventForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
-      <h1 className="font-display text-2xl font-bold">Crear evento</h1>
+      <div>
+        <h1 className="font-display text-2xl font-bold">Crear evento</h1>
+        <p className="mt-1 text-sm text-muted">
+          Después de crearlo podrás agregar categorías, rondas y bloques, y compartir el enlace de
+          inscripción.
+        </p>
+      </div>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium text-bark">Organización</legend>
@@ -163,79 +181,140 @@ export function CreateEventForm({
         )}
       </fieldset>
 
-      <input
-        type="text"
-        placeholder="Nombre del evento"
-        value={name}
-        onChange={(event) => handleNameChange(event.target.value)}
-        required
-        className={fieldClass}
-      />
       <div className="flex flex-col gap-1">
+        <label htmlFor="event-name" className="text-sm font-medium text-bark">
+          Nombre del evento
+        </label>
         <input
+          id="event-name"
           type="text"
-          placeholder="slug"
-          value={slug}
-          onChange={(event) => {
-            setSlugTouched(true);
-            setSlug(event.target.value);
-          }}
+          placeholder="Copa Páramo 2026"
+          value={name}
+          onChange={(event) => handleNameChange(event.target.value)}
           required
-          pattern="[a-z0-9-]+"
           className={fieldClass}
         />
-        <p className="text-xs text-muted">Así se verá en el enlace público del evento.</p>
       </div>
+
       <div className="flex flex-col gap-1">
+        <label htmlFor="event-slug" className="text-sm font-medium text-bark">
+          Enlace público
+        </label>
+        <div className="flex items-center gap-1 text-sm text-muted">
+          <span className="shrink-0">/inscripcion/</span>
+          <input
+            id="event-slug"
+            type="text"
+            value={slug}
+            onChange={(event) => {
+              setSlugTouched(true);
+              setSlug(event.target.value);
+            }}
+            required
+            pattern="[a-z0-9-]+"
+            className={`${fieldClass} min-w-0 flex-1 py-2`}
+          />
+        </div>
+        <p className="text-xs text-muted">
+          Se arma solo con el nombre. Solo minúsculas, números y guiones.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="event-date" className="text-sm font-medium text-bark">
+          Fecha del evento
+        </label>
         <input
+          id="event-date"
           type="date"
           value={date}
           onChange={(event) => setDate(event.target.value)}
           className={fieldClass}
         />
         <p className="text-xs text-muted">
-          Cuándo es el evento — se usa para calcular las categorías por edad.
+          Con esta fecha se calcula la edad de cada competidor para saber en qué categoría entra.
         </p>
       </div>
-      <select
-        value={discipline}
-        onChange={(event) => {
-          if (isDiscipline(event.target.value)) {
-            handleDisciplineChange(event.target.value);
-          }
-        }}
-        className={fieldClass}
-      >
-        <option value="boulder">Boulder</option>
-        <option value="lead">Lead</option>
-      </select>
-      <select
-        value={scoringFormat}
-        onChange={(event) => {
-          if (isScoringFormat(discipline, event.target.value)) {
-            setScoringFormat(event.target.value);
-          }
-        }}
-        className={fieldClass}
-      >
-        {SCORING_FORMATS[discipline].map((format) => (
-          <option key={format.value} value={format.value}>
-            {format.label}
-          </option>
-        ))}
-      </select>
-      <select
-        value={timezone}
-        onChange={(event) => setTimezone(event.target.value)}
-        required
-        className={fieldClass}
-      >
-        {TIMEZONES.map((tz) => (
-          <option key={tz} value={tz}>
-            {tz}
-          </option>
-        ))}
-      </select>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="event-discipline" className="text-sm font-medium text-bark">
+          Modalidad
+        </label>
+        <select
+          id="event-discipline"
+          value={discipline}
+          onChange={(event) => {
+            if (isDiscipline(event.target.value)) {
+              handleDisciplineChange(event.target.value);
+            }
+          }}
+          className={fieldClass}
+        >
+          <option value="boulder">Búlder</option>
+          <option value="lead">Dificultad</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="event-scoring" className="text-sm font-medium text-bark">
+          Cómo se puntúa
+        </label>
+        <select
+          id="event-scoring"
+          value={scoringFormat}
+          onChange={(event) => {
+            if (isScoringFormat(discipline, event.target.value)) {
+              setScoringFormat(event.target.value);
+            }
+          }}
+          className={fieldClass}
+        >
+          {SCORING_FORMATS[discipline].map((format) => (
+            <option key={format.value} value={format.value}>
+              {format.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted">
+          Define cómo se ordena la tabla de resultados y cómo se resuelven los empates.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="event-timezone" className="text-sm font-medium text-bark">
+          Zona horaria
+        </label>
+        <select
+          id="event-timezone"
+          value={timezone}
+          onChange={(event) => {
+            if (event.target.value === '__all__') {
+              setShowAllTimezones(true);
+              return;
+            }
+            setTimezone(event.target.value);
+          }}
+          required
+          className={fieldClass}
+        >
+          {showAllTimezones ? (
+            ALL_TIMEZONES.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz}
+              </option>
+            ))
+          ) : (
+            <>
+              {COMMON_TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+              <option value="__all__">Otra zona horaria…</option>
+            </>
+          )}
+        </select>
+      </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
       <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { categories, eq, events } from '@crux/db';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
+import { DISCIPLINE_LABEL, formatEventDate, labelFor } from '@/lib/labels';
 import { RegistrationForm } from './registration-form';
 
 export default async function InscripcionPage({
@@ -13,7 +14,12 @@ export default async function InscripcionPage({
   const db = getDb();
 
   const [event] = await db
-    .select({ id: events.id, name: events.name, date: events.date })
+    .select({
+      id: events.id,
+      name: events.name,
+      date: events.date,
+      discipline: events.discipline,
+    })
     .from(events)
     .where(eq(events.slug, slug));
   if (!event) {
@@ -37,10 +43,18 @@ export default async function InscripcionPage({
       <div className="w-full max-w-2xl">
         <TopographicMotif />
       </div>
-      <h1 className="font-display text-3xl font-bold">{event.name}</h1>
+      <div className="flex max-w-sm flex-col items-center gap-1 text-center">
+        <span className="text-xs uppercase tracking-wide text-muted">Inscripción</span>
+        <h1 className="font-display text-3xl font-bold">{event.name}</h1>
+        <p className="text-sm text-muted">
+          {labelFor(DISCIPLINE_LABEL, event.discipline)}
+          {formatEventDate(event.date) ? ` · ${formatEventDate(event.date)}` : ''}
+        </p>
+      </div>
       {eventCategories.length === 0 ? (
-        <p className="max-w-md text-center text-sm text-muted">
-          Inscripciones aún no disponibles para este evento.
+        <p className="max-w-sm rounded-lg border border-cardborder bg-white px-4 py-5 text-center text-sm text-muted">
+          Las inscripciones todavía no están abiertas: quien organiza aún no ha creado las
+          categorías. Vuelve a intentarlo más tarde.
         </p>
       ) : (
         <RegistrationForm eventId={event.id} eventDate={event.date} categories={eventCategories} />

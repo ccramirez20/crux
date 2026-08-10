@@ -23,13 +23,21 @@ export function ProblemQr({ slug, problemId }: { slug: string; problemId: string
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <button type="button" onClick={toggle} className="text-xs text-pine underline">
-        {dataUrl ? 'Ocultar QR' : 'Ver QR'}
+      <button
+        type="button"
+        onClick={toggle}
+        className="shrink-0 rounded border-[1.5px] border-pine px-3 py-1.5 text-xs font-semibold text-pine transition hover:bg-pine hover:text-white"
+      >
+        {dataUrl ? 'Ocultar QR' : 'QR para juzgar'}
       </button>
       {dataUrl && (
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-1 rounded-lg border border-cardborder bg-white p-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- a data: URL can't go through next/image's optimizer */}
-          <img src={dataUrl} alt={`QR para juzgar este bloque (${url})`} width={240} height={240} />
+          <img src={dataUrl} alt={`Código QR que abre la pantalla del juez para este bloque`} width={240} height={240} />
+          <p className="max-w-[240px] text-right text-xs text-muted">
+            Imprímelo y pégalo junto al bloque. El juez lo escanea y entra directo a puntuarlo, sin
+            clave.
+          </p>
           <span className="max-w-[240px] break-all text-right text-[10px] text-muted">{url}</span>
         </div>
       )}

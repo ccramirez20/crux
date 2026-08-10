@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { translateAuthError } from '@/lib/auth-error-messages';
@@ -49,47 +50,81 @@ export default function SignUpPage() {
         <TopographicMotif />
       </div>
       <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
-        <div className="font-display text-lg font-bold tracking-wide text-pine">CRUX</div>
-        <h1 className="font-display text-2xl font-bold">Crear cuenta de organizador</h1>
-        <input
-          type="text"
-          placeholder="Nombre"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-          className={fieldClass}
-        />
-        <input
-          type="email"
-          placeholder="Correo"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          className={fieldClass}
-        />
+        <Link href="/" className="font-display text-lg font-bold tracking-wide text-pine">
+          CRUX
+        </Link>
+        <div>
+          <h1 className="font-display text-2xl font-bold">Crear cuenta de organizador</h1>
+          <p className="mt-1 text-sm text-muted">
+            Solo la necesitas si vas a organizar eventos. Para competir no hace falta cuenta.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="name" className="text-sm font-medium text-bark">
+            Tu nombre
+          </label>
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            required
+            className={fieldClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="email" className="text-sm font-medium text-bark">
+            Correo
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            className={fieldClass}
+          />
+        </div>
         <PasswordField
           value={password}
           onChange={setPassword}
           minLength={8}
           autoComplete="new-password"
+          hint="Mínimo 8 caracteres."
         />
         <div className="flex flex-col gap-1">
+          <label htmlFor="access-code" className="text-sm font-medium text-bark">
+            Código de acceso
+          </label>
           <input
+            id="access-code"
             type="text"
-            placeholder="Código de acceso"
             value={accessCode}
             onChange={(event) => setAccessCode(event.target.value)}
             required
             className={fieldClass}
           />
           <p className="text-xs text-muted">
-            Te lo comparte quien administra la plataforma — por ahora el registro es solo para organizadores invitados.
+            Te lo comparte quien administra la plataforma: por ahora el registro es solo para
+            organizadores invitados.
           </p>
         </div>
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm font-medium text-red-700">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
-          Crear cuenta
+          {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
         </button>
+        <p className="text-sm text-muted">
+          ¿Ya tienes cuenta?{' '}
+          <Link href="/sign-in" className="font-medium text-pine underline">
+            Entrar
+          </Link>
+        </p>
       </form>
     </main>
   );

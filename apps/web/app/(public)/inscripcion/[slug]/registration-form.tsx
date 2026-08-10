@@ -74,80 +74,133 @@ export function RegistrationForm({
 
   if (success) {
     return (
-      <p className="text-center font-display text-lg font-semibold text-pine">{success}</p>
+      <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg border-2 border-pine bg-white p-5 text-center">
+        <p className="font-display text-xl font-semibold text-pine">{success}</p>
+        <p className="text-sm text-muted">
+          El día del evento te asignan un dorsal y con ese número los jueces registran tus
+          intentos. No necesitas crear cuenta ni instalar nada.
+        </p>
+      </div>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
-      <input
-        type="text"
-        placeholder="Nombre completo"
-        value={fullName}
-        onChange={(event) => setFullName(event.target.value)}
-        required
-        className={fieldClass}
-      />
-      <input
-        type="text"
-        placeholder="Documento de identidad"
-        value={documentId}
-        onChange={(event) => setDocumentId(event.target.value)}
-        required
-        className={fieldClass}
-      />
-      <input
-        type="date"
-        value={birthDate}
-        onChange={(event) => {
-          setBirthDate(event.target.value);
-          setCategoryId('');
-        }}
-        required
-        className={fieldClass}
-      />
-      <select
-        value={gender}
-        onChange={(event) => {
-          const value = event.target.value;
-          if (value === '' || isGender(value)) {
-            setGender(value);
-            setCategoryId('');
-          }
-        }}
-        required
-        className={fieldClass}
-      >
-        <option value="">Género</option>
-        <option value="male">Masculino</option>
-        <option value="female">Femenino</option>
-        <option value="mixed">Otro</option>
-      </select>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="full-name" className="text-sm font-medium text-bark">
+          Nombre completo
+        </label>
+        <input
+          id="full-name"
+          type="text"
+          autoComplete="name"
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          required
+          className={fieldClass}
+        />
+      </div>
 
-      {birthDate && gender && eligibleCategories.length > 0 && (
+      <div className="flex flex-col gap-1">
+        <label htmlFor="document-id" className="text-sm font-medium text-bark">
+          Documento de identidad
+        </label>
+        <input
+          id="document-id"
+          type="text"
+          inputMode="numeric"
+          value={documentId}
+          onChange={(event) => setDocumentId(event.target.value)}
+          required
+          className={fieldClass}
+        />
+        <p className="text-xs text-muted">
+          Con él reconocemos que eres tú si vuelves a competir, y así se conserva tu historial.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="birth-date" className="text-sm font-medium text-bark">
+          Fecha de nacimiento
+        </label>
+        <input
+          id="birth-date"
+          type="date"
+          value={birthDate}
+          onChange={(event) => {
+            setBirthDate(event.target.value);
+            setCategoryId('');
+          }}
+          required
+          className={fieldClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="gender" className="text-sm font-medium text-bark">
+          Género
+        </label>
         <select
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
+          id="gender"
+          value={gender}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === '' || isGender(value)) {
+              setGender(value);
+              setCategoryId('');
+            }
+          }}
           required
           className={fieldClass}
         >
-          <option value="">Elige tu categoría</option>
-          {eligibleCategories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
+          <option value="">Elige una opción</option>
+          <option value="male">Masculino</option>
+          <option value="female">Femenino</option>
+          <option value="mixed">Otro</option>
         </select>
-      )}
-      {birthDate && gender && eligibleCategories.length === 0 && (
-        <p className="text-sm text-muted">
-          No hay categorías disponibles para tu edad y género en este evento.
+      </div>
+
+      {!birthDate || !gender ? (
+        <p className="rounded-lg bg-white px-4 py-3 text-sm text-muted">
+          Completa tu fecha de nacimiento y género para ver en qué categorías puedes competir.
+        </p>
+      ) : eligibleCategories.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="category" className="text-sm font-medium text-bark">
+            Tu categoría
+          </label>
+          <select
+            id="category"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            required
+            className={fieldClass}
+          >
+            <option value="">Elige una opción</option>
+            {eligibleCategories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted">
+            Solo aparecen las categorías que corresponden a tu edad y género.
+          </p>
+        </div>
+      ) : (
+        <p className="rounded-lg border-2 border-bark bg-white px-4 py-3 text-sm text-bark">
+          Este evento no tiene ninguna categoría para tu edad y género. Si crees que es un error,
+          escríbele a quien organiza.
         </p>
       )}
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm font-medium text-red-700">
+          {error}
+        </p>
+      )}
       <button type="submit" disabled={isSubmitting || !categoryId} className={primaryButtonClass}>
-        Inscribirme
+        {isSubmitting ? 'Inscribiendo…' : 'Inscribirme'}
       </button>
     </form>
   );
