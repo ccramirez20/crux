@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
 import { translateAuthError } from '@/lib/auth-error-messages';
 import { TopographicMotif } from '@/components/topographic-motif';
+import { PasswordField } from '@/components/password-field';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 
 export default function SignInPage() {
@@ -43,14 +44,7 @@ export default function SignInPage() {
           required
           className={fieldClass}
         />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          className={fieldClass}
-        />
+        <PasswordField value={password} onChange={setPassword} autoComplete="current-password" />
         {error && <p className="text-sm text-red-700">{error}</p>}
         <button type="submit" disabled={isSubmitting} className={primaryButtonClass}>
           Entrar

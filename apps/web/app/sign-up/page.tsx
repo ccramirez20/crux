@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { translateAuthError } from '@/lib/auth-error-messages';
 import { TopographicMotif } from '@/components/topographic-motif';
+import { PasswordField } from '@/components/password-field';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 
 const errorBodySchema = z.object({ code: z.string(), message: z.string() }).partial();
@@ -66,14 +67,11 @@ export default function SignUpPage() {
           required
           className={fieldClass}
         />
-        <input
-          type="password"
-          placeholder="Contraseña"
+        <PasswordField
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
+          onChange={setPassword}
           minLength={8}
-          className={fieldClass}
+          autoComplete="new-password"
         />
         <div className="flex flex-col gap-1">
           <input
