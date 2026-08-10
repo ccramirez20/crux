@@ -2,10 +2,20 @@
 
 Fecha: 2026-08-10 · Estado: **sin probar en dispositivo real**
 
-Todo lo de abajo está commiteado y en `main` (`0bb9b16`), con `pnpm test` y
-`pnpm typecheck` en verde y build de producción compilando. Lo que **no** está
-hecho es la verificación end-to-end desde un teléfono: eso no lo puedo hacer yo
-y es lo único que falta para cerrar el criterio de "terminado" de la etapa 1.
+Todo lo de abajo está commiteado y en `main`, con `pnpm test` y `pnpm typecheck`
+en verde y build de producción compilando.
+
+**Nada de la captura de jueces se ha probado en un teléfono real.** Lo verificado
+hasta hoy fue por HTTP contra el servidor de desarrollo y consultando la base:
+eso demuestra que el servidor acepta y guarda lo correcto, y **no** demuestra
+nada sobre el navegador del teléfono — ni IndexedDB, ni el evento `online`, ni
+el comportamiento al bloquear la pantalla, ni Safari. El guion de abajo es
+exactamente esa verificación que falta, y es lo único que queda para cerrar el
+criterio de "terminado" de la etapa 1.
+
+El caso que más importa confirmar en hardware es **C-11**: capturar sin señal en
+una ruta, cambiarse a otra, y que al volver la conexión sincronice también lo de
+la primera.
 
 ## Cómo levantar el entorno
 
@@ -40,36 +50,46 @@ esa.
 ## Guion de prueba
 
 ### A. Búlder
-1. Panel → Evento de prueba → **QR para juzgar** del Bloque 1 → escanear.
-2. Escribir un código incorrecto: debe rechazarlo. Luego `PARAMO26`.
-3. Poner nombre de juez → aparece el roster con dorsal 11 y "Sin juzgar".
-4. Tocar a Beto → Top → contador a 2 con el `+` → guardar. El roster debe
-   mostrar "Top en 2" y "1 de 1 juzgados".
-5. Tocarlo otra vez: el formulario llega precargado y avisa que ya tiene
-   resultado. Cambiar a 3 y guardar: debe quedar un intento **nuevo**, no un
-   reemplazo.
+- **A-1.** Panel → Evento de prueba → **QR para juzgar** del Bloque 1 → escanear.
+- **A-2.** Escribir un código incorrecto: debe rechazarlo. Luego `PARAMO26`.
+- **A-3.** Poner nombre de juez → aparece el roster con dorsal 11 y "Sin juzgar".
+- **A-4.** Tocar a Beto → Top → contador a 2 con el `+` → guardar. El roster debe
+  mostrar "Top en 2" y "1 de 1 juzgados".
+- **A-5.** Tocarlo otra vez: el formulario llega precargado y avisa que ya tiene
+  resultado. Cambiar a 3 y guardar: debe quedar un intento **nuevo**, no un
+  reemplazo.
 
 ### B. Dificultad
-6. Copa Cuerda → QR de *Ruta Chingaza* → `CUERDA26`.
-7. Tocar a 31 Laura: **no debe haber Top ni Zona**, solo altura en metros.
-   Guardar `18.5`.
-8. Guardar sin altura: debe pedirla.
+- **B-6.** Copa Cuerda → QR de *Ruta Chingaza* → `CUERDA26`.
+- **B-7.** Tocar a 31 Laura: **no debe haber Top ni Zona**, solo altura en
+  metros. Guardar `18.5`.
+- **B-8.** Guardar sin altura: debe pedirla.
 
 ### C. Sin conexión (lo que de verdad importa)
-9. Modo avión → debe aparecer la franja "Sin conexión…".
-10. Registrar a 32 (altura 12) y 33 (altura 20): quedan "por enviar".
-11. **Sin salir del modo avión**, cambiar a *Ruta Sumapaz* y registrar a Laura.
-12. Quitar el modo avión: debe sincronizar **todo, incluida la Ruta Chingaza que
-    ya se había dejado atrás**. Ese fue un bug corregido sobre el plan original
-    y es el caso que hay que confirmar en hardware real.
+- **C-9.** Modo avión → debe aparecer la franja "Sin conexión…".
+- **C-10.** Registrar a 32 (altura 12) y 33 (altura 20): quedan "por enviar".
+- **C-11.** **Sin salir del modo avión**, cambiar a *Ruta Sumapaz* y registrar a
+  Laura. Después quitar el modo avión: debe sincronizar **todo, incluida la Ruta
+  Chingaza que ya se había dejado atrás**.
+
+> **C-11 es el paso que hay que confirmar en hardware.** Fue un bug corregido
+> sobre el plan original — la cola drenaba solo el bloque activo — y el arreglo
+> nunca se ha ejercitado en un teléfono de verdad. Si algo de todo el guion va a
+> fallar el día del evento, es esto: es el único paso donde el teléfono tiene que
+> recordar trabajo de una pantalla que el juez ya cerró. Vale la pena repetirlo
+> dos veces, y una de ellas bloqueando la pantalla mientras está en modo avión.
 
 ### D. Aislamiento entre eventos
-13. Con el teléfono ya desbloqueado en Copa Cuerda, abrir el QR del evento de
-    búlder: debe pedir `PARAMO26` otra vez (los códigos se guardan por evento).
+- **D-12.** Con el teléfono ya desbloqueado en Copa Cuerda, abrir el QR del
+  evento de búlder: debe pedir `PARAMO26` otra vez (los códigos se guardan por
+  evento).
+- **D-13.** Escribir mal el código diez veces seguidas: al onceavo debe salir
+  "Demasiados intentos seguidos" (freno nuevo, ver ADR 0002). Se libera solo a
+  los 5 minutos, o reiniciando `pnpm dev` — el contador vive en memoria.
 
 ### E. Verificación final
 `pnpm db:studio` → tabla `attempts`: `sequence` en el mismo orden en que se
-capturó, y la corrección del paso 5 con `sequence` mayor que el intento que
+capturó, y la corrección del paso A-5 con `sequence` mayor que el intento que
 corrige.
 
 ## Riesgos conocidos que esta prueba debería tocar
@@ -84,10 +104,33 @@ corrige.
   página (ver ADR 0002 y el fix de PII); se vuelve a pedir con el código
   guardado. Confirmar que tras recargar el roster sigue apareciendo.
 
+## Deuda cerrada el 2026-08-10 (después de escribir este guion)
+
+- **Rate limiting.** `apps/web/lib/rate-limit.ts`: 10 códigos fallidos por IP en
+  5 minutos → 429. Solo cuenta fallos, nunca capturas válidas. Ver ADR 0002 y el
+  paso D-13.
+- **Un organizador podía leer eventos ajenos.** `/panel/events/[id]` filtraba por
+  `id` y solo escondía los formularios de edición, así que servía la estructura
+  completa — incluidos los `problemId`, que *son* la URL de captura. Ahora la
+  consulta filtra por `ownerId`; un evento ajeno se comporta igual que uno que no
+  existe.
+- **`BETTER_AUTH_TRUSTED_ORIGINS` con test.** El regex de rango privado que deja
+  entrar al teléfono por IP de LAN en desarrollo estaba sin ninguna prueba;
+  `apps/web/lib/auth.test.ts` lo fija, incluido que en producción solo vale la
+  lista configurada y nunca el header del cliente. `apps/web` ya corre `vitest`.
+
+Falta poner la variable en `apps/web/.env.example` (no la puedo escribir yo):
+
+```
+# Origenes extra permitidos por Better Auth, separados por coma. En desarrollo
+# no hace falta: las IP privadas se confian solas. En produccion es obligatorio
+# si la app se sirve desde un dominio distinto al de BETTER_AUTH_URL.
+BETTER_AUTH_TRUSTED_ORIGINS=
+```
+
 ## Lo que sigue después
 
 1. Tabla pública de resultados — hay brief de diseño en `docs/01-etapas.md`.
    Es una pantalla proyectada, no un CRUD.
 2. Recuperación de contraseña (bloqueada por decidir proveedor de correo).
-3. Rate limiting en `/api/attempts` y `/api/judge-access` (deuda anotada en ADR 0002).
-4. Manual de uso en HTML, al cerrar la etapa.
+3. Manual de uso en HTML, al cerrar la etapa.
