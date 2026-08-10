@@ -3,7 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import { ROUND_TYPES, type RoundType } from '@crux/core';
 import { createRound } from './actions';
-import { fieldClass, secondaryButtonClass } from '@/lib/ui';
+import { fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
+import { AddPanel } from './add-panel';
 
 function isRoundType(value: string): value is RoundType {
   return (ROUND_TYPES as readonly string[]).includes(value);
@@ -20,7 +21,7 @@ export function RoundForm({ eventId, categoryId }: { eventId: string; categoryId
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>, close: () => void) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
@@ -28,30 +29,51 @@ export function RoundForm({ eventId, categoryId }: { eventId: string; categoryId
     setIsSubmitting(false);
     if (!result.ok) {
       setError(result.error);
+      return;
     }
+    close();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2 rounded-lg border border-cardborder bg-white p-2">
-      <select
-        value={type}
-        onChange={(event) => {
-          if (isRoundType(event.target.value)) {
-            setType(event.target.value);
-          }
-        }}
-        className={fieldClass}
-      >
-        {ROUND_TYPES.map((roundType) => (
-          <option key={roundType} value={roundType}>
-            {ROUND_TYPE_LABELS[roundType]}
-          </option>
-        ))}
-      </select>
-      {error && <p className="text-sm text-red-700">{error}</p>}
-      <button type="submit" disabled={isSubmitting} className={secondaryButtonClass}>
-        Agregar ronda
-      </button>
-    </form>
+    <AddPanel label="Agregar ronda" tone="round">
+      {(close) => (
+        <form onSubmit={(event) => void submit(event, close)} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={`round-type-${categoryId}`} className={labelClass}>
+              Tipo de ronda
+            </label>
+            <select
+              id={`round-type-${categoryId}`}
+              value={type}
+              onChange={(event) => {
+                if (isRoundType(event.target.value)) {
+                  setType(event.target.value);
+                }
+              }}
+              className={fieldClass}
+            >
+              {ROUND_TYPES.map((roundType) => (
+                <option key={roundType} value={roundType}>
+                  {ROUND_TYPE_LABELS[roundType]}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted">
+              Las rondas se ordenan solas: clasificatoria, semifinal, final.
+            </p>
+          </div>
+
+          {error && (
+            <p role="alert" className="text-sm font-medium text-red-700">
+              {error}
+            </p>
+          )}
+
+          <button type="submit" disabled={isSubmitting} className={secondaryButtonClass}>
+            {isSubmitting ? 'Creando…' : 'Crear ronda'}
+          </button>
+        </form>
+      )}
+    </AddPanel>
   );
 }

@@ -39,6 +39,8 @@ export interface MaxHeightResult {
   tied: boolean;
   registrationId: string;
   height: number;
+  // Termino la via. Gana sobre cualquier altura, incluso sin altura capturada.
+  top: boolean;
 }
 
 // Union of one today; each shipped strategy adds its own variant here.

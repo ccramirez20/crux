@@ -30,6 +30,14 @@ export function labelFor(map: Record<string, string>, value: string): string {
   return map[value] ?? value;
 }
 
+// En el código todo es `Problem`, pero en el gimnasio nadie llama "bloque" a una
+// vía de cuerda. La palabra depende de la modalidad del evento.
+export function problemUnit(discipline: string): { singular: string; plural: string } {
+  return discipline === 'lead'
+    ? { singular: 'ruta', plural: 'rutas' }
+    : { singular: 'bloque', plural: 'bloques' };
+}
+
 /** Reads a date-only column (yyyy-mm-dd) without letting the local timezone shift the day. */
 export function formatEventDate(date: string | null): string | null {
   if (!date) {

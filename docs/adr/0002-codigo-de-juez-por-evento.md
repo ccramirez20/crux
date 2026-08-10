@@ -41,7 +41,7 @@ recibe un booleano `requiresJudgeCode`.
 
 ## Consecuencias
 - ~~**No hay rate limiting**~~ **Resuelto el 2026-08-10.** `apps/web/lib/rate-limit.ts`
-  cuenta *solo los codigos fallidos* por IP (10 en 5 minutos) y responde 429 en
+  cuenta *solo los codigos fallidos* por IP (5 en 5 minutos) y responde 429 en
   `POST /api/attempts` y en `/api/judge-access`. Cuenta solo los fallos a
   proposito: un juez que vuelve de una zona sin senal drena la cola en rafaga y
   frenar eso perderia capturas reales. El 429 es deliberadamente distinto del

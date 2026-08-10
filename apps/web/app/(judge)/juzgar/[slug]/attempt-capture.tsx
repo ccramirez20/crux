@@ -10,14 +10,16 @@ import type { JudgeRegistration } from './capture-app';
 const SYNC_INTERVAL_MS = 5000;
 
 function describe(values: AttemptValues): string {
-  if (values.height != null) {
-    return `${values.height} m`;
-  }
+  // El top va primero: en dificultad llega sin contador de intentos y sin
+  // altura, y es el mejor resultado posible en la vía.
   if (values.top) {
-    return `Top en ${values.topAttempts ?? '?'}`;
+    return values.topAttempts != null ? `Top en ${values.topAttempts}` : 'Top';
   }
   if (values.zone) {
     return `Zona en ${values.zoneAttempts ?? '?'}`;
+  }
+  if (values.height != null) {
+    return `${values.height.toLocaleString('es-CO')} m`;
   }
   return 'Sin logro';
 }

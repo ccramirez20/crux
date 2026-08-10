@@ -8,8 +8,11 @@
 // Both are fine for one box running one gym's event; move the counter to a
 // Postgres table the day this runs on more than one instance.
 
+// Cinco fallos, no diez: el codigo se lee de un papel y se teclea con el pulgar,
+// asi que dos o tres errores honestos entran de sobra, y quien va por el cuarto
+// ya no lo esta leyendo de ningun papel.
 const WINDOW_MS = 5 * 60_000;
-const MAX_FAILURES = 10;
+const MAX_FAILURES = 5;
 const MAX_KEYS = 5_000;
 
 const failures = new Map<string, { count: number; resetAt: number }>();

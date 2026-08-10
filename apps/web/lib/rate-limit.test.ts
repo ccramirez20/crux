@@ -10,8 +10,8 @@ describe('rate limit del código de juez', () => {
     vi.useRealTimers();
   });
 
-  it('deja pasar hasta el décimo fallo y bloquea el siguiente', () => {
-    for (let i = 0; i < 9; i += 1) {
+  it('deja pasar hasta el quinto fallo y bloquea el siguiente', () => {
+    for (let i = 0; i < 4; i += 1) {
       recordFailure('1.2.3.4');
       expect(isRateLimited('1.2.3.4')).toBe(false);
     }
@@ -20,14 +20,14 @@ describe('rate limit del código de juez', () => {
   });
 
   it('no bloquea a otro teléfono por los fallos del primero', () => {
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       recordFailure('1.2.3.4');
     }
     expect(isRateLimited('5.6.7.8')).toBe(false);
   });
 
   it('se libera al pasar la ventana', () => {
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       recordFailure('1.2.3.4');
     }
     vi.advanceTimersByTime(5 * 60_000 + 1);

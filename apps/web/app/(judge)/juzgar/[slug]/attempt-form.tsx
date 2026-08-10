@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { parseHeight } from '@/lib/height';
 import { fieldClass } from '@/lib/ui';
 import type { JudgeRegistration } from './capture-app';
 
@@ -122,7 +123,17 @@ export function AttemptForm({
       }
       return null;
     }
-    return height ? null : 'Falta la altura alcanzada.';
+    // En dificultad el top es "llegó al final de la vía": vale por sí solo,
+    // sin altura, porque no hay altura mayor que esa.
+    if (top) {
+      return null;
+    }
+    if (!height) {
+      return 'Falta la altura alcanzada.';
+    }
+    return parseHeight(height) === null
+      ? 'La altura no se entiende. Escríbela en metros, por ejemplo 18,5.'
+      : null;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -138,7 +149,7 @@ export function AttemptForm({
       topAttempts: topAttempts ? Number(topAttempts) : null,
       zone,
       zoneAttempts: zoneAttempts ? Number(zoneAttempts) : null,
-      height: height ? Number(height) : null,
+      height: height ? parseHeight(height) : null,
     });
   }
 
@@ -209,20 +220,39 @@ export function AttemptForm({
         </>
       ) : (
         <>
-          <label htmlFor="height" className="text-sm font-medium text-bark">
-            Altura alcanzada, en metros
-          </label>
-          <input
-            id="height"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="0.1"
-            placeholder="0.0"
-            value={height}
-            onChange={(event) => setHeight(event.target.value)}
-            className={`${fieldClass} text-center font-display text-3xl font-bold`}
+          <AchievementToggle
+            label="Llegó al top"
+            active={top}
+            onToggle={() => {
+              setTop(!top);
+              setError(null);
+            }}
           />
+
+          {top ? (
+            <p className="text-xs text-muted">
+              Terminó la vía. No hace falta altura: nadie llega más arriba que el final.
+            </p>
+          ) : (
+            <>
+              <label htmlFor="height" className="text-sm font-medium text-bark">
+                Altura alcanzada, en metros
+              </label>
+              {/* Texto y no number: el teclado en español entrega coma, y un
+                  campo numérico la descarta sin avisar — "18,5" se guardaba
+                  como 185. parseHeight acepta las dos formas. */}
+              <input
+                id="height"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="18,5"
+                value={height}
+                onChange={(event) => setHeight(event.target.value)}
+                className={`${fieldClass} text-center font-display text-3xl font-bold`}
+              />
+            </>
+          )}
         </>
       )}
 
