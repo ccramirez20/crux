@@ -56,17 +56,17 @@ function Panel({ title, hint, children }: { title: string; hint: string; childre
 
 /* ------------------------------------------------------------------ tiles */
 
-function StatTile({ label, what, value, detail, accent }: { label: string; what: string; value: string; detail: string; accent?: boolean }) {
+function StatTile({ label, what, value, detail }: { label: string; what: string; value: string; detail: string }) {
   return (
     <div className={`${cardClass} flex flex-col gap-2 py-6`}>
       <span className={eyebrow}>{label}</span>
       {/* The tile says what it is measuring before it says the number. A big
           figure with only a two-word label makes the reader guess the unit. */}
       <span className="text-sm text-muted">{what}</span>
-      <span
-        className="mt-1 font-display text-[3.25rem] font-bold leading-none tracking-tight tabular-nums"
-        style={accent ? { color: GOLD } : undefined}
-      >
+      {/* Los tres en oro. El color aquí no está distinguiendo nada entre ellos
+          —son tres hechos del mismo rango—, así que teñir solo uno se leía como
+          que ese importaba más. */}
+      <span className="mt-1 font-display text-[3.25rem] font-bold leading-none tracking-tight tabular-nums" style={{ color: GOLD }}>
         {value}
       </span>
       <span className="text-base text-muted">{detail}</span>
@@ -97,7 +97,6 @@ function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: st
         <StatTile
           label={`El ${unit} más duro`}
           what={`Cuál fue el ${unit} que menos gente pudo hacer`}
-          accent
           value={`${unit.slice(0, 1).toUpperCase()}${crux.number}`}
           detail={`${problemName(crux.problemId) ?? 'Sin nombre'} · le hicieron top ${crux.tops} de ${crux.field}`}
         />
@@ -155,7 +154,14 @@ function declutter(values: number[], minGap: number): number[] {
   return out;
 }
 
-function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: LeaderboardRound; unit: string } & HoverProps) {
+function BumpChart({
+  round,
+  unit,
+  article,
+  hovered,
+  onHover,
+  onSelect,
+}: { round: LeaderboardRound; unit: string; article: string } & HoverProps) {
   const points = round.timeline;
   // Todas las competidoras, no las ocho primeras. Recortar la lista rompía dos
   // cosas: no se podía seguir a alguien de la mitad de la tabla, y señalarla en
@@ -171,11 +177,17 @@ function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: Leaderb
     point.ranks[row.registrationId] ?? shown.length;
   const maxRank = Math.max(...shown.flatMap((row) => points.map((p) => rankAt(row, p))));
 
-  const lane = 38;
-  const padTop = 62;
+  // El carril se estrecha con el campo en vez de estirar la gráfica hacia
+  // abajo. Es la pantalla que se proyecta: veinticinco competidoras tienen que
+  // caber en el mismo alto que catorce, o la mitad de la categoría queda fuera
+  // del proyector.
+  const lane = Math.max(22, Math.min(38, Math.round(620 / shown.length)));
+  const roomy = lane >= 32;
+  const padTop = 78;
   const padBottom = 104;
-  const plotLeft = 250;
+  const plotLeft = 290;
   const plotRight = 830;
+  const scaleX = 34;
   const deltaX = 1240;
   const width = 1250;
   const height = padTop + (maxRank - 1) * lane + padBottom;
@@ -185,8 +197,9 @@ function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: Leaderb
   const x = (index: number) => plotLeft + (index * (plotRight - plotLeft)) / (points.length - 1);
   const y = (rank: number) => padTop + (rank - 1) * lane;
 
-  const endYs = declutter(shown.map((row) => y(rankAt(row, points.at(-1)!))), 26);
-  const startYs = declutter(shown.map((row) => y(rankAt(row, points[0]!))), 26);
+  const gap = Math.min(26, lane - 2);
+  const endYs = declutter(shown.map((row) => y(rankAt(row, points.at(-1)!))), gap);
+  const startYs = declutter(shown.map((row) => y(rankAt(row, points[0]!))), gap);
 
   const axis = { fontSize: 12, fill: MUTED, fontWeight: 600, letterSpacing: 1.1 } as const;
 
@@ -198,17 +211,26 @@ function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: Leaderb
       aria-label={`Puesto de cada competidor al cierre de cada ${unit}`}
     >
       {/* Cada dimensión dice su nombre encima de la columna que ocupa: la escala
-          de la izquierda, de dónde salen las líneas y dónde terminan. */}
-      <text x={16} y={26} {...axis}>
+          de la izquierda, de dónde salen las líneas y dónde terminan. Los dos
+          extremos se titulan igual —"puesto tras el bloque N"— porque son lo
+          mismo medido en dos momentos; "posición final" mentiría mientras
+          todavía queden bloques por escalar. */}
+      <text x={scaleX} y={30} textAnchor="middle" {...axis}>
         PUESTO
       </text>
-      <text x={plotLeft - 28} y={26} textAnchor="end" {...axis}>
-        TRAS {tick(0)}
+      <text x={plotLeft - 28} y={30} textAnchor="end" {...axis}>
+        PUESTO TRAS
       </text>
-      <text x={plotRight + 24} y={26} {...axis}>
-        AHORA
+      <text x={plotLeft - 28} y={48} textAnchor="end" {...axis}>
+        {article.toUpperCase()} {unit.toUpperCase()} {points[0]!.problemNumber}
       </text>
-      <text x={deltaX} y={26} textAnchor="end" {...axis}>
+      <text x={plotRight + 40} y={30} {...axis}>
+        PUESTO TRAS
+      </text>
+      <text x={plotRight + 40} y={48} {...axis}>
+        {article.toUpperCase()} {unit.toUpperCase()} {points.at(-1)!.problemNumber}
+      </text>
+      <text x={deltaX} y={30} textAnchor="end" {...axis}>
         CAMBIO
       </text>
 
@@ -219,7 +241,14 @@ function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: Leaderb
           )}
           {/* La escala vertical, escrita. Sin ella el lector no sabe hasta qué
               puesto baja la gráfica ni por qué termina donde termina. */}
-          <text x={16} y={y(row + 1) + 5} fontSize={14} fill={MUTED} className="tabular-nums">
+          <text
+            x={scaleX}
+            y={y(row + 1) + 5}
+            textAnchor="middle"
+            fontSize={roomy ? 14 : 12}
+            fill={MUTED}
+            className="tabular-nums"
+          >
             {row + 1}
           </text>
         </g>
@@ -233,11 +262,17 @@ function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: Leaderb
           </text>
           {/* Los intentos reales siguen ahí, como información de apoyo: son el
               volumen de la categoría, no una coordenada de nadie. */}
-          <text x={x(index)} y={laneBottom + 42} textAnchor="middle" fontSize={12} fill={MUTED}>
-            {point.attempts} int.
+          <text x={x(index)} y={laneBottom + 42} textAnchor="middle" fontSize={12} fill={MUTED} className="tabular-nums">
+            {point.attempts}
           </text>
         </g>
       ))}
+      {/* La fila de números sin rótulo no se explicaba sola: se leía como si
+          fuera otra escala del eje. Nombrarla al inicio de su propia fila la
+          convierte en lo que es, un dato de apoyo. */}
+      <text x={plotLeft - 28} y={laneBottom + 42} textAnchor="end" fontSize={11} fill={MUTED} letterSpacing={0.8}>
+        INTENTOS ACUMULADOS EN LA CATEGORÍA
+      </text>
       {/* El eje es el mismo para todas: el puesto al cierre de cada bloque. Con
           los intentos acumulados de coordenada, ocho líneas terminaban en 70
           intentos y se leía como que las ocho intentaron setenta veces. */}
@@ -284,13 +319,40 @@ function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: Leaderb
             />
             <circle cx={x(points.length - 1)} cy={y(endRank)} r={podium ? 8 : 5} fill={color} stroke={SURFACE} strokeWidth={2.5} />
 
-            {/* Sin el número: el puesto de salida ya lo dice el carril donde
-                arranca la línea, y la escala está escrita a la izquierda. */}
-            <text x={plotLeft - 30} y={startYs[index]! + 5} textAnchor="end" fontSize={15} fill={focused ? INK : MUTED}>
-              {row.athleteName}
+            {/* El número viaja pegado al nombre, no lo delega al carril. Con
+                seis empatadas en el puesto 1 las etiquetas se separan para
+                poder leerse, y una etiqueta suelta frente al carril 4 se leía
+                como cuarto puesto cuando iba primera empatada. */}
+            <text
+              x={plotLeft - 30}
+              y={startYs[index]! + 5}
+              textAnchor="end"
+              fontSize={roomy ? 15 : 13}
+              fill={focused ? INK : MUTED}
+            >
+              {startRank}. {row.athleteName}
             </text>
-            <text x={plotRight + 24} y={endYs[index]! + 5} fontSize={18} fontWeight={podium ? 700 : 500} fill={podium ? INK : MUTED}>
-              {endRank}. {row.athleteName}
+            {/* Puesto y nombre en dos columnas: pegados, "12. Manuela" se leía
+                como una sola cosa larga. */}
+            <text
+              x={plotRight + 34}
+              y={endYs[index]! + 5}
+              textAnchor="end"
+              fontSize={roomy ? 18 : 15}
+              fontWeight={700}
+              fill={podium ? INK : MUTED}
+              className="tabular-nums"
+            >
+              {endRank}
+            </text>
+            <text
+              x={plotRight + 48}
+              y={endYs[index]! + 5}
+              fontSize={roomy ? 18 : 15}
+              fontWeight={podium ? 700 : 500}
+              fill={podium ? INK : MUTED}
+            >
+              {row.athleteName}
             </text>
 
             {/* A filled chip, not a bare glyph. A 14px triangle in a flat colour
@@ -321,36 +383,63 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
   const problemName = (id: string) => round.problems.find((p) => p.id === id)?.name;
 
   return (
-    <ul className="flex flex-col gap-5">
-      {stats.map((stat, index) => (
-        <li key={stat.problemId} className="flex items-center gap-5">
-          <span className="w-36 shrink-0">
-            <span className="block font-display text-xl font-bold leading-tight">
-              {unit.slice(0, 1).toUpperCase()}
-              {stat.number}
-              {index === 0 && <span className="ml-2 align-middle text-[11px] font-semibold uppercase tracking-[0.14em] text-bark">crux</span>}
+    <div>
+      {/* Los mismos encabezados que la otra gráfica: "4/14" y "1 flash" sueltos
+          obligaban a adivinar cuál número era cuál. */}
+      <div className="mb-3 flex items-center gap-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+        <span className="w-36 shrink-0" />
+        <span className="flex-1" />
+        <span className="w-24 shrink-0 text-right">Hicieron top</span>
+        {!isHeight && <span className="w-20 shrink-0 text-right">Flashes</span>}
+      </div>
+      <ul className="flex flex-col gap-5">
+        {stats.map((stat, index) => (
+          <li key={stat.problemId} className="flex items-center gap-5">
+            <span className="w-36 shrink-0">
+              <span className="block font-display text-xl font-bold leading-tight">
+                {unit.slice(0, 1).toUpperCase()}
+                {stat.number}
+                {index === 0 && <span className="ml-2 align-middle text-[11px] font-semibold uppercase tracking-[0.14em] text-bark">crux</span>}
+              </span>
+              <span className="block truncate text-sm text-muted">{problemName(stat.problemId) ?? '—'}</span>
             </span>
-            <span className="block truncate text-sm text-muted">{problemName(stat.problemId) ?? '—'}</span>
-          </span>
 
-          <span className="relative flex h-9 flex-1 overflow-hidden rounded-lg" style={{ background: LANE }}>
-            <span className="h-full" style={{ width: `${(stat.tops / stat.field) * 100}%`, background: GOLD }} />
-            {stat.zones > 0 && <span className="h-full" style={{ width: 2, background: SURFACE }} />}
-            <span className="h-full" style={{ width: `${(stat.zones / stat.field) * 100}%`, background: PINE }} />
-          </span>
+            {/* Cada tramo dice en voz alta qué significa su color al pasarle el
+                cursor. El `title` nativo alcanza: es un dato de apoyo, no vale
+                una capa de tooltip propia. */}
+            <span className="relative flex h-9 flex-1 overflow-hidden rounded-lg" style={{ background: LANE }}>
+              <span
+                className="h-full"
+                style={{ width: `${(stat.tops / stat.field) * 100}%`, background: GOLD }}
+                title={`${SCORE_TERM.top}: ${stat.tops} de ${stat.field}`}
+              />
+              {stat.zones > 0 && <span className="h-full" style={{ width: 2, background: SURFACE }} />}
+              <span
+                className="h-full"
+                style={{ width: `${(stat.zones / stat.field) * 100}%`, background: PINE }}
+                title={`${SCORE_TERM.zone} sin top: ${stat.zones} de ${stat.field}`}
+              />
+              <span
+                className="h-full flex-1"
+                title={`Sin ${SCORE_TERM.zone.toLowerCase()}: ${stat.field - stat.tops - stat.zones} de ${stat.field}`}
+              />
+            </span>
 
-          <span className="w-40 shrink-0 text-right">
-            <span className="block font-display text-2xl font-bold leading-none tabular-nums">
-              {stat.tops}
-              <span className="text-lg font-semibold text-muted">/{stat.field}</span>
+            <span className="w-24 shrink-0 text-right">
+              <span className="block font-display text-2xl font-bold leading-none tabular-nums">
+                {stat.tops}
+                <span className="text-lg font-semibold text-muted">/{stat.field}</span>
+              </span>
             </span>
-            <span className="block text-sm text-muted">
-              {isHeight ? 'llegaron al top' : flashCount(stat.flashes)}
-            </span>
-          </span>
-        </li>
-      ))}
-    </ul>
+            {!isHeight && (
+              <span className="w-20 shrink-0 text-right font-display text-2xl font-bold leading-none tabular-nums">
+                {stat.flashes}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -370,6 +459,10 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
           name: row.athleteName,
           rank: row.result.rank,
           tops: row.result.tops,
+          // Intentos de los bloques que sí topó. Un bloque que se le quedó no
+          // entra al promedio: mediría otra cosa, cuánto peleó, no cuánto le
+          // costó cada top.
+          topAttempts: row.result.topAttempts,
           ratio: row.result.topAttempts / row.result.tops,
         }]
       : [],
@@ -378,7 +471,7 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
     return null;
   }
 
-  const ranked = climbers.sort((a, b) => a.ratio - b.ratio).slice(0, 8);
+  const ranked = climbers.sort((a, b) => a.ratio - b.ratio).slice(0, 10);
   const worst = Math.max(...ranked.map((c) => c.ratio));
 
   return (
@@ -403,7 +496,11 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
             }`}
           >
             <span className="w-44 shrink-0 truncate font-display text-lg font-semibold">{climber.name}</span>
-            <span className="flex h-7 flex-1 overflow-hidden rounded-lg" style={{ background: LANE }}>
+            <span
+              className="flex h-7 flex-1 overflow-hidden rounded-lg"
+              style={{ background: LANE }}
+              title={`${climber.name}: ${climber.topAttempts} intentos para ${climber.tops} tops`}
+            >
               {/* Colour follows the competitor's standing, not their place in
                   this list, so the leader is the same gold in every chart. */}
               <span className="h-full rounded-lg" style={{ width: `${(climber.ratio / worst) * 100}%`, background: podiumColor(climber.rank) }} />
@@ -440,7 +537,7 @@ export function LeaderboardCharts({
   onSelect,
 }: {
   round: LeaderboardRound;
-  unit: { singular: string; plural: string };
+  unit: { singular: string; plural: string; article: string };
 } & HoverProps) {
   if (round.timeline.length === 0) {
     return null;
@@ -455,23 +552,33 @@ export function LeaderboardCharts({
 
       <Panel
         title={`Puesto ${unit.singular} a ${unit.singular}`}
-        hint={`Una línea por competidora. Cada punto es el puesto si la ronda hubiera cerrado en ese ${unit.singular}, así que todas se miden con la misma vara. Cuando dos líneas se cruzan, alguien pasó a la otra.`}
+        hint={`Una línea por competidor. Se muestra al cierre de cada ${unit.singular}.`}
       >
         {/* En el teléfono la gráfica no se encoge hasta volverse ilegible: se
             desplaza. Un eje de 15 nombres a 360 px de ancho no es una gráfica. */}
         <div className="overflow-x-auto">
-          <BumpChart round={round} unit={unit.singular} hovered={hovered} onHover={onHover} onSelect={onSelect} />
+          <BumpChart
+            round={round}
+            unit={unit.singular}
+            article={unit.article}
+            hovered={hovered}
+            onHover={onHover}
+            onSelect={onSelect}
+          />
         </div>
+        {/* Esto se lee de afán y de pie. Tres frases, no un párrafo. */}
         <p className="mt-4 text-base text-muted">
-          Se lee de izquierda a derecha: arranca con el puesto tras el primer {unit.singular} y termina
-          en el puesto de ahora, que es el mismo de la tabla de arriba. La escala vertical llega hasta{' '}
-          {round.rows.length}, que es cuántas compiten en la categoría. Señala a alguien —o tócala— y se
-          resalta también en la tabla y en las demás gráficas.
+          Se lee de izquierda a derecha: arranca con el puesto tras el primer {unit.singular}. La escala
+          vertical es cuántos compiten en la categoría. Haz clic sobre un competidor y se resalta en la
+          tabla y en las demás gráficas.
         </p>
       </Panel>
 
       <div className={`grid grid-cols-1 gap-6 ${hasAttemptsPerTop ? 'xl:grid-cols-[3fr_2fr]' : ''}`}>
-        <Panel title={`¿Qué tan duros estaban los ${unit.plural}?`} hint={`Desempeño en cada ${unit.singular}.`}>
+        <Panel
+          title={`¿Qué tan duros estaban los ${unit.plural}?`}
+          hint={`De los ${round.rows.length} de la categoría, cuántos hicieron top y cuántos se quedaron en zona. Del más duro al más amable.`}
+        >
           <div className="mb-5 flex flex-wrap items-center gap-5 text-sm text-muted">
             <Swatch color={GOLD} label={SCORE_TERM.top} />
             {!isHeight && <Swatch color={PINE} label={SCORE_TERM.zone} />}
@@ -480,7 +587,10 @@ export function LeaderboardCharts({
         </Panel>
 
         {hasAttemptsPerTop && (
-          <Panel title="Cuántos intentos al top" hint="Promedio de intentos para alcanzar el top.">
+          <Panel
+            title="Cuántos intentos al top"
+            hint={`Promedio de intentos por cada top logrado. Solo cuenta los ${unit.plural} que sí topó; entra quien tenga dos tops o más.`}
+          >
             <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} onSelect={onSelect} />
           </Panel>
         )}

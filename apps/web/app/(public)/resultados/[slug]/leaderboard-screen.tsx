@@ -12,11 +12,19 @@ const REFRESH_MS = 5000;
 // Headers per format. Splitting classic into four columns is the whole point:
 // those four *are* the tiebreak order, so someone arguing a placing reads the
 // reason off the wall instead of asking the organizer.
-const SCORE_HEADERS: Record<string, string[]> = {
-  classic_tops_zones: ['Tops', 'Int. top', 'Zonas', 'Int. zona'],
-  ifsc_boulder: ['Puntaje'],
-  league_points: ['Puntaje'],
-  max_height: ['Altura'],
+//
+// Van agrupados en dos pisos porque cuatro números seguidos con cuatro títulos
+// abreviados encima ("Tops · Int. top · Zonas · Int. zona") se leían como una
+// pared de cifras: el piso de arriba dice de qué se está hablando y el de abajo
+// solo si es cantidad o intentos.
+const SCORE_HEADERS: Record<string, { group: string; columns: string[] }[]> = {
+  classic_tops_zones: [
+    { group: 'Tops', columns: ['Cuántos', 'Intentos'] },
+    { group: 'Zonas', columns: ['Cuántas', 'Intentos'] },
+  ],
+  ifsc_boulder: [{ group: '', columns: ['Puntaje'] }],
+  league_points: [{ group: '', columns: ['Puntaje'] }],
+  max_height: [{ group: '', columns: ['Altura'] }],
 };
 
 function scoreCells(result: RankedResult): string[] {
@@ -166,7 +174,15 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
-  const headers = SCORE_HEADERS[data.event.scoringFormat] ?? [];
+  const groups = SCORE_HEADERS[data.event.scoringFormat] ?? [];
+  const headers = groups.flatMap((g) => g.columns);
+  // En qué índice arranca cada grupo: ahí van la línea divisoria y la cifra
+  // grande, y las que siguen son su desempate.
+  const groupStarts = new Set<number>();
+  groups.reduce((index, group) => {
+    groupStarts.add(index);
+    return index + group.columns.length;
+  }, 0);
   const date = formatEventDate(data.event.date);
   const headerClass = 'px-4 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-muted';
 
@@ -239,7 +255,10 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             ) : round.problems.length === 0 ? (
               <p className="text-2xl text-muted">Esta ronda todavía no tiene {unit.plural}.</p>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card">
+              // La tabla larga se desplaza dentro de su propia caja para que el
+              // encabezado pegajoso tenga contra qué pegarse. Solo en pantalla
+              // grande: en el teléfono lo que importa es correr a los lados.
+              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card lg:max-h-[80vh] lg:overflow-y-auto">
                 {/* The number inside a badge is how many goes it took, and
                     nothing on screen said so — someone reading this table for
                     the first time had no way to know. The legend teaches the
@@ -260,7 +279,11 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                   {!isHeight && <span>Los números son la cantidad de intentos.</span>}
                 </div>
                 <table className="w-full border-collapse text-left">
-                  <thead>
+                  {/* Los títulos se quedan pegados arriba: en la fila 12 de la
+                      tabla ya nadie recuerda cuál columna era cuál, y volver a
+                      subir a mirar es justo lo que no se puede hacer con la
+                      pantalla proyectada. */}
+                  <thead className="sticky top-0 z-10 bg-card">
                     {/* The caption spans the block columns instead of perching
                         on the first one, where it read as a label for B1 alone. */}
                     <tr>
@@ -271,10 +294,18 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                       >
                         {unit.plural}
                       </th>
-                      <th colSpan={headers.length} />
+                      {groups.map((group) => (
+                        <th
+                          key={group.group}
+                          colSpan={group.columns.length}
+                          className="border-l border-cardborder/60 px-4 pt-3 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"
+                        >
+                          {group.group}
+                        </th>
+                      ))}
                     </tr>
                     <tr className="border-b-2 border-cardborder">
-                      <th className={`${headerClass} w-28`}>Puesto</th>
+                      <th className={`${headerClass} w-28 text-center`}>Puesto</th>
                       <th className={headerClass}>Competidor</th>
                       {round.problems.map((problem) => (
                         <th
@@ -286,11 +317,16 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                           {problem.number}
                         </th>
                       ))}
-                      {headers.map((header) => (
-                        <th key={header} className={`${headerClass} text-right`}>
-                          {header}
-                        </th>
-                      ))}
+                      {groups.flatMap((group) =>
+                        group.columns.map((header, index) => (
+                          <th
+                            key={`${group.group}-${header}`}
+                            className={`${headerClass} text-right ${index === 0 ? 'border-l border-cardborder/60' : ''}`}
+                          >
+                            {header}
+                          </th>
+                        )),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -309,7 +345,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                               leading ? 'bg-gold/10' : ''
                             } ${focused !== null && focused !== row.registrationId ? 'opacity-60' : ''}`}
                           >
-                            <td className={`px-4 py-5 ${leading ? 'border-l-4 border-gold' : ''}`}>
+                            <td className={`px-4 py-5 text-center ${leading ? 'border-l-4 border-gold' : ''}`}>
                               <span
                                 className="font-display text-5xl font-bold tabular-nums"
                                 title={row.result.tied ? 'Empate' : undefined}
@@ -334,10 +370,15 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                             ))}
                             {scoreCells(row.result).map((value, index) => (
                               <td
-                                key={headers[index] ?? index}
+                                // Por índice: dos grupos traen una columna que
+                                // se llama igual, "Intentos".
+                                key={index}
+                                // La cifra del grupo manda y su desempate va en
+                                // gris: son cuatro números seguidos y sin esa
+                                // jerarquía todos pesan igual.
                                 className={`px-4 py-5 text-right tabular-nums ${
-                                  index === 0
-                                    ? 'font-display text-4xl font-bold'
+                                  groupStarts.has(index)
+                                    ? 'border-l border-cardborder/60 font-display text-4xl font-bold'
                                     : 'font-display text-2xl text-muted'
                                 }`}
                               >

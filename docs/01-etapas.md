@@ -36,7 +36,13 @@ que el siguiente gimnasio pregunte. Diseñarla como una pantalla, no como un CRU
 
 Tres tiles arriba (el bloque más duro, el porcentaje de flash de la ronda, el
 mayor ascenso), la tabla con una franja de leyenda que enseña su propio código,
-y tres gráficas:
+y tres gráficas.
+
+La tabla agrupa el puntaje en dos pisos —TOPS y ZONAS arriba, "cuántos" e
+"intentos" abajo— porque cuatro cifras seguidas con cuatro títulos abreviados
+encima se leían como una pared de números. El encabezado se queda pegado
+arriba mientras la tabla se desplaza: en la fila 12 ya nadie recuerda cuál
+columna era cuál, y en una pantalla proyectada no se puede volver a subir.
 
 - **Puesto bloque a bloque** — una línea por competidora, todas, y el eje X es
   el bloque, no el intento. Cada punto es el puesto si la ronda hubiera cerrado
@@ -46,7 +52,11 @@ y tres gráficas:
   y entra horizontal, así que la curva nunca inventa un puesto intermedio. Se
   reconstruye re-puntuando la ronda sobre los bloques 1..n (decisión #1: el
   pasado sigue en la tabla, no hay que guardar nada); un bloque que nadie ha
-  escalado no entra al eje.
+  escalado no entra al eje. Los dos extremos se titulan igual —"puesto tras el
+  bloque N"—: "posición final" mentiría mientras queden bloques por escalar.
+  En los empates el número viaja pegado al nombre, porque las etiquetas se
+  separan para poder leerse y una etiqueta frente al carril 4 se leía como
+  cuarto puesto cuando iba primera empatada.
 - **¿Qué tan duros estaban los bloques?** — tops y zonas por bloque, del más
   duro al más amable, marcando el crux.
 - **Cuántos intentos al top** — promedio de intentos por top, mínimo dos tops
@@ -78,12 +88,14 @@ elige a ojo. Dos resultados que hay que respetar:
 
 #### Pendiente de esta pantalla
 
-- Feedback de interfaz en curso; queda al menos una ronda más de ajustes.
 - Una decisión abierta: si la plata se deja en acero frío sabiendo lo de arriba.
-- Con 14 líneas grises el trazado se lee, pero se lee apretado. Si un evento
-  llega con 25 en una categoría hay que volver a mirarlo; el recorte a ocho ya
-  se probó y era peor (no se podía seguir a nadie de media tabla, y señalarla en
-  otra gráfica no encendía nada).
+- El caso de 25 competidoras se probó en pantalla, no en el papel: el carril
+  adaptativo (`620 / campo`, entre 22 y 38 px) las mete a las 25 en el mismo
+  alto que tenían 14, con etiqueta directa y sin superposición. El recorte a
+  ocho líneas ya se probó y era peor.
+- Falta verlo por debajo de 500 px de ancho: Chrome no deja achicar más la
+  ventana. A 500 px la gráfica y la tabla se desplazan a lo ancho dentro de su
+  caja y la página no se desborda.
 - El formato `league_points` sigue sin verse en pantalla con datos reales.
   `classic_tops_zones` ya se ve, gracias a `pnpm seed:event`.
 
