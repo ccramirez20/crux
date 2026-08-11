@@ -39,7 +39,7 @@ export function AthleteRoster({
 
   if (entries.length === 0) {
     return (
-      <p className="rounded-lg border border-cardborder bg-white px-4 py-6 text-center text-sm text-muted">
+      <p className="rounded-lg border border-cardborder bg-card px-4 py-6 text-center text-sm text-muted">
         Todavía no hay nadie inscrito en esta categoría. En cuanto se inscriban aparecerán aquí.
       </p>
     );
@@ -76,7 +76,7 @@ export function AthleteRoster({
                 onClick={() => onSelect(entry.registration.id)}
                 aria-pressed={isSelected}
                 className={`flex min-h-14 w-full items-center gap-3 rounded-lg border-2 px-3 py-2 text-left transition ${
-                  isSelected ? 'border-gold bg-white' : 'border-cardborder bg-white hover:border-sage'
+                  isSelected ? 'border-gold bg-card' : 'border-cardborder bg-card hover:border-sage'
                 }`}
               >
                 <span

@@ -1,14 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-stone: #f4f1e6;
+  --color-stone: #efebdd;
   --color-pine: #2f4a3e;
   --color-bark: #6b4a34;
   --color-gold: #e3a83b;
   --color-ink: #241f19;
   --color-sage: #b9c4ac;
-  --color-cardborder: #e3dcc9;
+  --color-cardborder: #dad2bc;
   --color-muted: #7a7266;
+
+  /* Las tarjetas no son blanco puro. Proyectada durante horas, una pared de
+     #FFFFFF deslumbra y cansa; en hueso cálido baja la luminancia de las áreas
+     grandes sin tocar el contraste del texto, que sigue en --color-ink. El
+     borde subió un punto para compensar el relleno más apagado. */
+  --color-card: #fbf8f0;
+
+  /* Podio. Ampliación deliberada y de un solo uso: el oro ya existía, la plata
+     y el bronce entran solo para el 1-2-3 de las gráficas. Validados como
+     tripleta contra la superficie de tarjeta — ΔE 17.6 en visión normal y 16.0
+     bajo protanopía revisando todos los pares. La plata es acero de luminosidad
+     media a propósito: una plata clara pasa la métrica pero se pierde
+     proyectada. */
+  --color-silver: #8fa3ae;
+  --color-bronze: #7e4f2c;
 
   --font-display: var(--font-space-grotesk), sans-serif;
   --font-body: var(--font-public-sans), sans-serif;

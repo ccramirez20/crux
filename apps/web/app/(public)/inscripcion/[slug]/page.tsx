@@ -52,7 +52,7 @@ export default async function InscripcionPage({
         </p>
       </div>
       {eventCategories.length === 0 ? (
-        <p className="max-w-sm rounded-lg border border-cardborder bg-white px-4 py-5 text-center text-sm text-muted">
+        <p className="max-w-sm rounded-lg border border-cardborder bg-card px-4 py-5 text-center text-sm text-muted">
           Las inscripciones todavía no están abiertas: quien organiza aún no ha creado las
           categorías. Vuelve a intentarlo más tarde.
         </p>

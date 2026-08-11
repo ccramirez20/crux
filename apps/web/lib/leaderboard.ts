@@ -1,6 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { z } from 'zod';
-import { SCORING_FORMATS, type Attempt } from '@crux/core';
+import { SCORING_FORMATS, type Attempt, type ScoringFormat } from '@crux/core';
 import { resolveCurrentAttempts, scoreRound, type RankedResult } from '@crux/scoring';
 import { athletes, attempts, categories, eq, events, problems, registrations, rounds } from '@crux/db';
 import { getDb } from './db';
@@ -64,6 +64,25 @@ export interface LeaderboardRow {
   cells: LeaderboardCell[];
 }
 
+/** Standings as they were after the first N attempts of the round. */
+export interface TimelinePoint {
+  attempts: number;
+  ranks: Record<string, number>;
+}
+
+/** How hard a block turned out to be, which is only knowable from the wall. */
+export interface ProblemStats {
+  problemId: string;
+  number: number;
+  tops: number;
+  /** Reached the zone and did not top. Always 0 in lead, where judges record height. */
+  zones: number;
+  /** Topped on the first go. To a climber this is the honest read on how hard a block was. */
+  flashes: number;
+  /** Competitors registered in the category — the denominator. */
+  field: number;
+}
+
 export interface LeaderboardRound {
   id: string;
   type: string;
@@ -72,6 +91,53 @@ export interface LeaderboardRound {
   rows: LeaderboardRow[];
   /** Set when the round can't be scored; the screen says so instead of showing a wrong table. */
   error: string | null;
+  timeline: TimelinePoint[];
+  problemStats: ProblemStats[];
+}
+
+const TIMELINE_POINTS = 12;
+
+/**
+ * Replays the round: score it again after the first attempt, the second, and so
+ * on, and the standings tell their own story — who led early, who overtook whom.
+ *
+ * Nothing is stored to make this work. Attempts are append-only with a monotonic
+ * sequence (decision #1), so the past is still in the table and re-scoring a
+ * prefix reconstructs it exactly.
+ *
+ * ponytail: 12 replays per round per cache window, whole-event. Fine for a gym
+ * event; if a big one ever drags, move the timeline to its own endpoint and
+ * compute it only for the round actually on screen.
+ */
+function buildTimeline(
+  format: ScoringFormat,
+  roundAttempts: Attempt[],
+  config: { problemIds: string[]; registrationIds: string[]; problemPoints: RoundPoints },
+): TimelinePoint[] {
+  const ordered = [...roundAttempts].sort((a, b) => a.sequence - b.sequence);
+  if (ordered.length === 0) {
+    return [];
+  }
+
+  const points: TimelinePoint[] = [];
+  let lastCut = 0;
+  for (let step = 1; step <= TIMELINE_POINTS; step++) {
+    const cut = Math.ceil((ordered.length * step) / TIMELINE_POINTS);
+    // Fewer attempts than steps: the same prefix would repeat.
+    if (cut === lastCut) {
+      continue;
+    }
+    lastCut = cut;
+    const scored = scoreRound(format, ordered.slice(0, cut), config);
+    if (!scored.ok) {
+      return [];
+    }
+    points.push({
+      attempts: cut,
+      ranks: Object.fromEntries(scored.value.map((r) => [r.registrationId, r.rank])),
+    });
+  }
+  return points;
 }
 
 export interface LeaderboardCategory {
@@ -86,12 +152,14 @@ export interface LeaderboardPayload {
   updatedAt: string;
 }
 
+type RoundPoints = Record<string, { topPoints: number; zonePoints: number | null }>;
+
 interface RoundDraft {
   id: string;
   type: string;
   order: number;
   problems: LeaderboardProblem[];
-  problemPoints: Record<string, { topPoints: number; zonePoints: number | null }>;
+  problemPoints: RoundPoints;
 }
 
 interface CategoryDraft {
@@ -155,7 +223,14 @@ export function buildLeaderboard(
     const categoryRegistrations = eventRegistrations.filter((r) => r.categoryId === category.id);
 
     const rounds: LeaderboardRound[] = category.rounds.map((round) => {
-      const base = { id: round.id, type: round.type, order: round.order, problems: round.problems };
+      const base = {
+        id: round.id,
+        type: round.type,
+        order: round.order,
+        problems: round.problems,
+        timeline: [],
+        problemStats: [],
+      };
 
       if (!format.success) {
         return { ...base, rows: [], error: `Formato de puntaje desconocido: ${event.scoringFormat}` };
@@ -167,14 +242,15 @@ export function buildLeaderboard(
       }
 
       const problemIds = round.problems.map((p) => p.id);
-      const scored = scoreRound(format.data, attemptRows, {
+      const config = {
         problemIds,
         // Everyone registered in the category, not just whoever has been
         // judged: that is what puts a competitor with no attempts on screen
         // at zero and last instead of leaving them off the table.
         registrationIds: categoryRegistrations.map((r) => r.id),
         problemPoints: round.problemPoints,
-      });
+      };
+      const scored = scoreRound(format.data, attemptRows, config);
       if (!scored.ok) {
         return { ...base, rows: [], error: scored.error.message };
       }
@@ -200,7 +276,29 @@ export function buildLeaderboard(
         };
       });
 
-      return { ...base, rows, error: null };
+      // How hard each block actually turned out to be. Not the setter's guess —
+      // what the field did with it.
+      const problemStats: ProblemStats[] = round.problems.map((problem) => {
+        const onProblem = current.filter((a) => a.problemId === problem.id);
+        return {
+          problemId: problem.id,
+          number: problem.number,
+          tops: onProblem.filter((a) => a.top).length,
+          zones: onProblem.filter((a) => a.zone && !a.top).length,
+          flashes: onProblem.filter((a) => a.top && (a.topAttempts ?? 1) === 1).length,
+          field: categoryRegistrations.length,
+        };
+      });
+
+      const roundAttempts = attemptRows.filter((a) => problemIds.includes(a.problemId));
+
+      return {
+        ...base,
+        rows,
+        error: null,
+        timeline: buildTimeline(format.data, roundAttempts, config),
+        problemStats,
+      };
     });
 
     return { id: category.id, name: category.name, rounds };

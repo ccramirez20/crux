@@ -33,7 +33,7 @@ export function AddPanel({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={`flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed bg-white/60 px-4 py-3 font-display text-sm font-semibold transition hover:text-white ${accent}`}
+        className={`flex w-full items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed bg-card/60 px-4 py-3 font-display text-sm font-semibold transition hover:text-white ${accent}`}
       >
         <span aria-hidden="true" className="text-base leading-none">
           +
@@ -44,7 +44,7 @@ export function AddPanel({
   }
 
   return (
-    <div className="rounded-lg border border-cardborder bg-white p-4 shadow-[0_1px_0_var(--color-cardborder)]">
+    <div className="rounded-lg border border-cardborder bg-card p-4 shadow-[0_1px_0_var(--color-cardborder)]">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="font-display text-sm font-bold">{label}</h3>
         <button

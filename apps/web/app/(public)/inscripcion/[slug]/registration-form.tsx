@@ -74,7 +74,7 @@ export function RegistrationForm({
 
   if (success) {
     return (
-      <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg border-2 border-pine bg-white p-5 text-center">
+      <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg border-2 border-pine bg-card p-5 text-center">
         <p className="font-display text-xl font-semibold text-pine">{success}</p>
         <p className="text-sm text-muted">
           El día del evento te asignan un dorsal y con ese número los jueces registran tus
@@ -161,7 +161,7 @@ export function RegistrationForm({
       </div>
 
       {!birthDate || !gender ? (
-        <p className="rounded-lg bg-white px-4 py-3 text-sm text-muted">
+        <p className="rounded-lg bg-card px-4 py-3 text-sm text-muted">
           Completa tu fecha de nacimiento y género para ver en qué categorías puedes competir.
         </p>
       ) : eligibleCategories.length > 0 ? (
@@ -188,7 +188,7 @@ export function RegistrationForm({
           </p>
         </div>
       ) : (
-        <p className="rounded-lg border-2 border-bark bg-white px-4 py-3 text-sm text-bark">
+        <p className="rounded-lg border-2 border-bark bg-card px-4 py-3 text-sm text-bark">
           Este evento no tiene ninguna categoría para tu edad y género. Si crees que es un error,
           escríbele a quien organiza.
         </p>

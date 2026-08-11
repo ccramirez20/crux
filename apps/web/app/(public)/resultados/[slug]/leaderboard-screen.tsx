@@ -3,8 +3,9 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { RankedResult } from '@crux/scoring';
 import { TopographicMotif } from '@/components/topographic-motif';
-import { DISCIPLINE_LABEL, ROUND_TYPE_LABEL, formatEventDate, labelFor, problemUnit } from '@/lib/labels';
+import { DISCIPLINE_LABEL, ROUND_TYPE_LABEL, SCORE_TERM, formatEventDate, labelFor, problemUnit } from '@/lib/labels';
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
+import { LeaderboardCharts } from './leaderboard-charts';
 
 const REFRESH_MS = 5000;
 
@@ -81,7 +82,7 @@ function BlockBadge({ cell, isHeight }: { cell: LeaderboardRow['cells'][number] 
 
 function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; row: LeaderboardRow; unit: string; isHeight: boolean }) {
   return (
-    <ul className="flex flex-wrap gap-3 px-6 pb-6">
+    <ul className="flex flex-wrap gap-3 px-6 pb-6 pt-5">
       {round.problems.map((problem) => {
         const cell = row.cells.find((c) => c.problemId === problem.id);
         let said = 'Sin registro';
@@ -95,7 +96,7 @@ function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; ro
           said = 'Sin zona';
         }
         return (
-          <li key={problem.id} className="rounded-lg border border-cardborder bg-white px-4 py-3">
+          <li key={problem.id} className="rounded-lg border border-cardborder bg-card px-4 py-3">
             <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
               {unit} {problem.number}
               {problem.name ? ` · ${problem.name}` : ''}
@@ -113,6 +114,10 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
   const [categoryId, setCategoryId] = useState<string | null>(initial.categories[0]?.id ?? null);
   const [roundId, setRoundId] = useState<string | null>(defaultRound(initial.categories[0]));
   const [openRow, setOpenRow] = useState<string | null>(null);
+  // Señalar a una atleta la resalta en todo a la vez: su fila, su línea en la
+  // gráfica de posiciones y su barra de intentos. Vive aquí y no dentro de una
+  // gráfica porque lo comparten tres piezas hermanas.
+  const [hovered, setHovered] = useState<string | null>(null);
 
   // Decision #4: poll a cached response, no sockets. A hidden tab is a laptop
   // lid closed next to the projector — no reason to keep asking, but the
@@ -228,9 +233,40 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             ) : round.problems.length === 0 ? (
               <p className="text-2xl text-muted">Esta ronda todavía no tiene {unit.plural}.</p>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-white">
+              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card">
+                {/* The number inside a badge is how many goes it took, and
+                    nothing on screen said so — someone reading this table for
+                    the first time had no way to know. The legend teaches the
+                    code in the same colours the table then uses. */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-cardborder px-4 py-3 text-sm text-muted">
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 rounded bg-gold" aria-hidden /> {SCORE_TERM.top}
+                  </span>
+                  {!isHeight && (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 rounded bg-sage" aria-hidden /> {SCORE_TERM.zone}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 rounded border-2 border-dashed border-cardborder" aria-hidden /> Sin
+                    escalar
+                  </span>
+                  {!isHeight && <span>Los números son la cantidad de intentos.</span>}
+                </div>
                 <table className="w-full border-collapse text-left">
                   <thead>
+                    {/* The caption spans the block columns instead of perching
+                        on the first one, where it read as a label for B1 alone. */}
+                    <tr>
+                      <th colSpan={2} />
+                      <th
+                        colSpan={round.problems.length}
+                        className="px-4 pt-3 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"
+                      >
+                        {unit.plural}
+                      </th>
+                      <th colSpan={headers.length} />
+                    </tr>
                     <tr className="border-b-2 border-cardborder">
                       <th className={`${headerClass} w-28`}>Puesto</th>
                       <th className={headerClass}>Competidor</th>
@@ -261,9 +297,11 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                         <Fragment key={row.registrationId}>
                           <tr
                             onClick={() => setOpenRow(open ? null : row.registrationId)}
-                            className={`cursor-pointer border-b border-cardborder/60 transition hover:bg-stone ${
+                            onMouseEnter={() => setHovered(row.registrationId)}
+                            onMouseLeave={() => setHovered(null)}
+                            className={`cursor-pointer border-b border-cardborder/60 transition duration-200 hover:bg-stone ${
                               leading ? 'bg-gold/10' : ''
-                            }`}
+                            } ${hovered !== null && hovered !== row.registrationId ? 'opacity-40' : ''}`}
                           >
                             <td className={`px-4 py-5 ${leading ? 'border-l-4 border-gold' : ''}`}>
                               <span
@@ -317,8 +355,12 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             )}
 
             <p className="text-base text-muted">
-              Toca una fila para ver el detalle {unit.singular} por {unit.singular}.
+              Haz click en las filas para ver el detalle, {unit.singular} por {unit.singular}.
             </p>
+
+            {round && !round.error && (
+              <LeaderboardCharts round={round} unit={unit} hovered={hovered} onHover={setHovered} />
+            )}
           </>
         )}
       </div>

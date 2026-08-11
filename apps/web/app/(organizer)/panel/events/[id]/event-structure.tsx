@@ -99,7 +99,7 @@ export function EventStructure({
           return (
             <li
               key={category.id}
-              className={`overflow-hidden rounded-lg border bg-white transition ${
+              className={`overflow-hidden rounded-lg border bg-card transition ${
                 isOpen ? 'border-pine' : 'border-cardborder'
               }`}
             >
@@ -161,7 +161,7 @@ export function EventStructure({
                             type="button"
                             onClick={() => toggleRound(round.id)}
                             aria-expanded={roundIsOpen}
-                            className="flex w-full items-center justify-between gap-3 rounded-lg border border-cardborder bg-white px-4 py-3 text-left"
+                            className="flex w-full items-center justify-between gap-3 rounded-lg border border-cardborder bg-card px-4 py-3 text-left"
                           >
                             <span>
                               <span className={`${eyebrowClass} block`}>Ronda</span>

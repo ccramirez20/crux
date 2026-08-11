@@ -32,7 +32,7 @@ function AchievementToggle({
       onClick={onToggle}
       aria-pressed={active}
       className={`${TAP_TARGET} flex w-full items-center justify-between rounded-lg border-2 px-4 text-left transition ${
-        active ? 'border-pine bg-pine text-stone' : 'border-cardborder bg-white text-ink'
+        active ? 'border-pine bg-pine text-stone' : 'border-cardborder bg-card text-ink'
       }`}
     >
       <span className="font-display text-lg font-semibold">{label}</span>
@@ -57,7 +57,7 @@ function AttemptStepper({
   const current = value ? Number(value) : 0;
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-cardborder bg-white px-4 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-cardborder bg-card px-4 py-2">
       <span className="text-sm text-muted">{label}</span>
       <div className="flex items-center gap-2">
         <button
@@ -156,7 +156,7 @@ export function AttemptForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-lg border-2 border-gold bg-white p-4"
+      className="flex flex-col gap-3 rounded-lg border-2 border-gold bg-card p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <span>

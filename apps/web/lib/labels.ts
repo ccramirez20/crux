@@ -46,6 +46,22 @@ export function problemUnit(discipline: string): { singular: string; plural: str
     : { singular: 'ruta', plural: 'rutas' };
 }
 
+// Vocabulario de puntaje. En el gimnasio nadie dice "toparon" — se dice que
+// alguien "hizo top", y un top a primer intento es un flash, no "un top a
+// primer intento". La tabla y las gráficas comparten estas palabras, así que
+// viven aquí y no sueltas en cada pantalla.
+export const SCORE_TERM = {
+  top: 'Top',
+  zone: 'Zona',
+  noTop: 'Sin top',
+  flash: 'flash',
+} as const;
+
+/** "11 flash", "1 flash" — la palabra no cambia en plural. */
+export function flashCount(count: number): string {
+  return `${count} ${SCORE_TERM.flash}`;
+}
+
 /** Reads a date-only column (yyyy-mm-dd) without letting the local timezone shift the day. */
 export function formatEventDate(date: string | null): string | null {
   if (!date) {
