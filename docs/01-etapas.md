@@ -17,6 +17,7 @@ explicitamente fuera, y el criterio de desbloqueo de la siguiente.
 - Tabla pública de resultados (`Leaderboard`) — **lista, en pulido de interfaz**. `/resultados/[slug]`, cálculo real vía `scoreRound`, refresco de 5s sobre respuesta cacheada, filtro por categoría y ronda, desempates en columnas visibles, detalle por competidor y tres gráficas. Lo que queda es acabado visual, no funcionalidad.
 - Historial de competidor entre eventos — el modelo de datos ya lo soporta (un `Athlete` se reutiliza entre inscripciones por `documentId`); falta la vista pública de perfil
 - Manual de uso corto, en lenguaje natural, como HTML diseñado y autocontenido (un archivo, se comparte por WhatsApp o se abre sin internet) — **al cerrar la etapa**, cuando el flujo ya no cambie
+- Portada pública (`/`) — **agregada por decisión explícita el 2026-08-11**, no estaba en la lista original. La tesis dice que el canal es "el siguiente gimnasio llega porque vio la tabla en vivo del anterior", así que la tabla pública lleva un gancho de una línea al pie y la portada es donde aterriza ese clic. Lleva imagen de Open Graph para poder moverse por redes. Sin precios: se cobra a mano y falta la conversación con el gimnasio piloto. Las fotos reales entran cuando corra el primer evento; hasta entonces la imagen es la interfaz del producto
 
 ### La tabla pública no es una tabla a secas
 
