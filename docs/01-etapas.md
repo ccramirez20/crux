@@ -77,11 +77,14 @@ puede volver a subir.
   guía punteada amarra cada etiqueta con el extremo de su línea, porque las
   etiquetas se separan entre sí para poder leerse y entonces no caen sobre su
   propio carril; es eso o una grilla, y una grilla compite con las curvas. A la
-  derecha, además, la banda del carril cruza hasta pasar la columna de cambio:
-  el chip solo aparece para quien se movió, y con dos vecinas quietas no había
-  nada que dijera de quién era ese ▼12. Sirve de ese lado porque los puestos
-  finales son únicos y la etiqueta cae sobre su carril; a la izquierda, con seis
-  empatadas en el puesto 1, una banda mentiría.
+  derecha no hace falta —el nodo y su nombre están en el mismo renglón y a un
+  palmo—, pero sí una guía del final del nombre a su chip de cambio: el chip
+  solo aparece para quien se movió, y con dos vecinas quietas nada decía de
+  quién era ese ▼12. Esa guía arranca en el ancho **medido** del nombre
+  (`getComputedTextLength`), no en una posición fija: es la única forma de que no
+  pase por debajo de las letras con cualquier largo de nombre. Extender la banda
+  del carril hasta el chip también resolvía el amarre y se descartó: sacaba la
+  piel de la gráfica fuera de la gráfica.
   Abajo va una sola palabra, "bloques"; los intentos acumulados estuvieron ahí
   y eran dos filas de texto para un dato que nadie viene a buscar.
 - **¿Qué tan duros estaban los bloques?** — tops y zonas por bloque, del más

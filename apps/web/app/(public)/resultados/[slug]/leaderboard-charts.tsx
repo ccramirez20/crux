@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { SCORE_TERM, flashCount } from '@/lib/labels';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 
@@ -165,6 +165,26 @@ function BumpChart({
   onHover,
   onSelect,
 }: { round: LeaderboardRound; unit: string; plural: string; article: string } & HoverProps) {
+  // Cuánto mide cada nombre ya dibujado. Un contra-trazo alcanzaba para tapar la
+  // guía, pero seguía pasando por debajo de las letras; medir el texto es la
+  // única forma de que la guía empiece donde el nombre termina, y de paso sirve
+  // para cualquier largo de nombre sin adivinar.
+  const nameRefs = useRef(new Map<string, SVGTextElement>());
+  const [nameWidths, setNameWidths] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const measured: Record<string, number> = {};
+    for (const [id, element] of nameRefs.current) {
+      measured[id] = element.getComputedTextLength();
+    }
+    // Sin comparar, cada medición dispararía otro render que vuelve a medir.
+    setNameWidths((previous) => {
+      const ids = Object.keys(measured);
+      const same =
+        ids.length === Object.keys(previous).length && ids.every((id) => previous[id] === measured[id]);
+      return same ? previous : measured;
+    });
+  });
+
   const points = round.timeline;
   // Todas las competidoras, no las ocho primeras. Recortar la lista rompía dos
   // cosas: no se podía seguir a alguien de la mitad de la tabla, y señalarla en
@@ -188,13 +208,19 @@ function BumpChart({
   const roomy = lane >= 32;
   const padTop = 78;
   const padBottom = 82;
-  const plotLeft = 290;
-  const plotRight = 830;
+  // El área de dibujo se come el aire de los dos costados: la etiqueta más larga
+  // mide 168 px y arrancaba en x=88, y del otro lado sobraba otro tanto antes
+  // del chip. La gráfica es el foco de esta pantalla, así que el ancho que
+  // sobraba es suyo y no de los márgenes.
+  const plotLeft = 224;
+  const plotRight = 880;
+  const endRankX = plotRight + 76;
+  const endNameX = plotRight + 88;
   // El centro de cada columna de etiquetas, medido sobre el bloque de texto que
   // ocupan y no sobre el ancho disponible: el título tiene que quedar encima de
   // los nombres, no encima del aire que sobra al lado.
-  const startLabelMid = plotLeft - 105;
-  const endLabelMid = plotRight + 130;
+  const startLabelMid = plotLeft - 118;
+  const endLabelMid = plotRight + 150;
   const deltaX = 1240;
   const width = 1250;
   const height = padTop + (maxRank - 1) * lane + padBottom;
@@ -237,22 +263,16 @@ function BumpChart({
         CAMBIO
       </text>
 
-      {/* La banda cruza hasta pasar la columna de cambio, así que la línea, su
-          puesto, su nombre y su chip viajan sobre la misma franja. El chip solo
-          aparece para quien se movió, y con dos vecinas quietas no había nada
-          que dijera de quién era ese ▼12 al otro lado de 300 px de vacío.
-
-          Solo sirve a la derecha: ahí los puestos finales son únicos y la
-          etiqueta cae justo sobre su carril. A la izquierda, con seis empatadas
-          en el puesto 1, las etiquetas se separan del carril y la banda
-          mentiría — ese lado se queda con la guía punteada, que sí las sigue. */}
+      {/* La banda empieza y termina con el área de dibujo. Extenderla hasta la
+          columna de cambio amarraba la fila con su chip, pero sacaba la piel de
+          la gráfica fuera de la gráfica; de eso se encarga ahora la guía. */}
       {Array.from({ length: maxRank }, (_, index) => index).map((row) =>
         row % 2 === 0 ? (
           <rect
             key={row}
             x={plotLeft - 22}
             y={y(row + 1) - lane / 2}
-            width={deltaX + 6 - (plotLeft - 22)}
+            width={plotRight - plotLeft + 44}
             height={lane}
             fill={LANE}
             opacity={0.7}
@@ -284,6 +304,7 @@ function BumpChart({
         const startRank = rankAt(row, points[0]!);
         const endRank = rankAt(row, points.at(-1)!);
         const delta = startRank - endRank;
+        const nameWidth = nameWidths[row.registrationId];
 
         return (
           <g
@@ -328,15 +349,24 @@ function BumpChart({
               strokeWidth={1.5}
               strokeDasharray="2 3"
             />
-            <line
-              x1={plotRight}
-              y1={y(endRank)}
-              x2={plotRight + 40}
-              y2={endYs[index]!}
-              stroke={podium || focused ? color : RULE}
-              strokeWidth={1.5}
-              strokeDasharray="2 3"
-            />
+            {/* Del nombre a su chip, y solo para quien se movió: el chip está
+                lejos y con dos vecinas quietas no había nada que dijera de quién
+                era ese ▼12. Va del color de su propio chip, para que se lea como
+                el rastro de ese chip y no como un renglón de tabla. Arranca en
+                el final medido del nombre, así que no lo toca por largo que
+                sea; hasta que la medida existe, no se dibuja. */}
+            {delta !== 0 && nameWidth !== undefined && (
+              <line
+                x1={endNameX + nameWidth + 12}
+                y1={endYs[index]!}
+                x2={deltaX - 62}
+                y2={endYs[index]!}
+                stroke={delta > 0 ? PINE : BRONZE}
+                strokeWidth={1.5}
+                strokeDasharray="2 3"
+                opacity={0.5}
+              />
+            )}
 
             {/* Mismo formato en los dos extremos: puesto en negrilla con punto,
                 nombre en peso normal y separado. El número viaja pegado al
@@ -361,7 +391,7 @@ function BumpChart({
                 área de dibujo, porque al ir alineado a la derecha el de dos
                 dígitos arrancaba encima del nodo de su propia línea. */}
             <text
-              x={plotRight + 64}
+              x={endRankX}
               y={endYs[index]! + 5}
               textAnchor="end"
               fontSize={roomy ? 18 : 15}
@@ -372,7 +402,14 @@ function BumpChart({
               {endRank}.
             </text>
             <text
-              x={plotRight + 76}
+              ref={(element) => {
+                if (element) {
+                  nameRefs.current.set(row.registrationId, element);
+                } else {
+                  nameRefs.current.delete(row.registrationId);
+                }
+              }}
+              x={endNameX}
               y={endYs[index]! + 5}
               fontSize={roomy ? 18 : 15}
               fontWeight={500}
