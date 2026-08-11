@@ -20,10 +20,11 @@ export const metadata: Metadata = {
 const DEMO_BOARD = '/resultados/liga-paramo';
 
 /**
- * Pendiente: falta decidir a qué dirección escribe un gimnasio interesado. Vacío
- * a propósito —una dirección personal en una página pública no se deshace— y el
- * bloque de contacto no se dibuja hasta que haya una. Poner el correo aquí es
- * todo lo que hace falta para que aparezca.
+ * Decidido el 2026-08-11: el contacto va a un correo propio del proyecto (algo
+ * como hola@crux.co), no a una dirección personal ni a WhatsApp — una dirección
+ * personal en una página abierta no se deshace. Falta el dominio y la cuenta,
+ * así que sigue vacío y el enlace no se dibuja: escribir el correo aquí es todo
+ * lo que hace falta para que aparezca.
  */
 const CONTACT_EMAIL = '';
 
@@ -65,9 +66,13 @@ function SampleRow({
       <td className={`px-4 py-4 text-center ${leading ? 'border-l-4 border-gold' : ''}`}>
         <span className="font-display text-3xl font-bold tabular-nums">{rank}</span>
       </td>
-      <td className="whitespace-nowrap px-4 py-4">
-        <span className="font-display text-xl font-semibold">{name}</span>
-        <span className="ml-2 text-base text-muted tabular-nums">#{bib}</span>
+      {/* El nombre puede partirse y el dorsal desaparece en pantalla chica: esta
+          sección existe para enseñar el código de colores, y si los badges
+          quedan fuera del borde hay que descubrir que se desliza para ver el
+          argumento. El enlace se comparte por WhatsApp; llega al teléfono. */}
+      <td className="px-3 py-4 md:px-4">
+        <span className="font-display text-base font-semibold md:text-xl">{name}</span>
+        <span className="ml-2 hidden text-base text-muted tabular-nums md:inline">#{bib}</span>
       </td>
       {cells.map((cell, index) => (
         <td key={index} className="px-2 py-4 text-center">
@@ -87,7 +92,9 @@ function SampleRow({
         </td>
       ))}
       <td className="px-3 py-4 text-center font-display text-2xl font-bold tabular-nums">{tops}</td>
-      <td className="px-3 py-4 text-center font-display text-lg tabular-nums text-muted">{attempts}</td>
+      <td className="hidden px-3 py-4 text-center font-display text-lg tabular-nums text-muted sm:table-cell">
+        {attempts}
+      </td>
     </tr>
   );
 }
@@ -133,6 +140,9 @@ export default function HomePage() {
           </p>
         </div>
 
+        {/* min-w-0: un hijo de columna flex no baja de su contenido mínimo, y el
+            nombre del competidor va en whitespace-nowrap. Sin esto la tabla
+            estira la página entera y a 390 px se corta el titular. */}
         <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-cardborder px-4 py-3 text-sm text-muted">
             <span className="flex items-center gap-2">
@@ -146,13 +156,13 @@ export default function HomePage() {
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b-2 border-cardborder">
-                <th className={`${eyebrowClass} w-24 px-4 py-3 text-center`}>Puesto</th>
-                <th className={`${eyebrowClass} px-4 py-3`}>Competidor</th>
+                <th className={`${eyebrowClass} w-16 px-3 py-3 text-center md:w-24 md:px-4`}>Puesto</th>
+                <th className={`${eyebrowClass} px-3 py-3 md:px-4`}>Competidor</th>
                 <th className={`${eyebrowClass} px-2 py-3 text-center`}>B1</th>
                 <th className={`${eyebrowClass} px-2 py-3 text-center`}>B2</th>
                 <th className={`${eyebrowClass} px-2 py-3 text-center`}>B3</th>
                 <th className={`${eyebrowClass} px-3 py-3 text-center`}>Tops</th>
-                <th className={`${eyebrowClass} px-3 py-3 text-center`}>Intentos</th>
+                <th className={`${eyebrowClass} hidden px-3 py-3 text-center sm:table-cell`}>Intentos</th>
               </tr>
             </thead>
             <tbody>
