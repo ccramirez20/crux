@@ -1,8 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import { SCORE_TERM, flashCount } from '@/lib/labels';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
+
+/** Señalar a alguien la resalta en las tres piezas a la vez; el estado vive en la pantalla. */
+export interface HoverProps {
+  hovered: string | null;
+  onHover: (registrationId: string | null) => void;
+}
 
 // Podium metals. Measured as a triple against the card surface rather than
 // picked by eye: ΔE 17.6 in normal vision and 16.0 under protanopia across
@@ -32,9 +37,11 @@ const eyebrow = 'text-[11px] font-semibold uppercase tracking-[0.18em] text-mute
 function Panel({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
     <figure className={`${cardClass} m-0 flex flex-col`}>
-      <figcaption className="mb-6">
-        <h2 className="font-display text-2xl font-bold leading-tight">{title}</h2>
-        <p className="mt-1 text-base text-muted">{hint}</p>
+      {/* El título tiene que ganarle al contenido, no competir con él: a
+          tamaño de subtítulo se perdía entre las barras y las líneas. */}
+      <figcaption className="mb-7">
+        <h2 className="font-display text-[1.75rem] font-bold leading-tight tracking-tight text-ink">{title}</h2>
+        <p className="mt-1.5 text-base text-muted">{hint}</p>
       </figcaption>
       {children}
     </figure>
@@ -146,8 +153,7 @@ function declutter(values: number[], minGap: number): number[] {
 // starts costing more attention than it returns.
 const SHOWN_LINES = 8;
 
-function BumpChart({ round }: { round: LeaderboardRound }) {
-  const [hovered, setHovered] = useState<string | null>(null);
+function BumpChart({ round, hovered, onHover }: { round: LeaderboardRound } & HoverProps) {
   const points = round.timeline;
   const shown = round.rows.slice(0, SHOWN_LINES);
   if (points.length < 2 || shown.length < 2) {
@@ -188,8 +194,11 @@ function BumpChart({ round }: { round: LeaderboardRound }) {
           </text>
         ) : null,
       )}
+      {/* "En la categoría" no es un detalle: sin eso el eje se lee como los
+          intentos de cada competidora, y entonces no se entiende por qué todas
+          las líneas terminan en el mismo punto. */}
       <text x={(plotLeft + plotRight) / 2} y={height - 10} textAnchor="middle" fontSize={13} fill={MUTED} letterSpacing={1.2}>
-        INTENTOS JUZGADOS
+        INTENTOS JUZGADOS EN LA CATEGORÍA
       </text>
 
       {shown.map((row, index) => {
@@ -205,9 +214,10 @@ function BumpChart({ round }: { round: LeaderboardRound }) {
         return (
           <g
             key={row.registrationId}
-            onMouseEnter={() => setHovered(row.registrationId)}
-            onMouseLeave={() => setHovered(null)}
-            opacity={dimmed ? 0.25 : 1}
+            onMouseEnter={() => onHover(row.registrationId)}
+            onMouseLeave={() => onHover(null)}
+            opacity={dimmed ? 0.2 : 1}
+            style={{ transition: 'opacity 200ms ease' }}
           >
             {/* Every line gets a surface-coloured under-stroke, not just the
                 leaders: at a crossing one line has to visibly pass over the
@@ -297,12 +307,13 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
  * How many goes each top cost. One axis, sorted, low is good — a scatter asked
  * the reader to decode two dimensions and a diagonal before it said anything.
  */
-function AttemptsPerTop({ round }: { round: LeaderboardRound }) {
+function AttemptsPerTop({ round, hovered, onHover }: { round: LeaderboardRound } & HoverProps) {
   const climbers = round.rows.flatMap((row) =>
     // Two tops minimum. Otherwise a single lucky flash scores 1.0 and outranks
     // someone who sent five, which is the exact opposite of the point.
     row.result.format === 'classic_tops_zones' && row.result.tops >= 2
       ? [{
+          id: row.registrationId,
           name: row.athleteName,
           rank: row.result.rank,
           tops: row.result.tops,
@@ -318,22 +329,41 @@ function AttemptsPerTop({ round }: { round: LeaderboardRound }) {
   const worst = Math.max(...ranked.map((c) => c.ratio));
 
   return (
-    <ul className="flex flex-col gap-4">
-      {ranked.map((climber) => (
-        <li key={climber.name} className="flex items-center gap-4">
-          <span className="w-44 shrink-0 truncate font-display text-lg font-semibold">{climber.name}</span>
-          <span className="flex h-7 flex-1 overflow-hidden rounded-lg" style={{ background: LANE }}>
-            {/* Colour follows the competitor's standing, not their place in
-                this list, so the leader is the same gold in every chart. */}
-            <span className="h-full rounded-lg" style={{ width: `${(climber.ratio / worst) * 100}%`, background: podiumColor(climber.rank) }} />
-          </span>
-          <span className="w-32 shrink-0 text-right">
-            <span className="font-display text-xl font-bold tabular-nums">{climber.ratio.toFixed(1)}</span>
-            <span className="ml-2 text-sm text-muted">{climber.tops} tops</span>
-          </span>
-        </li>
-      ))}
-    </ul>
+    <div>
+      {/* Sin encabezados, el "5" de al lado no se leía como la cantidad de
+          tops: cada número necesita su nombre encima, igual que en la tabla. */}
+      <div className="mb-3 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+        <span className="w-44 shrink-0" />
+        <span className="flex-1" />
+        <span className="w-20 shrink-0 text-right">Promedio</span>
+        <span className="w-16 shrink-0 text-right">Tops</span>
+      </div>
+      <ul className="flex flex-col gap-4">
+        {ranked.map((climber) => (
+          <li
+            key={climber.id}
+            onMouseEnter={() => onHover(climber.id)}
+            onMouseLeave={() => onHover(null)}
+            className={`flex items-center gap-4 transition-opacity duration-200 ${
+              hovered !== null && hovered !== climber.id ? 'opacity-30' : ''
+            }`}
+          >
+            <span className="w-44 shrink-0 truncate font-display text-lg font-semibold">{climber.name}</span>
+            <span className="flex h-7 flex-1 overflow-hidden rounded-lg" style={{ background: LANE }}>
+              {/* Colour follows the competitor's standing, not their place in
+                  this list, so the leader is the same gold in every chart. */}
+              <span className="h-full rounded-lg" style={{ width: `${(climber.ratio / worst) * 100}%`, background: podiumColor(climber.rank) }} />
+            </span>
+            <span className="w-20 shrink-0 text-right font-display text-xl font-bold tabular-nums">
+              {climber.ratio.toFixed(1)}
+            </span>
+            <span className="w-16 shrink-0 text-right font-display text-xl font-bold tabular-nums text-muted">
+              {climber.tops}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -351,10 +381,12 @@ function Swatch({ color, label }: { color: string; label: string }) {
 export function LeaderboardCharts({
   round,
   unit,
+  hovered,
+  onHover,
 }: {
   round: LeaderboardRound;
   unit: { singular: string; plural: string };
-}) {
+} & HoverProps) {
   if (round.timeline.length === 0) {
     return null;
   }
@@ -368,22 +400,18 @@ export function LeaderboardCharts({
 
       <Panel
         title={`${unit.singular.charAt(0).toUpperCase()}${unit.singular.slice(1)} a ${unit.singular}`}
-        hint={`Cómo se fue moviendo la tabla mientras caían los ${unit.plural}. Cuando dos líneas se cruzan, alguien pasó a la otra.`}
+        hint="Cómo cambió la tabla a lo largo de la competencia. Cuando dos líneas se cruzan, alguien pasó a la otra."
       >
-        <BumpChart round={round} />
-        {/* The honest answer to "why do they all start there": at the beginning
-            almost nobody has climbed yet, so half the category is tied. Saying
-            it costs one line and removes the impression that the left edge is
-            arbitrary. */}
+        <BumpChart round={round} hovered={hovered} onHover={onHover} />
         <p className="mt-4 text-base text-muted">
-          A la izquierda va el puesto de cada quien con los primeros intentos juzgados, y a la derecha el
-          de ahora. Al arrancar casi nadie ha escalado, así que muchas van empatadas: la tabla se ordena
-          de verdad cuando empiezan a caer los {unit.plural}.
+          Izquierda: los puestos al empezar la ronda. Derecha: como van ahora. Abajo, cuántos intentos
+          llevaba juzgados la categoría entera — al principio casi nadie ha escalado y por eso muchas
+          empatan.
         </p>
       </Panel>
 
       <div className={`grid grid-cols-1 gap-6 ${hasAttemptsPerTop ? 'xl:grid-cols-[3fr_2fr]' : ''}`}>
-        <Panel title={`¿Qué tan duro salió cada ${unit.singular}?`} hint={`Del más duro al más amable, según lo que hizo la categoría.`}>
+        <Panel title={`¿Qué tan duros estaban los ${unit.plural}?`} hint={`Desempeño en cada ${unit.singular}.`}>
           <div className="mb-5 flex flex-wrap items-center gap-5 text-sm text-muted">
             <Swatch color={GOLD} label={SCORE_TERM.top} />
             {!isHeight && <Swatch color={PINE} label={SCORE_TERM.zone} />}
@@ -392,8 +420,8 @@ export function LeaderboardCharts({
         </Panel>
 
         {hasAttemptsPerTop && (
-          <Panel title="¿A cuántos intentos?" hint="Cuántos intentos le costó cada top. Menos es más fino.">
-            <AttemptsPerTop round={round} />
+          <Panel title="Cuántos intentos al top" hint="Promedio de intentos para alcanzar el top.">
+            <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} />
           </Panel>
         )}
       </div>
