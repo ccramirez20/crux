@@ -16,7 +16,7 @@ export default function Loading() {
         <Bar className="h-3 w-2/5" />
       </div>
 
-      <div className="w-full max-w-2xl rounded-lg border border-cardborder bg-white p-5">
+      <div className="w-full max-w-2xl rounded-lg border border-cardborder bg-card p-5">
         <Bar className="h-4 w-40" />
         <div className="mt-3 flex flex-col gap-2">
           <Bar className="h-3 w-full" />
@@ -30,7 +30,7 @@ export default function Loading() {
 
       <div className="flex w-full max-w-2xl flex-col gap-3">
         {[0, 1].map((i) => (
-          <div key={i} className="rounded-lg border border-cardborder bg-white p-5">
+          <div key={i} className="rounded-lg border border-cardborder bg-card p-5">
             <Bar className="h-4 w-1/3" />
             <div className="mt-3">
               <Bar className="h-3 w-1/2" />

@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { RankedResult } from '@crux/scoring';
 import { TopographicMotif } from '@/components/topographic-motif';
-import { DISCIPLINE_LABEL, ROUND_TYPE_LABEL, formatEventDate, labelFor, problemUnit } from '@/lib/labels';
+import { DISCIPLINE_LABEL, ROUND_TYPE_LABEL, SCORE_TERM, formatEventDate, labelFor, problemUnit } from '@/lib/labels';
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 import { LeaderboardCharts } from './leaderboard-charts';
 
@@ -96,7 +96,7 @@ function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; ro
           said = 'Sin zona';
         }
         return (
-          <li key={problem.id} className="rounded-lg border border-cardborder bg-white px-4 py-3">
+          <li key={problem.id} className="rounded-lg border border-cardborder bg-card px-4 py-3">
             <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
               {unit} {problem.number}
               {problem.name ? ` · ${problem.name}` : ''}
@@ -229,18 +229,44 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             ) : round.problems.length === 0 ? (
               <p className="text-2xl text-muted">Esta ronda todavía no tiene {unit.plural}.</p>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-white">
+              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card">
+                {/* The number inside a badge is how many goes it took, and
+                    nothing on screen said so — someone reading this table for
+                    the first time had no way to know. The legend teaches the
+                    code in the same colours the table then uses. */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-cardborder px-4 py-3 text-sm text-muted">
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 rounded bg-gold" aria-hidden /> {SCORE_TERM.top}
+                  </span>
+                  {!isHeight && (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 rounded bg-sage" aria-hidden /> {SCORE_TERM.zone}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 rounded border-2 border-dashed border-cardborder" aria-hidden /> Sin
+                    escalar
+                  </span>
+                  {!isHeight && <span>El número es en cuántos intentos.</span>}
+                </div>
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="border-b-2 border-cardborder">
                       <th className={`${headerClass} w-28`}>Puesto</th>
                       <th className={headerClass}>Competidor</th>
-                      {round.problems.map((problem) => (
+                      {round.problems.map((problem, index) => (
                         <th
                           key={problem.id}
                           className={`${headerClass} w-24 text-center`}
                           title={problem.name ?? undefined}
                         >
+                          {/* The group caption rides on the first column so
+                              "B1" is anchored to the word it abbreviates. */}
+                          {index === 0 && (
+                            <span className="mb-0.5 block text-[10px] font-semibold tracking-[0.14em] text-muted/70">
+                              {unit.plural.toUpperCase()}
+                            </span>
+                          )}
                           {unit.singular.slice(0, 1).toUpperCase()}
                           {problem.number}
                         </th>
@@ -318,7 +344,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             )}
 
             <p className="text-base text-muted">
-              Toca una fila para ver el detalle {unit.singular} por {unit.singular}.
+              Haz click en las filas para ver el detalle, {unit.singular} por {unit.singular}.
             </p>
 
             {round && !round.error && <LeaderboardCharts round={round} unit={unit} />}
