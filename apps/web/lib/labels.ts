@@ -40,10 +40,13 @@ export function labelFor(map: Record<string, string>, value: string): string {
 // vía de cuerda. Boulder tiene bloques; todo lo que se escala con cuerda tiene
 // rutas. Aquí sí va una sola palabra: la unidad puntuable se nombra decenas de
 // veces por pantalla y "bloque / ruta" en cada una sería ruido.
-export function problemUnit(discipline: string): { singular: string; plural: string } {
+export function problemUnit(discipline: string): { singular: string; plural: string; article: string } {
+  // El artículo va aquí y no en la pantalla: "el bloque 1" y "la ruta 1" son la
+  // misma frase, y sin esto cada rótulo que la arme termina escribiendo "el
+  // ruta 1".
   return discipline === 'boulder'
-    ? { singular: 'bloque', plural: 'bloques' }
-    : { singular: 'ruta', plural: 'rutas' };
+    ? { singular: 'bloque', plural: 'bloques', article: 'el' }
+    : { singular: 'ruta', plural: 'rutas', article: 'la' };
 }
 
 // Vocabulario de puntaje. En el gimnasio nadie dice "toparon" — se dice que

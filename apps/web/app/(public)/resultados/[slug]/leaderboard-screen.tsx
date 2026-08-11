@@ -12,11 +12,18 @@ const REFRESH_MS = 5000;
 // Headers per format. Splitting classic into four columns is the whole point:
 // those four *are* the tiebreak order, so someone arguing a placing reads the
 // reason off the wall instead of asking the organizer.
-const SCORE_HEADERS: Record<string, string[]> = {
-  classic_tops_zones: ['Tops', 'Int. top', 'Zonas', 'Int. zona'],
-  ifsc_boulder: ['Puntaje'],
-  league_points: ['Puntaje'],
-  max_height: ['Altura'],
+//
+// Van en pares con una divisoria entre ellos: la línea es la que separa, no un
+// piso extra de títulos. Dos filas de encabezado engordaban la tabla a lo ancho
+// sin decir nada que "Tops · Intentos | Zonas · Intentos" no diga en una.
+const SCORE_HEADERS: Record<string, string[][]> = {
+  classic_tops_zones: [
+    ['Tops', 'Intentos'],
+    ['Zonas', 'Intentos'],
+  ],
+  ifsc_boulder: [['Puntaje']],
+  league_points: [['Puntaje']],
+  max_height: [['Altura']],
 };
 
 function scoreCells(result: RankedResult): string[] {
@@ -87,7 +94,14 @@ function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; ro
         const cell = row.cells.find((c) => c.problemId === problem.id);
         let said = 'Sin registro';
         if (cell?.top) {
-          said = isHeight ? 'Llegó al top' : `Top en ${cell.topAttempts ?? 1}`;
+          // Un top pasa por la zona en el camino, así que el detalle dice las
+          // dos cosas: es lo que suman las dos columnas de intentos de arriba, y
+          // sin la segunda el número de zonas no se reconciliaba con nada. Si el
+          // juez no anotó la zona aparte, cuenta en el mismo intento del top —
+          // que es exactamente lo que hace el scoring.
+          said = isHeight
+            ? 'Llegó al top'
+            : `Top en ${cell.topAttempts ?? 1} · ${SCORE_TERM.zone} en ${cell.zoneAttempts ?? cell.topAttempts ?? 1}`;
         } else if (cell?.zone) {
           said = `Zona en ${cell.zoneAttempts ?? 1}`;
         } else if (cell && cell.height !== null) {
@@ -118,6 +132,12 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
   // gráfica de posiciones y su barra de intentos. Vive aquí y no dentro de una
   // gráfica porque lo comparten tres piezas hermanas.
   const [hovered, setHovered] = useState<string | null>(null);
+  // En el teléfono no hay hover. Tocar a una competidora —en la tabla o en
+  // cualquier gráfica— la deja fija y abre su detalle en la fila, que es un
+  // espacio propio y no un globo encima de la gráfica que se quería mirar.
+  const focused = hovered ?? openRow;
+  const toggleRow = (registrationId: string) =>
+    setOpenRow((current) => (current === registrationId ? null : registrationId));
 
   // Decision #4: poll a cached response, no sockets. A hidden tab is a laptop
   // lid closed next to the projector — no reason to keep asking, but the
@@ -160,9 +180,21 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
-  const headers = SCORE_HEADERS[data.event.scoringFormat] ?? [];
+  const groups = SCORE_HEADERS[data.event.scoringFormat] ?? [];
+  const headers = groups.flat();
+  // En qué índice arranca cada grupo: ahí van la línea divisoria y la cifra
+  // grande, y las que siguen son su desempate.
+  const groupStarts = new Set<number>();
+  groups.reduce((index, group) => {
+    groupStarts.add(index);
+    return index + group.length;
+  }, 0);
   const date = formatEventDate(data.event.date);
   const headerClass = 'px-4 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-muted';
+  // Ancho fijo y centrado: la cifra se lee bajo su propio título, y sin el tope
+  // de ancho estas cuatro columnas estiraban la tabla a lo ancho de la pantalla
+  // sin necesitarlo.
+  const scoreCellClass = 'w-24 px-3 text-center';
 
   return (
     <main className="min-h-screen px-10 py-8">
@@ -233,7 +265,10 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             ) : round.problems.length === 0 ? (
               <p className="text-2xl text-muted">Esta ronda todavía no tiene {unit.plural}.</p>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card">
+              // La tabla larga se desplaza dentro de su propia caja para que el
+              // encabezado pegajoso tenga contra qué pegarse. Solo en pantalla
+              // grande: en el teléfono lo que importa es correr a los lados.
+              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card lg:max-h-[80vh] lg:overflow-y-auto">
                 {/* The number inside a badge is how many goes it took, and
                     nothing on screen said so — someone reading this table for
                     the first time had no way to know. The legend teaches the
@@ -252,9 +287,23 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                     escalar
                   </span>
                   {!isHeight && <span>Los números son la cantidad de intentos.</span>}
+                  {/* "Intentos" se lee como cuántas veces lo intentó, y es otra
+                      cosa: la suma de los intentos que le costó cada logro. El
+                      título de la columna se queda —así se llama en cualquier
+                      planilla— y la frase es la que desarma la confusión. */}
+                  {!isHeight && (
+                    <span>
+                      Las columnas de intentos suman los intentos que le tomó alcanzar todos los tops y
+                      todas las zonas: menos es mejor.
+                    </span>
+                  )}
                 </div>
                 <table className="w-full border-collapse text-left">
-                  <thead>
+                  {/* Los títulos se quedan pegados arriba: en la fila 12 de la
+                      tabla ya nadie recuerda cuál columna era cuál, y volver a
+                      subir a mirar es justo lo que no se puede hacer con la
+                      pantalla proyectada. */}
+                  <thead className="sticky top-0 z-10 bg-card">
                     {/* The caption spans the block columns instead of perching
                         on the first one, where it read as a label for B1 alone. */}
                     <tr>
@@ -268,20 +317,34 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                       <th colSpan={headers.length} />
                     </tr>
                     <tr className="border-b-2 border-cardborder">
-                      <th className={`${headerClass} w-28`}>Puesto</th>
-                      <th className={headerClass}>Competidor</th>
+                      <th className={`${headerClass} w-28 text-center`}>Puesto</th>
+                      {/* Sin ancho fijo y sin partir el nombre: la columna mide
+                          exactamente lo que mide el nombre más largo, y todo el
+                          sobrante se va a los bloques en vez de quedarse aquí
+                          como un hueco. */}
+                      <th className={`${headerClass} w-px whitespace-nowrap`}>Competidor</th>
                       {round.problems.map((problem) => (
                         <th
                           key={problem.id}
-                          className={`${headerClass} w-24 text-center`}
+                          // Sin ancho fijo: son estas columnas las que se
+                          // reparten el sobrante. Con el ancho clavado, la
+                          // única elástica era la del competidor y todo el aire
+                          // se juntaba en un hueco entre el dorsal y el primer
+                          // bloque.
+                          className={`${headerClass} text-center`}
                           title={problem.name ?? undefined}
                         >
                           {unit.singular.slice(0, 1).toUpperCase()}
                           {problem.number}
                         </th>
                       ))}
-                      {headers.map((header) => (
-                        <th key={header} className={`${headerClass} text-right`}>
+                      {headers.map((header, index) => (
+                        <th
+                          key={index}
+                          className={`${scoreCellClass} py-4 text-sm font-semibold uppercase tracking-[0.14em] text-muted ${
+                            groupStarts.has(index) ? 'border-l border-cardborder/60' : ''
+                          }`}
+                        >
                           {header}
                         </th>
                       ))}
@@ -296,14 +359,14 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                       return (
                         <Fragment key={row.registrationId}>
                           <tr
-                            onClick={() => setOpenRow(open ? null : row.registrationId)}
+                            onClick={() => toggleRow(row.registrationId)}
                             onMouseEnter={() => setHovered(row.registrationId)}
                             onMouseLeave={() => setHovered(null)}
                             className={`cursor-pointer border-b border-cardborder/60 transition duration-200 hover:bg-stone ${
                               leading ? 'bg-gold/10' : ''
-                            } ${hovered !== null && hovered !== row.registrationId ? 'opacity-40' : ''}`}
+                            } ${focused !== null && focused !== row.registrationId ? 'opacity-60' : ''}`}
                           >
-                            <td className={`px-4 py-5 ${leading ? 'border-l-4 border-gold' : ''}`}>
+                            <td className={`px-4 py-5 text-center ${leading ? 'border-l-4 border-gold' : ''}`}>
                               <span
                                 className="font-display text-5xl font-bold tabular-nums"
                                 title={row.result.tied ? 'Empate' : undefined}
@@ -312,7 +375,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                                 {row.result.rank}
                               </span>
                             </td>
-                            <td className="px-4 py-5">
+                            <td className="whitespace-nowrap px-4 py-5">
                               <span className="font-display text-3xl font-semibold">{row.athleteName}</span>
                               {row.bibNumber && (
                                 <span className="ml-3 text-xl text-muted tabular-nums">#{row.bibNumber}</span>
@@ -328,10 +391,15 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                             ))}
                             {scoreCells(row.result).map((value, index) => (
                               <td
-                                key={headers[index] ?? index}
-                                className={`px-4 py-5 text-right tabular-nums ${
-                                  index === 0
-                                    ? 'font-display text-4xl font-bold'
+                                // Por índice: dos grupos traen una columna que
+                                // se llama igual, "Intentos".
+                                key={index}
+                                // La cifra del grupo manda y su desempate va en
+                                // gris: son cuatro números seguidos y sin esa
+                                // jerarquía todos pesan igual.
+                                className={`${scoreCellClass} py-5 tabular-nums ${
+                                  groupStarts.has(index)
+                                    ? 'border-l border-cardborder/60 font-display text-4xl font-bold'
                                     : 'font-display text-2xl text-muted'
                                 }`}
                               >
@@ -359,7 +427,13 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             </p>
 
             {round && !round.error && (
-              <LeaderboardCharts round={round} unit={unit} hovered={hovered} onHover={setHovered} />
+              <LeaderboardCharts
+                round={round}
+                unit={unit}
+                hovered={focused}
+                onHover={setHovered}
+                onSelect={toggleRow}
+              />
             )}
           </>
         )}
