@@ -17,6 +17,7 @@ explicitamente fuera, y el criterio de desbloqueo de la siguiente.
 - Tabla pública de resultados (`Leaderboard`) — **lista, en pulido de interfaz**. `/resultados/[slug]`, cálculo real vía `scoreRound`, refresco de 5s sobre respuesta cacheada, filtro por categoría y ronda, desempates en columnas visibles, detalle por competidor y tres gráficas. Lo que queda es acabado visual, no funcionalidad.
 - Historial de competidor entre eventos — el modelo de datos ya lo soporta (un `Athlete` se reutiliza entre inscripciones por `documentId`); falta la vista pública de perfil
 - Manual de uso corto, en lenguaje natural, como HTML diseñado y autocontenido (un archivo, se comparte por WhatsApp o se abre sin internet) — **al cerrar la etapa**, cuando el flujo ya no cambie
+- Portada pública (`/`) — **agregada por decisión explícita el 2026-08-11**, no estaba en la lista original. La tesis dice que el canal es "el siguiente gimnasio llega porque vio la tabla en vivo del anterior", así que la tabla pública lleva un gancho de una línea al pie y la portada es donde aterriza ese clic. Lleva imagen de Open Graph para poder moverse por redes. Sin precios: se cobra a mano y falta la conversación con el gimnasio piloto. Las fotos reales entran cuando corra el primer evento; hasta entonces la imagen es la interfaz del producto
 
 ### La tabla pública no es una tabla a secas
 
@@ -146,6 +147,25 @@ Pagos en línea, múltiples organizaciones con roles, notificaciones, exportaci�
 Un gimnasio real corrió un evento con ≥20 inscritos sin soporte manual del desarrollador el día del evento.
 
 ## Ideas registradas para etapa 2 (no implementar aun)
+
+- **Dos decisiones de diseno que ya sabemos que hay que tomar** (2026-08-11, del
+  analisis de competencia en `00-tesis.md`). Ninguna se construye ahora: la etapa
+  2 esta bloqueada y el esquema necesita aprobacion explicita.
+
+  1. **Modelar el bloque de entrenamiento.** Hoy `problems` cuelga de un `round`,
+     que cuelga de un evento, asi que un bloque solo existe dentro de una
+     competencia. El foso de la etapa 2 —comparar varios escaladores sobre el
+     mismo bloque— vive en el entrenamiento: el entrenador monta un bloque y pone
+     a sus alumnos a intentarlo. Ese bloque no tiene donde vivir en el modelo.
+  2. **Fila por intento fisico.** Una fila de `attempts` es el *estado* de
+     (atleta, bloque) —`resolveCurrentAttempts` se queda con la de mayor
+     `sequence` y las correcciones son filas nuevas—, no un registro por intento.
+     Colgar el video del intento #2 de un bloque exige modelar el numero de
+     intento.
+
+- **Revision de literatura y taxonomia de fallas por fase de movimiento.** Es la
+  parte del diferencial que no se copia. Se hace al cierre de la V1 de
+  competencias, con el conocimiento del fundador como filtro.
 
 - **Feedback del entrenador como input del diagnostico.** En el plan pago de
   entrenador, que el entrenador pueda personalizar/anotar la descripcion o

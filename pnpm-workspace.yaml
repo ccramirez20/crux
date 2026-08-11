@@ -4,9 +4,14 @@ packages:
 
 # Pines de seguridad, duplicados a proposito con el campo "pnpm" de package.json.
 # pnpm 9 (el fijado en packageManager) solo lee los de package.json; pnpm 10 dejo
-# de leer ese campo y solo lee estos. Quitarlos de package.json probado: el arbol
-# vuelve a resolver postcss 8.4.31, sharp 0.34.5 y esbuild 0.18.20, todos con CVE.
-# Si cambias uno, cambia el otro.
+# de leer ese campo y solo lee estos. Quitarlos de package.json probado dos veces
+# —la ultima el 2026-08-11—: el arbol vuelve a resolver postcss 8.4.31, sharp
+# 0.34.5 y esbuild 0.18.20, todos con CVE. Si cambias uno, cambia el otro.
+#
+# El warning "The pnpm field in package.json is no longer read" lo emite un pnpm
+# 10 que esta en el PATH, no el 9.15.0 que corre el proyecto. Es ruido, no un
+# sintoma: el lockfile prueba que los pines se aplican. Se calla el dia que se
+# suba packageManager a pnpm 10 y se borre el campo de package.json, en ese orden.
 overrides:
   postcss: ">=8.5.23"
   sharp: ">=0.35.0"

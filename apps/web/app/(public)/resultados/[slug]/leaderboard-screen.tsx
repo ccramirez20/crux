@@ -435,6 +435,22 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                 onSelect={toggleRow}
               />
             )}
+
+            {/* Una línea, al final y en gris: esta pantalla es del evento, no
+                nuestra. Pero es donde está toda la sala durante horas, y ahí
+                está el dueño del gimnasio de al lado. */}
+            {round && (
+              <p className="border-t border-cardborder pt-6 text-base text-muted">
+                Esta tabla la corre{' '}
+                <a
+                  href="/"
+                  className="font-display font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
+                >
+                  Crux
+                </a>
+                , plataforma de competencias de escalada.
+              </p>
+            )}
           </>
         )}
       </div>

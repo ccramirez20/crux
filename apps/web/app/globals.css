@@ -33,3 +33,28 @@ body {
   background-color: var(--color-stone);
   color: var(--color-ink);
 }
+
+/* La portada dibuja sus curvas al cargar: arrancan juntas a la izquierda —todo
+   el mundo empatado— y se separan cruzándose, que es lo que hace la tabla
+   durante una ronda. Es la única animación del sitio; el resto se queda quieto. */
+@keyframes crux-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.crux-draw {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: crux-draw 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crux-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
