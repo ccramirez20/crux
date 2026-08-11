@@ -35,6 +35,8 @@ Retención y adquisición de consumidor, no ingreso. Solo tiene sentido con base
 
 Node 22, TypeScript estricto, Next.js 15 (App Router), Tailwind + shadcn/ui (shadcn/ui aún no instalado), Postgres + Drizzle, Better Auth, Vitest + Playwright (Playwright aún no instalado; `pnpm test:e2e` no ejecuta nada todavía), pnpm workspaces + Turborepo.
 
+**Sin librería de gráficas.** Las de la tabla pública son SVG y CSS a mano: cuestan 6.5 kB en la pantalla que abre toda la sala al tiempo, contra los 100 kB y pico de una librería. Antes de proponer una, mira `apps/web/app/(public)/resultados/[slug]/leaderboard-charts.tsx`.
+
 Etapa 2 añade: MediaPipe Tasks Vision (PoseLandmarker) sobre WASM/WebGPU, en Web Worker. Etapa 3 añade: onnxruntime-web.
 
 ## Estructura
@@ -134,7 +136,8 @@ pnpm test:e2e         # Playwright — pendiente, aún no instalado (no hace nad
 pnpm db:generate      # generar migración desde el esquema
 pnpm db:migrate
 pnpm db:studio
-pnpm seed:event       # pendiente, aún no implementado
+pnpm seed:event       # siembra la competencia demo (26 inscritos, 5 bloques, 130 intentos)
+pnpm seed:event --reset   # la borra y la vuelve a sembrar
 ```
 
 ## Convenciones
