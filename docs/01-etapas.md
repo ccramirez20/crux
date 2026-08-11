@@ -164,8 +164,12 @@ Un gimnasio real corrió un evento con ≥20 inscritos sin soporte manual del de
      intento.
 
 - **Revision de literatura y taxonomia de fallas por fase de movimiento.** Es la
-  parte del diferencial que no se copia. Se hace al cierre de la V1 de
-  competencias, con el conocimiento del fundador como filtro.
+  parte del diferencial que no se copia. Primera pasada hecha el 2026-08-11 en
+  `03-biomecanica.md`: la literatura da el ciclo de tres fases
+  (estabilizacion → preparacion → desplazamiento), la fluidez por jerk de cadera
+  y numeros de tiempo-movimiento de competencia, pero **no da catalogo de fallas,
+  ni umbrales, ni validacion contra resultado**. El borrador de taxonomia espera
+  correccion de CR antes de que se escriba una linea de codigo.
 
 - **Feedback del entrenador como input del diagnostico.** En el plan pago de
   entrenador, que el entrenador pueda personalizar/anotar la descripcion o
