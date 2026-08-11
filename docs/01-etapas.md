@@ -38,11 +38,14 @@ Tres tiles arriba (el bloque más duro, el porcentaje de flash de la ronda, el
 mayor ascenso), la tabla con una franja de leyenda que enseña su propio código,
 y tres gráficas.
 
-La tabla agrupa el puntaje en dos pisos —TOPS y ZONAS arriba, "cuántos" e
-"intentos" abajo— porque cuatro cifras seguidas con cuatro títulos abreviados
-encima se leían como una pared de números. El encabezado se queda pegado
-arriba mientras la tabla se desplaza: en la fila 12 ya nadie recuerda cuál
-columna era cuál, y en una pantalla proyectada no se puede volver a subir.
+La tabla separa el puntaje en dos pares con una divisoria —TOPS · INTENTOS |
+ZONAS · INTENTOS— y las cifras van centradas bajo su título. Es la divisoria la
+que hace legible el bloque, no un piso extra de encabezados: eso se probó y
+engordaba la tabla a lo ancho sin decir nada nuevo. Esas cuatro columnas van a
+ancho fijo, o estiran la tabla hasta el borde de la pantalla sin necesitarlo.
+El encabezado se queda pegado arriba mientras la tabla se desplaza: en la fila
+12 ya nadie recuerda cuál columna era cuál, y en una pantalla proyectada no se
+puede volver a subir.
 
 - **Puesto bloque a bloque** — una línea por competidora, todas, y el eje X es
   el bloque, no el intento. Cada punto es el puesto si la ronda hubiera cerrado
@@ -56,9 +59,15 @@ columna era cuál, y en una pantalla proyectada no se puede volver a subir.
   bloque N"—: "posición final" mentiría mientras queden bloques por escalar.
   En los empates el número viaja pegado al nombre, porque las etiquetas se
   separan para poder leerse y una etiqueta frente al carril 4 se leía como
-  cuarto puesto cuando iba primera empatada.
+  cuarto puesto cuando iba primera empatada. No hay columna de escala: con el
+  puesto pegado a cada nombre en los dos extremos, esa columna solo repetía.
+  Abajo va una sola palabra, "bloques"; los intentos acumulados estuvieron ahí
+  y eran dos filas de texto para un dato que nadie viene a buscar.
 - **¿Qué tan duros estaban los bloques?** — tops y zonas por bloque, del más
-  duro al más amable, marcando el crux.
+  duro al más amable, marcando el crux. Señalar un tramo de la barra apaga los
+  otros dos y escribe qué mide ese color ("7 llegaron a la zona sin top"): un
+  color solo no dice qué está contando. La fila que lo escribe reserva su alto
+  aunque esté vacía, o el texto empuja las barras justo cuando les apuntas.
 - **Cuántos intentos al top** — promedio de intentos por top, mínimo dos tops
   para entrar (si no, un flash suelto encabeza por encima de quien hizo cinco).
 
@@ -92,7 +101,9 @@ elige a ojo. Dos resultados que hay que respetar:
 - El caso de 25 competidoras se probó en pantalla, no en el papel: el carril
   adaptativo (`620 / campo`, entre 22 y 38 px) las mete a las 25 en el mismo
   alto que tenían 14, con etiqueta directa y sin superposición. El recorte a
-  ocho líneas ya se probó y era peor.
+  ocho líneas ya se probó y era peor. La ronda de 7 bloques también se probó:
+  los títulos de los extremos salen del primer y del último punto, así que
+  dicen "puesto tras el bloque 7" solos.
 - Falta verlo por debajo de 500 px de ancho: Chrome no deja achicar más la
   ventana. A 500 px la gráfica y la tabla se desplazan a lo ancho dentro de su
   caja y la página no se desborda.
