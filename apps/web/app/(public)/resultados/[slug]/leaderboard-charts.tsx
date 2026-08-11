@@ -194,7 +194,7 @@ function BumpChart({
   // ocupan y no sobre el ancho disponible: el título tiene que quedar encima de
   // los nombres, no encima del aire que sobra al lado.
   const startLabelMid = plotLeft - 105;
-  const endLabelMid = plotRight + 115;
+  const endLabelMid = plotRight + 130;
   const deltaX = 1240;
   const width = 1250;
   const height = padTop + (maxRank - 1) * lane + padBottom;
@@ -237,15 +237,22 @@ function BumpChart({
         CAMBIO
       </text>
 
-      {/* Sin columna de escala: el puesto ya va pegado a cada nombre en los dos
-          extremos, y la columna de números solo repetía lo mismo. */}
+      {/* La banda cruza hasta pasar la columna de cambio, así que la línea, su
+          puesto, su nombre y su chip viajan sobre la misma franja. El chip solo
+          aparece para quien se movió, y con dos vecinas quietas no había nada
+          que dijera de quién era ese ▼12 al otro lado de 300 px de vacío.
+
+          Solo sirve a la derecha: ahí los puestos finales son únicos y la
+          etiqueta cae justo sobre su carril. A la izquierda, con seis empatadas
+          en el puesto 1, las etiquetas se separan del carril y la banda
+          mentiría — ese lado se queda con la guía punteada, que sí las sigue. */}
       {Array.from({ length: maxRank }, (_, index) => index).map((row) =>
         row % 2 === 0 ? (
           <rect
             key={row}
             x={plotLeft - 22}
             y={y(row + 1) - lane / 2}
-            width={plotRight - plotLeft + 44}
+            width={deltaX + 6 - (plotLeft - 22)}
             height={lane}
             fill={LANE}
             opacity={0.7}
@@ -324,7 +331,7 @@ function BumpChart({
             <line
               x1={plotRight}
               y1={y(endRank)}
-              x2={plotRight + 26}
+              x2={plotRight + 40}
               y2={endYs[index]!}
               stroke={podium || focused ? color : RULE}
               strokeWidth={1.5}
@@ -350,9 +357,11 @@ function BumpChart({
               <tspan dx={6}>{row.athleteName}</tspan>
             </text>
             {/* A la derecha el puesto va en su propia columna: pegado al nombre,
-                "12 Manuela" se leía como una sola cosa larga. */}
+                "12 Manuela" se leía como una sola cosa larga. Y separado del
+                área de dibujo, porque al ir alineado a la derecha el de dos
+                dígitos arrancaba encima del nodo de su propia línea. */}
             <text
-              x={plotRight + 48}
+              x={plotRight + 64}
               y={endYs[index]! + 5}
               textAnchor="end"
               fontSize={roomy ? 18 : 15}
@@ -363,7 +372,7 @@ function BumpChart({
               {endRank}.
             </text>
             <text
-              x={plotRight + 60}
+              x={plotRight + 76}
               y={endYs[index]! + 5}
               fontSize={roomy ? 18 : 15}
               fontWeight={500}
