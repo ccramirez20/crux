@@ -19,6 +19,14 @@ export const metadata: Metadata = {
 /** El enlace vive aquí y no suelto en cada sección: es el argumento de venta. */
 const DEMO_BOARD = '/resultados/liga-paramo';
 
+/**
+ * Pendiente: falta decidir a qué dirección escribe un gimnasio interesado. Vacío
+ * a propósito —una dirección personal en una página pública no se deshace— y el
+ * bloque de contacto no se dibuja hasta que haya una. Poner el correo aquí es
+ * todo lo que hace falta para que aparezca.
+ */
+const CONTACT_EMAIL = '';
+
 const STEPS = [
   {
     title: 'Publicas el enlace',
@@ -249,6 +257,14 @@ export default function HomePage() {
           <Link href={DEMO_BOARD} className={secondaryButtonClass}>
             Ver la demostración
           </Link>
+          {CONTACT_EMAIL !== '' && (
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="font-display text-base font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
+            >
+              Escribirnos
+            </a>
+          )}
         </div>
       </footer>
     </main>

@@ -1,25 +1,41 @@
 /**
  * La firma de la portada: las curvas de nivel del páramo son las líneas de
- * posición del tablero. Arrancan juntas a la izquierda —al empezar la ronda
- * nadie ha escalado y todos van empatados— y se separan cruzándose hasta un
- * nodo, igual que la gráfica "puesto bloque a bloque" del producto.
+ * posición del tablero. Arrancan apretadas a la izquierda —al empezar la ronda
+ * nadie ha escalado y todos van empatados— y se **cruzan**: la dorada sale
+ * cuarta y termina primera. Sin cruce serían un abanico decorativo; el cruce es
+ * la historia de una tabla, y es la misma forma de la gráfica "puesto bloque a
+ * bloque" del producto.
  *
  * Los colores son los del podio de esa gráfica, ya validados como tripleta
  * contra la superficie de tarjeta.
  */
 const LINES = [
-  { d: 'M0,96 C180,96 240,92 320,74 T560,40 T780,30', endY: 30, color: '#E3A83B', width: 3 },
-  { d: 'M0,102 C180,102 250,104 330,96 T580,72 T780,64', endY: 64, color: '#8FA3AE', width: 2.5 },
-  { d: 'M0,108 C180,108 250,116 330,126 T580,104 T780,98', endY: 98, color: '#7E4F2C', width: 2.5 },
-  { d: 'M0,114 C180,114 250,126 340,142 T590,150 T780,132', endY: 132, color: '#2F4A3E', width: 1.75 },
-  { d: 'M0,120 C180,120 250,134 340,160 T590,178 T780,168', endY: 168, color: '#B9C4AC', width: 1.75 },
+  // Sale cuarta y adelanta a tres: es la única línea que hay que seguir.
+  { d: 'M0,110 C260,110 300,96 420,70 S640,34 770,28', endY: 28, rank: 1, color: '#E3A83B', width: 3.5 },
+  { d: 'M0,100 C260,100 320,92 440,78 S660,66 770,62', endY: 62, rank: 2, color: '#8FA3AE', width: 2.5 },
+  { d: 'M0,104 C260,104 320,112 440,106 S660,98 770,96', endY: 96, rank: 3, color: '#7E4F2C', width: 2.5 },
+  // Arrancaba primera y se deja pasar.
+  { d: 'M0,96 C260,96 300,106 420,116 S640,128 770,130', endY: 130, rank: 4, color: '#2F4A3E', width: 2 },
+  { d: 'M0,114 C260,114 330,128 450,146 S670,162 770,164', endY: 164, rank: 5, color: '#B9C4AC', width: 2 },
 ];
 
 export function StandingsMotif() {
   return (
-    <svg viewBox="0 0 800 200" className="block w-full" aria-hidden="true">
+    <svg viewBox="0 0 800 190" className="block w-full" aria-hidden="true">
       {LINES.map((line, index) => (
         <g key={line.color}>
+          {/* Contra-trazo del color del fondo: en un cruce una línea tiene que
+              pasar visiblemente por encima de la otra, o se disuelven en una X.
+              Es el mismo recurso que usa la gráfica real. */}
+          <path
+            d={line.d}
+            fill="none"
+            stroke="#EFEBDD"
+            strokeWidth={line.width + 6}
+            strokeLinecap="round"
+            className="crux-draw"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          />
           <path
             d={line.d}
             fill="none"
@@ -27,10 +43,21 @@ export function StandingsMotif() {
             strokeWidth={line.width}
             strokeLinecap="round"
             className="crux-draw"
-            style={{ animationDelay: `${index * 0.12}s` }}
+            style={{ animationDelay: `${index * 0.1}s` }}
           />
-          {/* El nodo final, como el de la tabla: la línea termina en un puesto. */}
-          <circle cx={780} cy={line.endY} r={line.width * 1.8} fill={line.color} />
+          <circle cx={770} cy={line.endY} r={line.width * 1.7} fill={line.color} />
+          {/* El puesto al final, como en la tabla: esto es un tablero, no un
+              adorno. */}
+          <text
+            x={790}
+            y={line.endY + 6}
+            fontSize={17}
+            fontWeight={700}
+            fill={line.rank <= 3 ? '#241F19' : '#7A7266'}
+            className="tabular-nums"
+          >
+            {line.rank}
+          </text>
         </g>
       ))}
     </svg>
