@@ -38,18 +38,26 @@ Tres tiles arriba (el bloque más duro, el porcentaje de flash de la ronda, el
 mayor ascenso), la tabla con una franja de leyenda que enseña su propio código,
 y tres gráficas:
 
-- **Bloque a bloque** — puesto contra intentos juzgados en la categoría. Cada
-  tramo sale y entra horizontal, así que la curva nunca inventa un puesto
-  intermedio: muestra un puesto sostenido y luego cambiado. Se reconstruye
-  re-puntuando la ronda en 12 prefijos de `attempts` (decisión #1: el pasado
-  sigue en la tabla, no hay que guardar nada).
+- **Puesto bloque a bloque** — una línea por competidora, todas, y el eje X es
+  el bloque, no el intento. Cada punto es el puesto si la ronda hubiera cerrado
+  ahí, que es la única vara que todas comparten: con intentos acumulados de
+  coordenada, la gráfica se leía como que todas habían intentado 70 veces. Los
+  intentos siguen bajo cada tick, como volumen de la categoría. Cada tramo sale
+  y entra horizontal, así que la curva nunca inventa un puesto intermedio. Se
+  reconstruye re-puntuando la ronda sobre los bloques 1..n (decisión #1: el
+  pasado sigue en la tabla, no hay que guardar nada); un bloque que nadie ha
+  escalado no entra al eje.
 - **¿Qué tan duros estaban los bloques?** — tops y zonas por bloque, del más
   duro al más amable, marcando el crux.
 - **Cuántos intentos al top** — promedio de intentos por top, mínimo dos tops
   para entrar (si no, un flash suelto encabeza por encima de quien hizo cinco).
 
 Señalar a una competidora la resalta al tiempo en la tabla, en su línea y en su
-barra.
+barra; el resto baja a 0.45 y no a 0.2, porque el contexto es justamente lo que
+hace que resaltar signifique algo. En el teléfono no hay hover: tocarla la deja
+fija y su detalle se abre en la fila de la tabla, un espacio propio, en vez de
+un globo encima de la gráfica que se quería mirar. La gráfica de líneas no se
+encoge en pantalla chica, se desplaza.
 
 #### Reglas de color que ya costaron una corrección
 
@@ -71,9 +79,11 @@ elige a ojo. Dos resultados que hay que respetar:
 #### Pendiente de esta pantalla
 
 - Feedback de interfaz en curso; queda al menos una ronda más de ajustes.
-- Dos decisiones abiertas: si la plata se deja en acero frío sabiendo lo de
-  arriba, y si los carriles de abajo en "Bloque a bloque" se recortan (se ven
-  vacíos, pero es cierto que alguna de las ocho cayó hasta ese puesto).
+- Una decisión abierta: si la plata se deja en acero frío sabiendo lo de arriba.
+- Con 14 líneas grises el trazado se lee, pero se lee apretado. Si un evento
+  llega con 25 en una categoría hay que volver a mirarlo; el recorte a ocho ya
+  se probó y era peor (no se podía seguir a nadie de media tabla, y señalarla en
+  otra gráfica no encendía nada).
 - El formato `league_points` sigue sin verse en pantalla con datos reales.
   `classic_tops_zones` ya se ve, gracias a `pnpm seed:event`.
 

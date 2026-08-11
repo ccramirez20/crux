@@ -118,6 +118,12 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
   // gráfica de posiciones y su barra de intentos. Vive aquí y no dentro de una
   // gráfica porque lo comparten tres piezas hermanas.
   const [hovered, setHovered] = useState<string | null>(null);
+  // En el teléfono no hay hover. Tocar a una competidora —en la tabla o en
+  // cualquier gráfica— la deja fija y abre su detalle en la fila, que es un
+  // espacio propio y no un globo encima de la gráfica que se quería mirar.
+  const focused = hovered ?? openRow;
+  const toggleRow = (registrationId: string) =>
+    setOpenRow((current) => (current === registrationId ? null : registrationId));
 
   // Decision #4: poll a cached response, no sockets. A hidden tab is a laptop
   // lid closed next to the projector — no reason to keep asking, but the
@@ -296,12 +302,12 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                       return (
                         <Fragment key={row.registrationId}>
                           <tr
-                            onClick={() => setOpenRow(open ? null : row.registrationId)}
+                            onClick={() => toggleRow(row.registrationId)}
                             onMouseEnter={() => setHovered(row.registrationId)}
                             onMouseLeave={() => setHovered(null)}
                             className={`cursor-pointer border-b border-cardborder/60 transition duration-200 hover:bg-stone ${
                               leading ? 'bg-gold/10' : ''
-                            } ${hovered !== null && hovered !== row.registrationId ? 'opacity-40' : ''}`}
+                            } ${focused !== null && focused !== row.registrationId ? 'opacity-60' : ''}`}
                           >
                             <td className={`px-4 py-5 ${leading ? 'border-l-4 border-gold' : ''}`}>
                               <span
@@ -359,7 +365,13 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
             </p>
 
             {round && !round.error && (
-              <LeaderboardCharts round={round} unit={unit} hovered={hovered} onHover={setHovered} />
+              <LeaderboardCharts
+                round={round}
+                unit={unit}
+                hovered={focused}
+                onHover={setHovered}
+                onSelect={toggleRow}
+              />
             )}
           </>
         )}

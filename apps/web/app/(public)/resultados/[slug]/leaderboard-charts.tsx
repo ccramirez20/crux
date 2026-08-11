@@ -3,10 +3,16 @@
 import { SCORE_TERM, flashCount } from '@/lib/labels';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 
-/** Señalar a alguien la resalta en las tres piezas a la vez; el estado vive en la pantalla. */
+/**
+ * Señalar a alguien la resalta en las tres piezas a la vez; el estado vive en la
+ * pantalla. En el teléfono no hay hover: tocar fija a la competidora (`onSelect`)
+ * y el detalle se abre en su fila de la tabla, en un espacio aparte, sin taparle
+ * la gráfica encima.
+ */
 export interface HoverProps {
   hovered: string | null;
   onHover: (registrationId: string | null) => void;
+  onSelect: (registrationId: string) => void;
 }
 
 // Podium metals. Measured as a triple against the card surface rather than
@@ -107,7 +113,7 @@ function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: st
       {bestClimb && bestClimb.delta > 0 && (
         <StatTile
           label="Mayor ascenso en la tabla"
-          what="Quién más puestos ganó desde que arrancó la ronda"
+          what={`Quién más puestos ganó desde el primer ${unit}`}
           value={`+${bestClimb.delta}`}
           detail={`${bestClimb.name} subió ${bestClimb.delta} puestos en la tabla de posiciones`}
         />
@@ -149,29 +155,32 @@ function declutter(values: number[], minGap: number): number[] {
   return out;
 }
 
-// Eight, not ten. Past eight the crossings stop being readable and the chart
-// starts costing more attention than it returns.
-const SHOWN_LINES = 8;
-
-function BumpChart({ round, hovered, onHover }: { round: LeaderboardRound } & HoverProps) {
+function BumpChart({ round, unit, hovered, onHover, onSelect }: { round: LeaderboardRound; unit: string } & HoverProps) {
   const points = round.timeline;
-  const shown = round.rows.slice(0, SHOWN_LINES);
+  // Todas las competidoras, no las ocho primeras. Recortar la lista rompía dos
+  // cosas: no se podía seguir a alguien de la mitad de la tabla, y señalarla en
+  // otra gráfica no encendía nada aquí. La legibilidad la sostienen la etiqueta
+  // directa y el carril, no el recorte.
+  const shown = round.rows;
   if (points.length < 2 || shown.length < 2) {
     return null;
   }
 
+  const tick = (index: number) => `${unit.slice(0, 1).toUpperCase()}${points[index]!.problemNumber}`;
   const rankAt = (row: LeaderboardRow, point: (typeof points)[number]) =>
     point.ranks[row.registrationId] ?? shown.length;
   const maxRank = Math.max(...shown.flatMap((row) => points.map((p) => rankAt(row, p))));
 
   const lane = 38;
-  const padTop = 30;
-  const padBottom = 52;
+  const padTop = 62;
+  const padBottom = 104;
   const plotLeft = 250;
   const plotRight = 830;
   const deltaX = 1240;
   const width = 1250;
   const height = padTop + (maxRank - 1) * lane + padBottom;
+  const laneTop = padTop - lane / 2;
+  const laneBottom = padTop + (maxRank - 1) * lane + lane / 2;
 
   const x = (index: number) => plotLeft + (index * (plotRight - plotLeft)) / (points.length - 1);
   const y = (rank: number) => padTop + (rank - 1) * lane;
@@ -179,26 +188,61 @@ function BumpChart({ round, hovered, onHover }: { round: LeaderboardRound } & Ho
   const endYs = declutter(shown.map((row) => y(rankAt(row, points.at(-1)!))), 26);
   const startYs = declutter(shown.map((row) => y(rankAt(row, points[0]!))), 26);
 
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="Puesto de cada competidor a lo largo de la ronda">
-      {Array.from({ length: maxRank }, (_, index) => index).map((row) =>
-        row % 2 === 0 ? (
-          <rect key={row} x={plotLeft - 22} y={y(row + 1) - lane / 2} width={plotRight - plotLeft + 44} height={lane} fill={LANE} opacity={0.7} />
-        ) : null,
-      )}
+  const axis = { fontSize: 12, fill: MUTED, fontWeight: 600, letterSpacing: 1.1 } as const;
 
-      {points.map((point, index) =>
-        index % 3 === 0 || index === points.length - 1 ? (
-          <text key={point.attempts} x={x(index)} y={height - 30} textAnchor="middle" fontSize={13} fill={MUTED}>
-            {point.attempts}
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full min-w-[900px]"
+      role="img"
+      aria-label={`Puesto de cada competidor al cierre de cada ${unit}`}
+    >
+      {/* Cada dimensión dice su nombre encima de la columna que ocupa: la escala
+          de la izquierda, de dónde salen las líneas y dónde terminan. */}
+      <text x={16} y={26} {...axis}>
+        PUESTO
+      </text>
+      <text x={plotLeft - 28} y={26} textAnchor="end" {...axis}>
+        TRAS {tick(0)}
+      </text>
+      <text x={plotRight + 24} y={26} {...axis}>
+        AHORA
+      </text>
+      <text x={deltaX} y={26} textAnchor="end" {...axis}>
+        CAMBIO
+      </text>
+
+      {Array.from({ length: maxRank }, (_, index) => index).map((row) => (
+        <g key={row}>
+          {row % 2 === 0 && (
+            <rect x={plotLeft - 22} y={y(row + 1) - lane / 2} width={plotRight - plotLeft + 44} height={lane} fill={LANE} opacity={0.7} />
+          )}
+          {/* La escala vertical, escrita. Sin ella el lector no sabe hasta qué
+              puesto baja la gráfica ni por qué termina donde termina. */}
+          <text x={16} y={y(row + 1) + 5} fontSize={14} fill={MUTED} className="tabular-nums">
+            {row + 1}
           </text>
-        ) : null,
-      )}
-      {/* "En la categoría" no es un detalle: sin eso el eje se lee como los
-          intentos de cada competidora, y entonces no se entiende por qué todas
-          las líneas terminan en el mismo punto. */}
-      <text x={(plotLeft + plotRight) / 2} y={height - 10} textAnchor="middle" fontSize={13} fill={MUTED} letterSpacing={1.2}>
-        INTENTOS JUZGADOS EN LA CATEGORÍA
+        </g>
+      ))}
+
+      {points.map((point, index) => (
+        <g key={point.problemNumber}>
+          <line x1={x(index)} y1={laneTop} x2={x(index)} y2={laneBottom} stroke={RULE} strokeWidth={1} opacity={0.8} />
+          <text x={x(index)} y={laneBottom + 24} textAnchor="middle" fontSize={15} fontWeight={700} fill={INK}>
+            {tick(index)}
+          </text>
+          {/* Los intentos reales siguen ahí, como información de apoyo: son el
+              volumen de la categoría, no una coordenada de nadie. */}
+          <text x={x(index)} y={laneBottom + 42} textAnchor="middle" fontSize={12} fill={MUTED}>
+            {point.attempts} int.
+          </text>
+        </g>
+      ))}
+      {/* El eje es el mismo para todas: el puesto al cierre de cada bloque. Con
+          los intentos acumulados de coordenada, ocho líneas terminaban en 70
+          intentos y se leía como que las ocho intentaron setenta veces. */}
+      <text x={(plotLeft + plotRight) / 2} y={laneBottom + 78} textAnchor="middle" {...axis}>
+        AL CIERRE DE CADA {unit.toUpperCase()}
       </text>
 
       {shown.map((row, index) => {
@@ -216,9 +260,16 @@ function BumpChart({ round, hovered, onHover }: { round: LeaderboardRound } & Ho
             key={row.registrationId}
             onMouseEnter={() => onHover(row.registrationId)}
             onMouseLeave={() => onHover(null)}
-            opacity={dimmed ? 0.2 : 1}
-            style={{ transition: 'opacity 200ms ease' }}
+            onClick={() => onSelect(row.registrationId)}
+            // 0.45, no 0.2: resaltar a una no puede borrar a las demás. El resto
+            // de la carrera es justamente el contexto que hace que resaltar
+            // signifique algo.
+            opacity={dimmed ? 0.45 : 1}
+            style={{ transition: 'opacity 200ms ease', cursor: 'pointer' }}
           >
+            {/* Un trazo grueso invisible: en el teléfono nadie le pega a una
+                línea de 2.5 px con el dedo. */}
+            <path d={path} fill="none" stroke="transparent" strokeWidth={22} />
             {/* Every line gets a surface-coloured under-stroke, not just the
                 leaders: at a crossing one line has to visibly pass over the
                 other or the two dissolve into an X nobody can follow. */}
@@ -233,8 +284,10 @@ function BumpChart({ round, hovered, onHover }: { round: LeaderboardRound } & Ho
             />
             <circle cx={x(points.length - 1)} cy={y(endRank)} r={podium ? 8 : 5} fill={color} stroke={SURFACE} strokeWidth={2.5} />
 
-            <text x={plotLeft - 30} y={startYs[index]! + 5} textAnchor="end" fontSize={15} fill={MUTED}>
-              {startRank}. {row.athleteName}
+            {/* Sin el número: el puesto de salida ya lo dice el carril donde
+                arranca la línea, y la escala está escrita a la izquierda. */}
+            <text x={plotLeft - 30} y={startYs[index]! + 5} textAnchor="end" fontSize={15} fill={focused ? INK : MUTED}>
+              {row.athleteName}
             </text>
             <text x={plotRight + 24} y={endYs[index]! + 5} fontSize={18} fontWeight={podium ? 700 : 500} fill={podium ? INK : MUTED}>
               {endRank}. {row.athleteName}
@@ -307,7 +360,7 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
  * How many goes each top cost. One axis, sorted, low is good — a scatter asked
  * the reader to decode two dimensions and a diagonal before it said anything.
  */
-function AttemptsPerTop({ round, hovered, onHover }: { round: LeaderboardRound } & HoverProps) {
+function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: LeaderboardRound } & HoverProps) {
   const climbers = round.rows.flatMap((row) =>
     // Two tops minimum. Otherwise a single lucky flash scores 1.0 and outranks
     // someone who sent five, which is the exact opposite of the point.
@@ -344,8 +397,9 @@ function AttemptsPerTop({ round, hovered, onHover }: { round: LeaderboardRound }
             key={climber.id}
             onMouseEnter={() => onHover(climber.id)}
             onMouseLeave={() => onHover(null)}
-            className={`flex items-center gap-4 transition-opacity duration-200 ${
-              hovered !== null && hovered !== climber.id ? 'opacity-30' : ''
+            onClick={() => onSelect(climber.id)}
+            className={`flex cursor-pointer items-center gap-4 transition-opacity duration-200 ${
+              hovered !== null && hovered !== climber.id ? 'opacity-60' : ''
             }`}
           >
             <span className="w-44 shrink-0 truncate font-display text-lg font-semibold">{climber.name}</span>
@@ -383,6 +437,7 @@ export function LeaderboardCharts({
   unit,
   hovered,
   onHover,
+  onSelect,
 }: {
   round: LeaderboardRound;
   unit: { singular: string; plural: string };
@@ -399,14 +454,19 @@ export function LeaderboardCharts({
       <Headline round={round} unit={unit.singular} isHeight={isHeight} />
 
       <Panel
-        title={`${unit.singular.charAt(0).toUpperCase()}${unit.singular.slice(1)} a ${unit.singular}`}
-        hint="Cómo cambió la tabla a lo largo de la competencia. Cuando dos líneas se cruzan, alguien pasó a la otra."
+        title={`Puesto ${unit.singular} a ${unit.singular}`}
+        hint={`Una línea por competidora. Cada punto es el puesto si la ronda hubiera cerrado en ese ${unit.singular}, así que todas se miden con la misma vara. Cuando dos líneas se cruzan, alguien pasó a la otra.`}
       >
-        <BumpChart round={round} hovered={hovered} onHover={onHover} />
+        {/* En el teléfono la gráfica no se encoge hasta volverse ilegible: se
+            desplaza. Un eje de 15 nombres a 360 px de ancho no es una gráfica. */}
+        <div className="overflow-x-auto">
+          <BumpChart round={round} unit={unit.singular} hovered={hovered} onHover={onHover} onSelect={onSelect} />
+        </div>
         <p className="mt-4 text-base text-muted">
-          Izquierda: los puestos al empezar la ronda. Derecha: como van ahora. Abajo, cuántos intentos
-          llevaba juzgados la categoría entera — al principio casi nadie ha escalado y por eso muchas
-          empatan.
+          Se lee de izquierda a derecha: arranca con el puesto tras el primer {unit.singular} y termina
+          en el puesto de ahora, que es el mismo de la tabla de arriba. La escala vertical llega hasta{' '}
+          {round.rows.length}, que es cuántas compiten en la categoría. Señala a alguien —o tócala— y se
+          resalta también en la tabla y en las demás gráficas.
         </p>
       </Panel>
 
@@ -421,7 +481,7 @@ export function LeaderboardCharts({
 
         {hasAttemptsPerTop && (
           <Panel title="Cuántos intentos al top" hint="Promedio de intentos para alcanzar el top.">
-            <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} />
+            <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} onSelect={onSelect} />
           </Panel>
         )}
       </div>

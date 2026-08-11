@@ -64,8 +64,17 @@ export interface LeaderboardRow {
   cells: LeaderboardCell[];
 }
 
-/** Standings as they were after the first N attempts of the round. */
+/**
+ * Standings as they stood once a block closed. The x axis has to be something
+ * every competitor shares — attempts are not: a field where one climber was
+ * judged twelve times and another four reads as if everybody climbed until
+ * attempt 70. Blocks are the common yardstick, so a point is "the round scored
+ * over blocks 1..n", and the attempt count rides along as real volume.
+ */
 export interface TimelinePoint {
+  /** The block this point closes. The tick on screen. */
+  problemNumber: number;
+  /** Attempts judged on blocks 1..n across the category — secondary information. */
   attempts: number;
   ranks: Record<string, number>;
 }
@@ -95,45 +104,48 @@ export interface LeaderboardRound {
   problemStats: ProblemStats[];
 }
 
-const TIMELINE_POINTS = 12;
-
 /**
- * Replays the round: score it again after the first attempt, the second, and so
- * on, and the standings tell their own story — who led early, who overtook whom.
+ * Replays the round block by block: score it over block 1, then blocks 1-2, and
+ * so on, and the standings tell their own story — who led early, who overtook
+ * whom. Every competitor is measured against the same blocks at every point,
+ * which is what makes two lines comparable.
  *
- * Nothing is stored to make this work. Attempts are append-only with a monotonic
- * sequence (decision #1), so the past is still in the table and re-scoring a
- * prefix reconstructs it exactly.
+ * Nothing is stored to make this work. Attempts are append-only (decision #1),
+ * so the past is still in the table and re-scoring a subset reconstructs it.
  *
- * ponytail: 12 replays per round per cache window, whole-event. Fine for a gym
- * event; if a big one ever drags, move the timeline to its own endpoint and
- * compute it only for the round actually on screen.
+ * ponytail: one replay per block per round per cache window, whole-event. Fine
+ * for a gym event; if a big one ever drags, move the timeline to its own
+ * endpoint and compute it only for the round actually on screen.
  */
 function buildTimeline(
   format: ScoringFormat,
   roundAttempts: Attempt[],
+  problems: LeaderboardProblem[],
   config: { problemIds: string[]; registrationIds: string[]; problemPoints: RoundPoints },
 ): TimelinePoint[] {
-  const ordered = [...roundAttempts].sort((a, b) => a.sequence - b.sequence);
-  if (ordered.length === 0) {
+  if (roundAttempts.length === 0) {
     return [];
   }
 
+  const ordered = [...problems].sort((a, b) => a.number - b.number);
   const points: TimelinePoint[] = [];
-  let lastCut = 0;
-  for (let step = 1; step <= TIMELINE_POINTS; step++) {
-    const cut = Math.ceil((ordered.length * step) / TIMELINE_POINTS);
-    // Fewer attempts than steps: the same prefix would repeat.
-    if (cut === lastCut) {
+  for (let count = 1; count <= ordered.length; count++) {
+    const soFar = ordered.slice(0, count);
+    const ids = new Set(soFar.map((p) => p.id));
+    const prefix = roundAttempts.filter((a) => ids.has(a.problemId));
+    // A block nobody has been judged on yet would repeat the previous point.
+    // Skipping it keeps the axis honest: a flat segment means a placing was
+    // held through a block that was actually climbed.
+    if (prefix.length === (points.at(-1)?.attempts ?? 0)) {
       continue;
     }
-    lastCut = cut;
-    const scored = scoreRound(format, ordered.slice(0, cut), config);
+    const scored = scoreRound(format, prefix, { ...config, problemIds: [...ids] });
     if (!scored.ok) {
       return [];
     }
     points.push({
-      attempts: cut,
+      problemNumber: soFar.at(-1)!.number,
+      attempts: prefix.length,
       ranks: Object.fromEntries(scored.value.map((r) => [r.registrationId, r.rank])),
     });
   }
@@ -296,7 +308,7 @@ export function buildLeaderboard(
         ...base,
         rows,
         error: null,
-        timeline: buildTimeline(format.data, roundAttempts, config),
+        timeline: buildTimeline(format.data, roundAttempts, round.problems, config),
         problemStats,
       };
     });

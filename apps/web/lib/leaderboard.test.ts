@@ -126,32 +126,32 @@ describe('buildLeaderboard', () => {
     expect(round.rows).toEqual([]);
   });
 
-  it('reconstruye el adelantamiento re-puntuando la ronda por prefijos', () => {
-    // Beto topa los dos bloques primero; después Ana topa los dos y lo pasa por
-    // haber usado menos intentos. La línea de tiempo tiene que mostrar el cruce,
-    // no solo el resultado final.
+  it('reconstruye el adelantamiento re-puntuando la ronda bloque por bloque', () => {
+    // Beto topa el primer bloque y Ana solo llega a la zona; en el segundo Ana
+    // topa y Beto no. El eje es el bloque, igual para los dos: al cierre del
+    // primero manda Beto, al cierre del segundo manda Ana por menos intentos.
     const round = qualification([
       attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 1, top: true, topAttempts: 3 }),
-      attempt({ registrationId: 'reg-beto', problemId: 'p2', sequence: 2, top: true, topAttempts: 3 }),
-      attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 3, top: true, topAttempts: 1 }),
-      attempt({ registrationId: 'reg-ana', problemId: 'p2', sequence: 4, top: true, topAttempts: 1 }),
+      attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 2, zone: true, zoneAttempts: 2 }),
+      attempt({ registrationId: 'reg-ana', problemId: 'p2', sequence: 3, top: true, topAttempts: 1 }),
     ]);
 
-    const first = round.timeline[0]!;
-    const last = round.timeline.at(-1)!;
-    expect(first.ranks['reg-beto']).toBe(1);
-    expect(last.ranks['reg-ana']).toBe(1);
-    expect(last.ranks['reg-beto']).toBe(2);
-    expect(last.attempts).toBe(4);
+    const [first, last] = round.timeline;
+    expect(round.timeline.map((p) => p.problemNumber)).toEqual([1, 2]);
+    expect(first!.ranks['reg-beto']).toBe(1);
+    expect(last!.ranks['reg-ana']).toBe(1);
+    expect(last!.ranks['reg-beto']).toBe(2);
+    // Los intentos siguen ahí como información de apoyo, ya no como eje.
+    expect(last!.attempts).toBe(3);
   });
 
-  it('no repite un punto de la línea de tiempo cuando hay menos intentos que pasos', () => {
+  it('no pone en el eje un bloque que nadie ha escalado todavía', () => {
     const round = qualification([
       attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
       attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 2, zone: true, zoneAttempts: 1 }),
     ]);
 
-    expect(round.timeline.map((p) => p.attempts)).toEqual([1, 2]);
+    expect(round.timeline.map((p) => p.problemNumber)).toEqual([1]);
   });
 
   it('mide la dificultad de cada bloque por lo que hizo el campo, sin contar el top como zona', () => {
