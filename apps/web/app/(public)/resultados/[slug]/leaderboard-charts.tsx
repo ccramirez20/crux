@@ -307,13 +307,37 @@ function BumpChart({
             />
             <circle cx={x(points.length - 1)} cy={y(endRank)} r={podium ? 8 : 5} fill={color} stroke={SURFACE} strokeWidth={2.5} />
 
-            {/* Mismo formato en los dos extremos: puesto en negrilla, nombre en
-                peso normal. El número viaja pegado al nombre y no lo delega al
-                carril — con seis empatadas en el puesto 1 las etiquetas se
-                separan para poder leerse, y una etiqueta suelta frente al
-                carril 4 se leía como cuarto puesto cuando iba primera. */}
+            {/* La guía amarra la etiqueta con su línea. Las etiquetas se
+                separan entre sí para poder leerse, así que no siempre caen
+                sobre su carril, y sin la guía no hay forma de saber cuál nombre
+                es cuál línea. Punteada y tenue: es una ayuda de lectura, no un
+                trazo más compitiendo con las curvas. */}
+            <line
+              x1={plotLeft - 22}
+              y1={startYs[index]!}
+              x2={plotLeft}
+              y2={y(startRank)}
+              stroke={podium || focused ? color : RULE}
+              strokeWidth={1.5}
+              strokeDasharray="2 3"
+            />
+            <line
+              x1={plotRight}
+              y1={y(endRank)}
+              x2={plotRight + 26}
+              y2={endYs[index]!}
+              stroke={podium || focused ? color : RULE}
+              strokeWidth={1.5}
+              strokeDasharray="2 3"
+            />
+
+            {/* Mismo formato en los dos extremos: puesto en negrilla con punto,
+                nombre en peso normal y separado. El número viaja pegado al
+                nombre y no lo delega al carril — con seis empatadas en el puesto
+                1 una etiqueta suelta frente al carril 4 se leía como cuarto
+                puesto cuando iba primera. */}
             <text
-              x={plotLeft - 30}
+              x={plotLeft - 34}
               y={startYs[index]! + 5}
               textAnchor="end"
               fontSize={roomy ? 16 : 13}
@@ -321,14 +345,14 @@ function BumpChart({
               fill={focused ? INK : MUTED}
             >
               <tspan fontWeight={700} className="tabular-nums">
-                {startRank}
-              </tspan>{' '}
-              {row.athleteName}
+                {startRank}.
+              </tspan>
+              <tspan dx={6}>{row.athleteName}</tspan>
             </text>
             {/* A la derecha el puesto va en su propia columna: pegado al nombre,
                 "12 Manuela" se leía como una sola cosa larga. */}
             <text
-              x={plotRight + 34}
+              x={plotRight + 48}
               y={endYs[index]! + 5}
               textAnchor="end"
               fontSize={roomy ? 18 : 15}
@@ -336,10 +360,10 @@ function BumpChart({
               fill={podium ? INK : MUTED}
               className="tabular-nums"
             >
-              {endRank}
+              {endRank}.
             </text>
             <text
-              x={plotRight + 48}
+              x={plotRight + 60}
               y={endYs[index]! + 5}
               fontSize={roomy ? 18 : 15}
               fontWeight={500}
@@ -376,19 +400,32 @@ interface WallHover {
 
 function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
   const [hover, setHover] = useState<WallHover | null>(null);
-  const stats = [...round.problemStats].sort((a, b) => a.tops - b.tops);
+  // Menos tops es más duro, y con los mismos tops manda el flash: once tops de
+  // los cuales seis salieron al primer intento no es el mismo bloque que once
+  // tops peleados. Sin este desempate el orden lo decidía el número del bloque,
+  // que no mide nada.
+  const stats = [...round.problemStats].sort(
+    (a, b) => a.tops - b.tops || a.flashes - b.flashes || a.zones - b.zones,
+  );
   if (stats.length === 0) {
     return null;
   }
   const problemName = (id: string) => round.problems.find((p) => p.id === id)?.name;
 
   const hovered = stats.find((s) => s.problemId === hover?.problemId);
+  // El cero va en plural en español ("0 hicieron top"); solo el uno cambia.
+  const says = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+  const zone = SCORE_TERM.zone.toLowerCase();
   const reading =
     hovered && hover
       ? {
-          top: `${hovered.tops} hicieron top`,
-          zone: `${hovered.zones} llegaron a la ${SCORE_TERM.zone.toLowerCase()} sin top`,
-          none: `${hovered.field - hovered.tops - hovered.zones} no llegaron a la ${SCORE_TERM.zone.toLowerCase()}`,
+          top: says(hovered.tops, 'hizo top', 'hicieron top'),
+          zone: says(hovered.zones, `llegó a la ${zone} sin top`, `llegaron a la ${zone} sin top`),
+          none: says(
+            hovered.field - hovered.tops - hovered.zones,
+            `no llegó a la ${zone}`,
+            `no llegaron a la ${zone}`,
+          ),
         }[hover.kind]
       : null;
 

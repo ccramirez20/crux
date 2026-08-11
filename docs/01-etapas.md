@@ -38,8 +38,21 @@ Tres tiles arriba (el bloque más duro, el porcentaje de flash de la ronda, el
 mayor ascenso), la tabla con una franja de leyenda que enseña su propio código,
 y tres gráficas.
 
+**Qué significan las dos columnas de intentos.** Un top pasa por la zona en el
+camino, así que en `classic_tops_zones` un top cuenta también como zona: las "5
+zonas" de quien topó 5 bloques son esos mismos bloques, no otros. Y cada columna
+de intentos es la suma del intento en que se logró cada cosa, no cuántas veces lo
+intentó: 5 tops en 9 intentos y 5 zonas en 7 son la misma escalada medida en dos
+puntos de la ruta, no 16 intentos. Se lo preguntaron a la pantalla y la pantalla
+no lo decía, así que ahora lo dice la leyenda, y el detalle por atleta muestra
+"Top en 3 · Zona en 1" para que los dos números de arriba reconcilien bloque a
+bloque.
+
 La tabla separa el puntaje en dos pares con una divisoria —TOPS · INTENTOS |
-ZONAS · INTENTOS— y las cifras van centradas bajo su título. Es la divisoria la
+ZONAS · INTENTOS— y las cifras van centradas bajo su título. La columna de
+competidor mide lo que mide el nombre más largo y no se parte: todo el sobrante
+de ancho se reparte entre las columnas de bloque, en vez de juntarse en un hueco
+entre el dorsal y el primer bloque. Es la divisoria la
 que hace legible el bloque, no un piso extra de encabezados: eso se probó y
 engordaba la tabla a lo ancho sin decir nada nuevo. Esas cuatro columnas van a
 ancho fijo, o estiran la tabla hasta el borde de la pantalla sin necesitarlo.
@@ -60,14 +73,20 @@ puede volver a subir.
   En los empates el número viaja pegado al nombre, porque las etiquetas se
   separan para poder leerse y una etiqueta frente al carril 4 se leía como
   cuarto puesto cuando iba primera empatada. No hay columna de escala: con el
-  puesto pegado a cada nombre en los dos extremos, esa columna solo repetía.
+  puesto pegado a cada nombre en los dos extremos, esa columna solo repetía. Una
+  guía punteada amarra cada etiqueta con el extremo de su línea, porque las
+  etiquetas se separan entre sí para poder leerse y entonces no caen sobre su
+  propio carril; es eso o una grilla, y una grilla compite con las curvas.
   Abajo va una sola palabra, "bloques"; los intentos acumulados estuvieron ahí
   y eran dos filas de texto para un dato que nadie viene a buscar.
 - **¿Qué tan duros estaban los bloques?** — tops y zonas por bloque, del más
-  duro al más amable, marcando el crux. Señalar un tramo de la barra apaga los
-  otros dos y escribe qué mide ese color ("7 llegaron a la zona sin top"): un
-  color solo no dice qué está contando. La fila que lo escribe reserva su alto
-  aunque esté vacía, o el texto empuja las barras justo cuando les apuntas.
+  duro al más amable, marcando el crux. Con los mismos tops desempata el flash:
+  once tops de los cuales seis salieron al primer intento no es el mismo bloque
+  que once tops peleados, y sin ese desempate el orden lo decidía el número del
+  bloque. Señalar un tramo de la barra apaga los otros dos y escribe qué mide ese
+  color ("7 llegaron a la zona sin top", "1 llegó a la zona sin top"): un color
+  solo no dice qué está contando. La fila que lo escribe reserva su alto aunque
+  esté vacía, o el texto empuja las barras justo cuando les apuntas.
 - **Cuántos intentos al top** — promedio de intentos por top, mínimo dos tops
   para entrar (si no, un flash suelto encabeza por encima de quien hizo cinco).
 

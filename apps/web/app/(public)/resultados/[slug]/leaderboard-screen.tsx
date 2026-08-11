@@ -94,7 +94,14 @@ function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; ro
         const cell = row.cells.find((c) => c.problemId === problem.id);
         let said = 'Sin registro';
         if (cell?.top) {
-          said = isHeight ? 'Llegó al top' : `Top en ${cell.topAttempts ?? 1}`;
+          // Un top pasa por la zona en el camino, así que el detalle dice las
+          // dos cosas: es lo que suman las dos columnas de intentos de arriba, y
+          // sin la segunda el número de zonas no se reconciliaba con nada. Si el
+          // juez no anotó la zona aparte, cuenta en el mismo intento del top —
+          // que es exactamente lo que hace el scoring.
+          said = isHeight
+            ? 'Llegó al top'
+            : `Top en ${cell.topAttempts ?? 1} · ${SCORE_TERM.zone} en ${cell.zoneAttempts ?? cell.topAttempts ?? 1}`;
         } else if (cell?.zone) {
           said = `Zona en ${cell.zoneAttempts ?? 1}`;
         } else if (cell && cell.height !== null) {
@@ -280,6 +287,16 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                     escalar
                   </span>
                   {!isHeight && <span>Los números son la cantidad de intentos.</span>}
+                  {/* "Intentos" se lee como cuántas veces lo intentó, y es otra
+                      cosa: la suma de los intentos que le costó cada logro. El
+                      título de la columna se queda —así se llama en cualquier
+                      planilla— y la frase es la que desarma la confusión. */}
+                  {!isHeight && (
+                    <span>
+                      Las columnas de intentos suman los intentos que le tomó alcanzar todos los tops y
+                      todas las zonas: menos es mejor.
+                    </span>
+                  )}
                 </div>
                 <table className="w-full border-collapse text-left">
                   {/* Los títulos se quedan pegados arriba: en la fila 12 de la
@@ -301,11 +318,20 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                     </tr>
                     <tr className="border-b-2 border-cardborder">
                       <th className={`${headerClass} w-28 text-center`}>Puesto</th>
-                      <th className={headerClass}>Competidor</th>
+                      {/* Sin ancho fijo y sin partir el nombre: la columna mide
+                          exactamente lo que mide el nombre más largo, y todo el
+                          sobrante se va a los bloques en vez de quedarse aquí
+                          como un hueco. */}
+                      <th className={`${headerClass} w-px whitespace-nowrap`}>Competidor</th>
                       {round.problems.map((problem) => (
                         <th
                           key={problem.id}
-                          className={`${headerClass} w-24 text-center`}
+                          // Sin ancho fijo: son estas columnas las que se
+                          // reparten el sobrante. Con el ancho clavado, la
+                          // única elástica era la del competidor y todo el aire
+                          // se juntaba en un hueco entre el dorsal y el primer
+                          // bloque.
+                          className={`${headerClass} text-center`}
                           title={problem.name ?? undefined}
                         >
                           {unit.singular.slice(0, 1).toUpperCase()}
@@ -349,7 +375,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                                 {row.result.rank}
                               </span>
                             </td>
-                            <td className="px-4 py-5">
+                            <td className="whitespace-nowrap px-4 py-5">
                               <span className="font-display text-3xl font-semibold">{row.athleteName}</span>
                               {row.bibNumber && (
                                 <span className="ml-3 text-xl text-muted tabular-nums">#{row.bibNumber}</span>
