@@ -24,6 +24,8 @@ El escalador sube el video de su intento y recibe **diagnóstico por fase de mov
 
 Este es el diferenciador técnico frente a BetterClimber, Cima, Climbalyzer y Belay.ai, que ya existen y producen métricas bonitas sin diagnóstico tipificado. Lanzarlo sin audiencia previa es competir en desventaja; por eso va después de la etapa 1.
 
+El foso concreto es el **bloque compartido**: varios escaladores sobre el mismo bloque, comparados entre sí, con una taxonomía de fallas de base científica. Ninguna app de video sabe que dos clips son del mismo bloque; ninguna plataforma de gimnasio diagnostica. El análisis completo de competencia y las dos decisiones de modelo que esto implica están en `@docs/00-tesis.md` y en `@docs/01-etapas.md`.
+
 **Desbloquea la etapa 3 cuando:** hay entrenadores pagando por la cuenta de diagnóstico.
 
 ### Etapa 3 — detalle
@@ -123,7 +125,7 @@ Ya están tomadas. Si vas a contradecir alguna, dilo explícitamente antes de es
 
 **5. Un atleta puede existir sin cuenta.** El organizador inscribe gente que nunca abrirá la app. `Athlete` y `User` son entidades distintas, vinculables después. Fusionarlas es el error que obliga a rehacer el modelo en el mes 3.
 
-**6. Nada de video sale del dispositivo (etapa 2).** Es promesa de producto y ventaja de costo. Cualquier propuesta que suba video al backend está mal.
+**6. Nada de video sale del dispositivo (etapa 2).** Es promesa de producto y ventaja de costo — **no es diferenciador**: BetterClimber ya corre pose en el aparato sin subir nada. Cualquier propuesta que suba video al backend sigue estando mal.
 
 ## Comandos
 

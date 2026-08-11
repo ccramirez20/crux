@@ -147,6 +147,25 @@ Un gimnasio real corrió un evento con ≥20 inscritos sin soporte manual del de
 
 ## Ideas registradas para etapa 2 (no implementar aun)
 
+- **Dos decisiones de diseno que ya sabemos que hay que tomar** (2026-08-11, del
+  analisis de competencia en `00-tesis.md`). Ninguna se construye ahora: la etapa
+  2 esta bloqueada y el esquema necesita aprobacion explicita.
+
+  1. **Modelar el bloque de entrenamiento.** Hoy `problems` cuelga de un `round`,
+     que cuelga de un evento, asi que un bloque solo existe dentro de una
+     competencia. El foso de la etapa 2 —comparar varios escaladores sobre el
+     mismo bloque— vive en el entrenamiento: el entrenador monta un bloque y pone
+     a sus alumnos a intentarlo. Ese bloque no tiene donde vivir en el modelo.
+  2. **Fila por intento fisico.** Una fila de `attempts` es el *estado* de
+     (atleta, bloque) —`resolveCurrentAttempts` se queda con la de mayor
+     `sequence` y las correcciones son filas nuevas—, no un registro por intento.
+     Colgar el video del intento #2 de un bloque exige modelar el numero de
+     intento.
+
+- **Revision de literatura y taxonomia de fallas por fase de movimiento.** Es la
+  parte del diferencial que no se copia. Se hace al cierre de la V1 de
+  competencias, con el conocimiento del fundador como filtro.
+
 - **Feedback del entrenador como input del diagnostico.** En el plan pago de
   entrenador, que el entrenador pueda personalizar/anotar la descripcion o
   contexto de cada escalador (ej: "esta corrigiendo lock-off", "lesion previa

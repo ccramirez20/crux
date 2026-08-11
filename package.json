@@ -22,7 +22,7 @@
     "typescript": "^5.7.2"
   },
   "pnpm": {
-    "comment": "Pines de seguridad. Duplicados en pnpm-workspace.yaml: pnpm 9 (el de packageManager) solo lee estos; pnpm 10 solo lee los de alla. Si cambias uno, cambia el otro.",
+    "comment": "Pines de seguridad. Duplicados en pnpm-workspace.yaml: pnpm 9 (el de packageManager) solo lee estos; pnpm 10 solo lee los de alla. Si cambias uno, cambia el otro. Reprobado el 2026-08-11: quitar este campo devuelve el arbol a postcss 8.4.31, sharp 0.34.5 y esbuild 0.18.20, los tres con CVE, porque pnpm 9 no lee overrides de pnpm-workspace.yaml. El warning que sale en consola lo emite un pnpm 10 del PATH, no el 9.15.0 que corre el proyecto; solo se calla subiendo packageManager a pnpm 10, que es decision de cadena de herramientas y no se toma de paso.",
     "overrides": {
       "postcss": ">=8.5.23",
       "sharp": ">=0.35.0",
