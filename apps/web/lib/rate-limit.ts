@@ -19,7 +19,11 @@ const failures = new Map<string, { count: number; resetAt: number }>();
 
 // Behind a proxy the client IP is the first entry of x-forwarded-for; on the
 // LAN dev server nothing sets it and every phone shares the 'local' bucket.
-// That is acceptable precisely because only wrong codes land here.
+// Deployed it is barely better: one gym wifi is one public IP, so the whole
+// judging crew still shares a bucket. That is only acceptable because both
+// callers consult this **after** checking the code and only on the failing
+// branch — a judge with the right code is never throttled by someone else's
+// typing. Keep that order if you touch either route.
 export function clientKey(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   return forwarded || 'local';

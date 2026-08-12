@@ -101,21 +101,25 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
   const input: AttemptInput = parsed.data;
   const db = getDb();
 
-  // 429, not 403: the queue treats 403 as "the code changed, go ask again" and
-  // clears it. Being throttled is temporary, so it has to stay non-terminal —
-  // the pending attempts wait on the phone and the next tick retries.
-  const key = clientKey(request);
-  if (isRateLimited(key)) {
-    return NextResponse.json(
-      { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
-      { status: 429 },
-    );
-  }
-
   const { problem, registration } = await loadScope(db, input.registrationId, input.problemId);
   const verdict = attemptVerdict(problem, registration, input.judgeCode);
 
+  // El freno vive dentro de esta rama, no antes. Con la cubeta compartida de una
+  // wifi de gimnasio, mirarlo antes de validar significaba que un juez con la
+  // cola llena volviendo de una zona muerta recibía 429 en cada sincronización
+  // por los dedazos de otro, y sus capturas se quedaban en el teléfono. Con el
+  // código bueno ya no se consulta el limitador nunca.
   if (verdict === 'bad-code') {
+    const key = clientKey(request);
+    // 429, not 403: the queue treats 403 as "the code changed, go ask again" and
+    // clears it. Being throttled is temporary, so it has to stay non-terminal —
+    // the pending attempts wait on the phone and the next tick retries.
+    if (isRateLimited(key)) {
+      return NextResponse.json(
+        { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
+        { status: 429 },
+      );
+    }
     recordFailure(key);
     return NextResponse.json(
       { ok: false, error: 'El código del evento no es correcto.' },
