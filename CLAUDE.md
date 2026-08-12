@@ -22,9 +22,7 @@ Un organizador crea un evento con modalidad, categorías y rondas. Publica un en
 ### Etapa 2 — detalle
 El escalador sube el video de su intento y recibe **diagnóstico por fase de movimiento**, no métricas sueltas: en qué momento inició mal la extensión, en qué movimiento cargó el pie equivocado. Todo corre en el navegador; el video nunca sale del dispositivo; costo de inferencia cero.
 
-Este es el diferenciador técnico frente a BetterClimber, Cima, Climbalyzer y Belay.ai, que ya existen y producen métricas bonitas sin diagnóstico tipificado. Lanzarlo sin audiencia previa es competir en desventaja; por eso va después de la etapa 1.
-
-El foso concreto es el **bloque compartido**: varios escaladores sobre el mismo bloque, comparados entre sí, con una taxonomía de fallas de base científica. Ninguna app de video sabe que dos clips son del mismo bloque; ninguna plataforma de gimnasio diagnostica. El análisis completo de competencia y las dos decisiones de modelo que esto implica están en `@docs/00-tesis.md` y en `@docs/01-etapas.md`.
+El foso es el **bloque compartido**, no el diagnóstico a secas. Análisis de competencia, foso y las dos decisiones de modelo que implica: `@docs/00-tesis.md` y `@docs/01-etapas.md`.
 
 **Desbloquea la etapa 3 cuando:** hay entrenadores pagando por la cuenta de diagnóstico.
 
@@ -41,37 +39,8 @@ Node 22, TypeScript estricto, Next.js 15 (App Router), Tailwind + shadcn/ui (sha
 
 Etapa 2 añade: MediaPipe Tasks Vision (PoseLandmarker) sobre WASM/WebGPU, en Web Worker. Etapa 3 añade: onnxruntime-web.
 
-## Estructura
+## Reglas de dependencia (no negociables)
 
-```
-crux/
-├─ CLAUDE.md
-├─ docs/
-│  ├─ 00-tesis.md            # negocio, precios, canal, riesgo
-│  ├─ 01-etapas.md           # alcance detallado por etapa
-│  ├─ 02-dominio.md          # reglas de scoring largas, casos de borde
-│  └─ adr/                   # una decisión por archivo, numeradas
-├─ apps/
-│  └─ web/
-│     ├─ app/
-│     │  ├─ (public)/        # inscripción (/inscripcion/[slug], SIN auth); tabla de resultados y perfil de competidor — aún no existen
-│     │  ├─ (organizer)/     # panel del gimnasio: eventos, categorías, rutas — protegido
-│     │  ├─ (judge)/         # captura de intentos, offline-first — aún no existe
-│     │  ├─ sign-in/, sign-up/  # páginas de autenticación
-│     │  └─ api/
-│     │     ├─ auth/[...all]/   # Better Auth (catch-all)
-│     │     └─ health/
-│     ├─ components/         # elementos visuales compartidos (ej. motivo topográfico)
-│     └─ lib/                # getDb(), getAuth() — clientes lazy
-├─ packages/
-│  ├─ core/                  # dominio puro: tipos y funciones sin IO
-│  ├─ scoring/               # estrategias de puntaje — el corazón del sistema
-│  ├─ db/                    # esquema Drizzle, migraciones, queries
-│  └─ config/                # eslint, tsconfig, tailwind compartidos
-└─ .claude/
-```
-
-**Reglas de dependencia (no negociables):**
 - `packages/core` y `packages/scoring` no importan nada de `db`, `next`, ni de red. Funciones puras, y así se testean.
 - `packages/db` no contiene lógica de negocio, solo persistencia y queries.
 - `apps/web` orquesta; no reimplementa reglas que viven en `core` o `scoring`.
@@ -94,22 +63,8 @@ Código en inglés, UI en español (es-CO).
 | Zona | `Zone` | Presa intermedia puntuable |
 | Tabla de resultados | `Leaderboard` | Vista pública |
 
-### Jerga en pantalla (es-CO)
-
-Decidido el 2026-08-10. Vive en `apps/web/lib/labels.ts`; ninguna pantalla
-escribe estas palabras a mano.
-
-- **Modalidad: las dos palabras juntas.** `boulder` → **"Boulder / Bloque"**,
-  `lead` → **"Lead / Dificultad"**. Cuando exista, `speed` → "Speed /
-  Velocidad". En el gimnasio se dice boulder y lead; en la inscripción de una
-  liga se lee bloque y dificultad. Quien conoce solo una de las dos igual se
-  ubica. **Nunca "búlder" castellanizado.**
-- **Unidad puntuable: una sola palabra, según la modalidad.** En boulder es
-  **bloque**; en todo lo que se escala con cuerda es **ruta**. Se usa
-  `problemUnit(discipline)`. Aquí no van las dos palabras: el nombre aparece
-  decenas de veces por pantalla y "bloque / ruta" en cada una sería ruido.
-- En el código todo sigue siendo `Problem` y `Discipline`. La jerga es de la
-  interfaz, no del modelo.
+La jerga de pantalla (Boulder / Bloque, bloque vs ruta) está en
+`apps/web/CLAUDE.md`; se carga sola al trabajar ahí.
 
 ## Decisiones de arquitectura vigentes
 
@@ -129,15 +84,9 @@ Ya están tomadas. Si vas a contradecir alguna, dilo explícitamente antes de es
 
 ## Comandos
 
+Los scripts de rutina están en `package.json`. Los que no se adivinan:
+
 ```bash
-pnpm dev              # apps/web en :3000
-pnpm typecheck
-pnpm lint
-pnpm test             # Vitest
-pnpm test:e2e         # Playwright — pendiente, aún no instalado (no hace nada todavía)
-pnpm db:generate      # generar migración desde el esquema
-pnpm db:migrate
-pnpm db:studio
 pnpm seed:event       # siembra las dos fechas de la liga demo (22 y 26 inscritos)
 pnpm seed:event --reset   # las borra y las vuelve a sembrar
 
