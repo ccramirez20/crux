@@ -1,12 +1,14 @@
-// The judge's write queue. Only writes live here: reference data
-// (categories/rounds/problems/registrations) is loaded once per page load and
-// kept in React state, because domain decision #3 requires the *write* path to
-// survive a dropped connection, not the read path.
+// The judge's write queue, and the two rules the drain hangs on. Only writes
+// live here: reference data (categories/rounds/problems/registrations) is
+// loaded once per page load and kept in React state, because domain decision #3
+// requires the *write* path to survive a dropped connection, not the read path.
 //
 // ponytail: hand-rolled over the native IndexedDB API — three functions, no
-// wrapper library. apps/web has no test runner yet, so this is verified in the
-// browser against the real UI; if this file grows past put/getAll/delete,
-// that's the signal to stand up Vitest for apps/web rather than keep guessing.
+// wrapper library. put/getAll/delete are still verified in the browser against
+// the real UI; covering them would take fake-indexeddb and a DOM environment.
+// What has tests is what can break without anyone noticing: the id the whole
+// idempotency scheme rests on, and the table that decides whether a captured
+// attempt is kept or thrown away.
 
 export interface PendingAttempt {
   clientAttemptId: string;
@@ -37,6 +39,40 @@ export function newClientAttemptId(): string {
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+export type SyncOutcome = 'delivered' | 'rejected' | 'ask-for-code' | 'stop';
+
+/**
+ * What the drain does with one queued attempt, given how its POST went. Every
+ * branch here is somebody's captured work, so getting one wrong loses results
+ * on the wall rather than throwing an error anyone can see.
+ *
+ * - `ask-for-code`: a wrong event code is fixable and the captures are real
+ *   work, so they stay queued while the judge is sent back to the code screen.
+ * - `rejected`: a 400 is the server refusing this payload permanently (bad
+ *   shape, or a registration and a block from different categories). Retrying
+ *   forever would pin a zombie row in the queue, so it comes out marked.
+ * - `stop`: end the batch instead of skipping ahead, so whatever did get
+ *   through stays in capture order, and retry on the next tick. 429 belongs
+ *   here on purpose — app/api/attempts/route.ts answers a throttled judge with
+ *   429 rather than 403 precisely so the brake reads as temporary. Moving it
+ *   to the terminal side would empty a judge's backlog into nothing.
+ */
+export function syncOutcome(status: number | 'offline'): SyncOutcome {
+  if (status === 'offline') {
+    return 'stop';
+  }
+  if (status === 403) {
+    return 'ask-for-code';
+  }
+  if (status >= 200 && status < 300) {
+    return 'delivered';
+  }
+  if (status === 400) {
+    return 'rejected';
+  }
+  return 'stop';
 }
 
 const DB_NAME = 'crux-judge-queue';
