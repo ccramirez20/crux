@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CurrentAttempt } from '@/app/api/attempts/route';
-import { addPending, listPending, newClientAttemptId, removeSynced, type PendingAttempt } from './attempt-queue';
+import {
+  addPending,
+  listPending,
+  newClientAttemptId,
+  removeSynced,
+  syncOutcome,
+  type PendingAttempt,
+} from './attempt-queue';
 import { AthleteRoster, type RosterEntry } from './athlete-roster';
 import { AttemptForm, type AttemptValues } from './attempt-form';
 import type { JudgeRegistration } from './capture-app';
@@ -75,36 +82,29 @@ export function AttemptCapture({
 
       const ordered = [...pending].sort((a, b) => a.capturedAt.localeCompare(b.capturedAt));
       for (const attempt of ordered) {
-        let response: Response;
+        let status: number | 'offline';
         try {
-          response = await fetch('/api/attempts', {
+          const response = await fetch('/api/attempts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(attempt),
           });
+          status = response.status;
         } catch {
-          // Offline. Stop here rather than skipping ahead, so what does get
-          // through stays in capture order. The next tick retries.
-          break;
+          status = 'offline';
         }
 
-        // A wrong event code is fixable, and the captures are real work — keep
-        // them queued, stop sending, and send the judge back to the code
-        // screen. Silently retrying forever would strand a whole round.
-        if (response.status === 403) {
+        // What each answer means for a captured attempt lives in syncOutcome,
+        // which is pure and tested. Here we only carry it out.
+        const outcome = syncOutcome(status);
+        if (outcome === 'ask-for-code') {
           onCodeRejected();
           break;
         }
-
-        // A 400 is the server refusing this payload permanently (bad shape, or
-        // a registration and block from different categories). Retrying it
-        // forever would pin a zombie row in the queue, so drop it and let the
-        // judge see it was rejected instead of silently pending.
-        const terminal = response.ok || response.status === 400;
-        if (!terminal) {
+        if (outcome === 'stop') {
           break;
         }
-        if (!response.ok) {
+        if (outcome === 'rejected') {
           setRejectedIds((prev) => new Set(prev).add(attempt.clientAttemptId));
         }
         await removeSynced(attempt.clientAttemptId);
