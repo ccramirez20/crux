@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { and, categories, eq, events, problems, rounds } from '@crux/db';
+import { and, athletes, categories, eq, events, problems, registrations, rounds } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
@@ -14,6 +14,8 @@ import {
 } from '@/lib/labels';
 import { cardClass } from '@/lib/ui';
 import { EventStructure } from './event-structure';
+import { EventForm } from './event-form';
+import { Roster, type RosterCategory } from './roster';
 import { ShareLink } from './share-link';
 
 export default async function EventDetailPage({
@@ -44,6 +46,7 @@ export default async function EventDetailPage({
       date: events.date,
       slug: events.slug,
       judgeCode: events.judgeCode,
+      timezone: events.timezone,
     })
     .from(events)
     .where(and(eq(events.id, eventId), eq(events.ownerId, session.user.id)));
@@ -67,6 +70,8 @@ export default async function EventDetailPage({
       problemId: problems.id,
       problemNumber: problems.number,
       problemName: problems.name,
+      problemTopPoints: problems.topPoints,
+      problemZonePoints: problems.zonePoints,
     })
     .from(categories)
     .leftJoin(rounds, eq(rounds.categoryId, categories.id))
@@ -74,7 +79,44 @@ export default async function EventDetailPage({
     .where(eq(categories.eventId, eventId))
     .orderBy(categories.name, rounds.order, problems.number);
 
-  type Problem = { id: string; number: number; name: string | null };
+  // Los inscritos son otro eje: no cuelgan de la ronda ni del bloque, cuelgan de
+  // la categoría. Consulta aparte y no otro `leftJoin` sobre el árbol, porque
+  // unir 20 inscritos contra 5 bloques multiplica las filas por nada.
+  const rosterRows = await db
+    .select({
+      registrationId: registrations.id,
+      categoryId: registrations.categoryId,
+      categoryName: categories.name,
+      bibNumber: registrations.bibNumber,
+      athleteFullName: athletes.fullName,
+    })
+    .from(registrations)
+    .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
+    .innerJoin(categories, eq(registrations.categoryId, categories.id))
+    .where(eq(registrations.eventId, eventId))
+    .orderBy(categories.name, registrations.createdAt);
+
+  const rosterCategories: RosterCategory[] = [];
+  for (const row of rosterRows) {
+    let category = rosterCategories.find((c) => c.id === row.categoryId);
+    if (!category) {
+      category = { id: row.categoryId, name: row.categoryName, entries: [] };
+      rosterCategories.push(category);
+    }
+    category.entries.push({
+      registrationId: row.registrationId,
+      athleteFullName: row.athleteFullName,
+      bibNumber: row.bibNumber,
+    });
+  }
+
+  type Problem = {
+    id: string;
+    number: number;
+    name: string | null;
+    topPoints: number | null;
+    zonePoints: number | null;
+  };
   type Round = { id: string; type: string; order: number; problems: Problem[] };
   type Category = {
     id: string;
@@ -112,7 +154,13 @@ export default async function EventDetailPage({
     if (row.problemId === null || row.problemNumber === null) {
       continue;
     }
-    round.problems.push({ id: row.problemId, number: row.problemNumber, name: row.problemName });
+    round.problems.push({
+      id: row.problemId,
+      number: row.problemNumber,
+      name: row.problemName,
+      topPoints: row.problemTopPoints,
+      zonePoints: row.problemZonePoints,
+    });
   }
 
   const date = formatEventDate(event.date);
@@ -133,6 +181,13 @@ export default async function EventDetailPage({
           {date ? ` · ${date}` : ' · sin fecha'} ·{' '}
           {labelFor(SCORING_FORMAT_LABEL, event.scoringFormat)}
         </p>
+        <EventForm
+          eventId={event.id}
+          name={event.name}
+          date={event.date}
+          timezone={event.timezone}
+          judgeCode={event.judgeCode}
+        />
       </div>
 
       <div className="flex w-full max-w-2xl flex-col gap-3">
@@ -158,6 +213,18 @@ export default async function EventDetailPage({
             </code>
           </div>
         )}
+      </div>
+
+      <div className="w-full max-w-2xl">
+        <h2 className="font-display text-xl font-bold">Inscritos</h2>
+        <p className="mt-1 text-sm text-muted">
+          Quién se inscribió y con qué dorsal. El dorsal es opcional: si lo dejas vacío, los jueces
+          buscan por nombre, que también funciona.
+        </p>
+      </div>
+
+      <div className="w-full max-w-2xl">
+        <Roster eventId={event.id} categories={rosterCategories} />
       </div>
 
       <div className="w-full max-w-2xl">

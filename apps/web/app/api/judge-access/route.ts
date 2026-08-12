@@ -31,14 +31,6 @@ export async function POST(request: Request): Promise<NextResponse<AccessResult>
     return NextResponse.json({ ok: false, error: 'Datos inválidos.' }, { status: 400 });
   }
 
-  const key = clientKey(request);
-  if (isRateLimited(key)) {
-    return NextResponse.json(
-      { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
-      { status: 429 },
-    );
-  }
-
   const db = getDb();
   const [event] = await db
     .select({ id: events.id, judgeCode: events.judgeCode })
@@ -51,7 +43,20 @@ export async function POST(request: Request): Promise<NextResponse<AccessResult>
   const matches =
     event.judgeCode === null ||
     parsed.data.code.trim().toUpperCase() === event.judgeCode.toUpperCase();
+  // El freno se consulta **solo en la rama del código malo**. Antes se miraba
+  // antes de validar, y en un gimnasio eso deja afuera a los jueces buenos: una
+  // wifi es una sola IP pública, así que los tres teléfonos comparten cubeta, y
+  // cinco dedazos de uno bloqueaban a los otros dos justo al arrancar el evento.
+  // Un código correcto ya nunca toca el limitador; el ataque sigue frenado,
+  // porque un código malo jamás llega hasta acá.
   if (!matches) {
+    const key = clientKey(request);
+    if (isRateLimited(key)) {
+      return NextResponse.json(
+        { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
+        { status: 429 },
+      );
+    }
     recordFailure(key);
     return NextResponse.json(
       { ok: false, error: 'Ese código no corresponde a este evento.' },

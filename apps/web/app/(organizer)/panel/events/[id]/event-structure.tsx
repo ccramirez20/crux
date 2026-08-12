@@ -8,7 +8,13 @@ import { RoundForm } from './round-form';
 import { ProblemForm } from './problem-form';
 import { ProblemCard } from './problem-qr';
 
-type Problem = { id: string; number: number; name: string | null };
+type Problem = {
+  id: string;
+  number: number;
+  name: string | null;
+  topPoints: number | null;
+  zonePoints: number | null;
+};
 type Round = { id: string; type: string; order: number; problems: Problem[] };
 type Category = {
   id: string;
@@ -196,9 +202,13 @@ export function EventStructure({
                                   <SpineNode tone="problem" />
                                   <ProblemCard
                                     slug={slug}
+                                    eventId={eventId}
                                     problemId={problem.id}
                                     number={problem.number}
                                     name={problem.name}
+                                    topPoints={problem.topPoints}
+                                    zonePoints={problem.zonePoints}
+                                    isLeaguePoints={scoringFormat === 'league_points'}
                                     unit={unit}
                                   />
                                 </div>
