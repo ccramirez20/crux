@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { attempts, categories, eq, events, problems, registrations, rounds, type Db } from '@crux/db';
 import { resolveCurrentAttempts } from '@crux/scoring';
+import { attemptVerdict } from '@/lib/attempt-scope';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
 import { clientKey, isRateLimited, recordFailure } from '@/lib/rate-limit';
@@ -23,52 +24,32 @@ type AttemptInput = z.infer<typeof attemptInputSchema>;
 
 type SyncResult = { ok: true } | { ok: false; error: string };
 
-// Blocks belong to a round, which belongs to a category — so the athlete's
-// registration must be in that same category, not merely the same event.
-// This route has no auth (the link is the access control), so it is the
-// trust boundary: a cross-category row would be unrankable by every scoring
-// strategy, and nothing downstream would catch it.
-async function belongToSameCategory(
-  db: Db,
-  registrationId: string,
-  problemId: string,
-): Promise<boolean> {
-  const [registrationRow] = await db
-    .select({ categoryId: registrations.categoryId })
-    .from(registrations)
-    .where(eq(registrations.id, registrationId));
-  if (!registrationRow) {
-    return false;
-  }
+/**
+ * Lo que hace falta saber de la base para decidir si una captura entra: el
+ * bloque con su categoría y el código de su evento, y la categoría de la
+ * inscripción. Son dos lecturas independientes, así que van juntas — la cola
+ * del juez las paga una por intento al ponerse al día tras una caída de wifi,
+ * y con la base en la nube cada ida y vuelta es latencia real.
+ *
+ * La decisión que sale de esto vive en `attemptVerdict`, que es puro y está
+ * probado; aquí solo se traen las filas.
+ */
+async function loadScope(db: Db, registrationId: string, problemId: string) {
+  const [problemRows, registrationRows] = await Promise.all([
+    db
+      .select({ categoryId: rounds.categoryId, judgeCode: events.judgeCode })
+      .from(problems)
+      .innerJoin(rounds, eq(problems.roundId, rounds.id))
+      .innerJoin(categories, eq(rounds.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(eq(problems.id, problemId)),
+    db
+      .select({ categoryId: registrations.categoryId })
+      .from(registrations)
+      .where(eq(registrations.id, registrationId)),
+  ]);
 
-  const [problemRow] = await db
-    .select({ categoryId: rounds.categoryId })
-    .from(problems)
-    .innerJoin(rounds, eq(problems.roundId, rounds.id))
-    .where(eq(problems.id, problemId));
-  if (!problemRow) {
-    return false;
-  }
-
-  return registrationRow.categoryId === problemRow.categoryId;
-}
-
-// The judge screen has no login — the QR is public and anyone at the gym can
-// scan it — so this is the only place the event's code is actually enforced.
-// The client checks it too, but only to fail fast; a client check protects
-// nobody.
-async function judgeCodeAccepted(db: Db, problemId: string, given: string | null): Promise<boolean> {
-  const [row] = await db
-    .select({ judgeCode: events.judgeCode })
-    .from(problems)
-    .innerJoin(rounds, eq(problems.roundId, rounds.id))
-    .innerJoin(categories, eq(rounds.categoryId, categories.id))
-    .innerJoin(events, eq(categories.eventId, events.id))
-    .where(eq(problems.id, problemId));
-  if (!row || row.judgeCode === null) {
-    return true;
-  }
-  return given !== null && given.trim().toUpperCase() === row.judgeCode.toUpperCase();
+  return { problem: problemRows[0], registration: registrationRows[0] };
 }
 
 export interface CurrentAttempt {
@@ -131,7 +112,10 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
     );
   }
 
-  if (!(await judgeCodeAccepted(db, input.problemId, input.judgeCode))) {
+  const { problem, registration } = await loadScope(db, input.registrationId, input.problemId);
+  const verdict = attemptVerdict(problem, registration, input.judgeCode);
+
+  if (verdict === 'bad-code') {
     recordFailure(key);
     return NextResponse.json(
       { ok: false, error: 'El código del evento no es correcto.' },
@@ -139,8 +123,7 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
     );
   }
 
-  const inScope = await belongToSameCategory(db, input.registrationId, input.problemId);
-  if (!inScope) {
+  if (verdict === 'out-of-scope') {
     return NextResponse.json(
       { ok: false, error: 'La inscripción y el bloque no pertenecen a la misma categoría.' },
       { status: 400 },
