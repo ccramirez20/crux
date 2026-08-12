@@ -11,7 +11,8 @@
     "db:generate": "pnpm --filter @crux/db exec drizzle-kit generate",
     "db:migrate": "pnpm --filter @crux/db exec drizzle-kit migrate",
     "db:studio": "pnpm --filter @crux/db exec drizzle-kit studio",
-  "seed:event": "pnpm --filter @crux/db exec node src/seed-event.mjs",
+    "seed:event": "pnpm --filter @crux/db exec node src/seed-event.mjs",
+    "clean:cache": "node scripts/clean-cache.mjs",
     "format": "prettier --write ."
   },
   "devDependencies": {
