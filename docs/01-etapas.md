@@ -9,14 +9,15 @@ explicitamente fuera, y el criterio de desbloqueo de la siguiente.
 ### Dentro del alcance
 
 - Autenticación de organizador (sign-up con código de acceso, sign-in) — **listo**
-- Recuperación de contraseña ("olvidé mi clave") para cuentas con clave — **pendiente, esperando el dominio**. Hoy no existe: la clave se guarda hasheada con scrypt, así que una cuenta sin acceso solo se recupera tocando la base a mano. Es tapón real, no comodidad: el organizador entra al panel una vez cada varios meses, justo antes de un evento, que es el peor momento para quedar afuera. Lo bloquea una decisión, no el código — ver abajo.
-- Panel del organizador: crear evento, categorías, rondas, bloques — **listo**
+- Recuperación de contraseña ("olvidé mi clave") — **fuera de la etapa 1 por decisión del 2026-08-12**. Necesita correo transaccional, que necesita dominio propio, y CR decidió no comprar dominio por ahora. Hay vía gratis (Brevo o SendGrid verifican un remitente suelto sin dominio) y se descartó por lo mismo que está escrito abajo: un "olvidé mi clave" saliendo de un Gmail cae en spam el único día que importa. Se queda el hueco, y el manual lo dice: una cuenta sin acceso se recupera a mano en la base.
+- Panel del organizador: crear evento, categorías, rondas, bloques — **listo**. Edición de lo que es seguro editar y lista de inscritos con dorsales, desde el 2026-08-12 — detalle abajo
 - Inscripción pública (`/inscripcion/[slug]`, sin cuenta), con dedupe de atleta por documento y elegibilidad por edad/género contra la fecha del evento — **listo**
 - Captura de intentos por juez, offline-first — **listo**, probado en teléfono real
 - Scoring en vivo (`packages/scoring`) — **listo**: `classic_tops_zones`, `ifsc_boulder`, `league_points`, `max_height`, con tests de empate. Conectado a la tabla pública desde `apps/web/lib/leaderboard.ts`.
 - Tabla pública de resultados (`Leaderboard`) — **lista, en pulido de interfaz**. `/resultados/[slug]`, cálculo real vía `scoreRound`, refresco de 5s sobre respuesta cacheada, filtro por categoría y ronda, desempates en columnas visibles, detalle por competidor y tres gráficas. Lo que queda es acabado visual, no funcionalidad.
 - Historial de competidor entre eventos — **listo**. `/competidor/[athleteId]`, enlazado desde el panel desplegado de cada fila de la tabla pública. Detalle abajo
-- Manual de uso corto, en lenguaje natural, como HTML diseñado y autocontenido (un archivo, se comparte por WhatsApp o se abre sin internet) — **listo el 2026-08-12**, en `docs/manual.html`. Cero referencias externas, así que abre sin señal; tipografías del sistema a propósito (embeber Space Grotesk costaba más de 100 kB y el color y el motivo topográfico ya cargan la identidad). Cubre organizador y jueces; la sección de jueces va en su propio marco para poder reenviarse sola. No se sirve desde la app: no hay ruta `/manual` ni `apps/web/public/`, se comparte a mano. Escribirlo destapó dos cosas que el producto promete y no hace — ver abajo
+- Manual de uso corto, en lenguaje natural, como HTML diseñado y autocontenido (un archivo, se comparte por WhatsApp o se abre sin internet) — **listo el 2026-08-12**, en `docs/manual.html`. Cero referencias externas, así que abre sin señal; tipografías del sistema a propósito (embeber Space Grotesk costaba más de 100 kB y el color y el motivo topográfico ya cargan la identidad). Cubre organizador y jueces; la sección de jueces va en su propio marco para poder reenviarse sola. No se sirve desde la app: no hay ruta `/manual` ni `apps/web/public/`, se comparte a mano. Escribirlo destapó tres huecos que el código no dejaba ver, y los tres se cerraron el mismo día — ver abajo
+- Despliegue — **pendiente, y es lo único que separa a la etapa 1 de estar terminada**. Crux solo existe en `localhost` o en IP de LAN, así que correr un evento real hoy significa que el desarrollador lleve un portátil y lo mantenga vivo, que es exactamente la condición que impide desbloquear la etapa 2. Va en Vercel, plan gratis; los pasos y las cuatro variables de entorno están en `docs/despliegue.md`. Lo único que no se puede automatizar es el login de Vercel y conectar el repositorio
 - Portada pública (`/`) — **agregada por decisión explícita el 2026-08-11**, no estaba en la lista original. La tesis dice que el canal es "el siguiente gimnasio llega porque vio la tabla en vivo del anterior", así que la tabla pública lleva un gancho de una línea al pie y la portada es donde aterriza ese clic. Lleva imagen de Open Graph para poder moverse por redes. Sin precios: se cobra a mano y falta la conversación con el gimnasio piloto. Las fotos reales entran cuando corra el primer evento; hasta entonces la imagen es la interfaz del producto
 
 ### El correo se aplaza entero hasta que haya dominio
@@ -220,26 +221,42 @@ elige a ojo. Dos resultados que hay que respetar:
   ve — hay tres competidoras en `=3`. Es propiedad del formato, no defecto; si
   un gimnasio real lo pide, el desempate se agrega como estrategia aparte.
 
-### Lo que el manual destapó (2026-08-12)
+### Lo que el manual destapó, y cómo quedó (2026-08-12)
 
 Escribir el manual obliga a decir en voz alta lo que el producto hace, y ahí se
-ven los huecos que leyendo el código no se ven.
+ven los huecos que leyendo el código no se ven. Los tres se cerraron el mismo
+día.
 
-- **Nadie asigna dorsales.** `bibNumber` existe en el esquema y se lee en la
-  tabla, en la pantalla del juez y en el buscador, pero **ninguna pantalla lo
-  escribe**: solo lo pone `pnpm seed:event`. En un evento real todos los
-  competidores salen con `—` de dorsal y el juez busca por nombre, que
-  funciona. El problema es la promesa: la pantalla de inscripción le dice al
-  competidor *"El día del evento te asignan un dorsal y con ese número los
-  jueces registran tus intentos"*, y eso hoy es mentira. O se agrega el
-  asignador de dorsales al panel, o se cambia esa frase. Lo segundo es gratis
-  y probablemente lo correcto hasta que un gimnasio lo pida.
-- **No hay pantalla de edición de nada.** Ni del evento ni de los bloques.
-  Formato de puntaje y puntos por bloque se fijan al crear y solo se arreglan
-  con SQL. El manual lo dice explícito dos veces, que es lo mínimo mientras
-  siga así. Se cerró la mitad más peligrosa: `createProblem` ya no acepta un
-  bloque de liga sin puntos, que era lo que producía una tabla entera en cero
-  sin un solo error en pantalla.
+- **El panel no mostraba a los inscritos.** Solo el conteo en la tarjeta del
+  evento. Se descubrió buscando dónde se ponía el dorsal y resultando que no
+  había ni lista. Ahora hay `Inscritos` por categoría, y la lectura que
+  encabeza no es cuántos hay sino **cuántos van sin dorsal**, que es lo que
+  importa la mañana del evento.
+- **Nadie asignaba dorsales**, y la pantalla de inscripción se lo prometía al
+  competidor. `bibNumber` se leía en tres pantallas y no lo escribía ninguna
+  fuera del seed. Ahora se escribe a mano por inscrito, y hay un botón que
+  numera en orden de inscripción **solo las casillas vacías**, para el gimnasio
+  que ya repartió petos impresos. El dorsal sigue siendo opcional: sin él el
+  juez busca por nombre.
+- **No había pantalla de edición de nada.** Ahora se editan nombre, fecha, zona
+  horaria y código de jueces del evento, y número, nombre y puntos de un
+  bloque. Rotar un código de juez filtrado era imposible sin SQL y era el peor
+  de los tres. Quedan fuera a propósito, y el formulario dice por qué: el
+  `slug` (vive dentro de cada QR impreso y de cada enlace compartido) y la
+  modalidad y el formato de puntaje (reinterpretan intentos ya capturados, y el
+  puntaje es derivado). Editar los puntos de un bloque **sí** es seguro: no
+  toca ningún intento, la tabla se recalcula sola.
+
+### El freno de fuerza bruta dejaba afuera a los jueces buenos
+
+Los dos endpoints que exigen código de juez (`/api/judge-access` y
+`/api/attempts`) consultaban el limitador **antes** de validar el código. Una
+wifi de gimnasio es una sola IP pública, así que los tres teléfonos comparten
+cubeta: cinco dedazos de un juez bloqueaban a los otros dos, y en la ruta de
+intentos un juez que volvía de una zona muerta con la cola llena recibía 429 en
+cada sincronización por culpa ajena. El freno pasó a vivir solo en la rama del
+código malo. Un código correcto ya nunca se topa con él, y el ataque sigue
+frenado porque un código malo jamás pasa de ahí.
 
 ### Fuera del alcance
 

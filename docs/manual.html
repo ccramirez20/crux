@@ -247,7 +247,8 @@
         <dd>
           Se arma solo con el nombre del evento (<code>copa-paramo-2026</code>).
           Es el que vas a compartir. Puedes cambiarlo antes de crear el evento;
-          después no.
+          después no, porque queda dentro de cada QR impreso y de todo lo que ya
+          hayas compartido.
         </dd>
 
         <dt>Cómo se puntúa</dt>
@@ -268,6 +269,14 @@
           un juez de cualquiera que pase y escanee el código de la pared.
         </dd>
       </dl>
+
+      <p>
+        El nombre, la fecha, la zona horaria y el código de jueces se pueden
+        cambiar después con <span class="ui">Editar el evento</span>. El enlace
+        público, la modalidad y la forma de puntuar no: si alguno quedó mal y
+        todavía no has capturado ningún intento, borra el evento y créalo otra
+        vez.
+      </p>
 
       <h2>3. Armar la competencia</h2>
       <p>
@@ -302,11 +311,14 @@
           <b>Si escogiste puntos por bloque estilo liga:</b> a cada bloque le
           pones cuánto paga su top, y opcionalmente cuánto paga su zona. Un
           bloque sin puntos de zona es un bloque donde llegar a la zona no
-          suma nada — es válido, pero anúncialo.
+          suma nada — es válido, pero anúncialo. La tabla pública muestra los
+          dos números bajo cada bloque, para que nadie tenga que adivinarlos.
         </p>
         <p>
-          Esos puntos <b>no se pueden editar después de crear el bloque</b>.
-          Revísalos antes de guardar.
+          Si te equivocaste, el botón <b>Editar</b> de cada bloque corrige el
+          número, el nombre y los puntos. Cambiar los puntos no borra ningún
+          intento: la tabla se recalcula sola, así que si el evento ya empezó,
+          los puestos se pueden mover al guardar.
         </p>
       </div>
 
@@ -347,20 +359,42 @@
           mensaje. No lo pegues en la pared junto al QR.
         </li>
         <li>
+          <strong>Revisa los dorsales.</strong> En
+          <span class="ui">Inscritos</span>, que no quede nadie sin número si
+          vas a usarlos. Ahí también aparece quién llegó a inscribirse a última
+          hora.
+        </li>
+        <li>
           <strong>Manda a cada juez la sección de abajo</strong> de este
           manual. Con eso ya sabe todo lo que necesita.
         </li>
       </ol>
 
-      <div class="ojo">
-        <p>
-          <b>Hoy Crux no asigna dorsales.</b> Si le pones dorsales a la gente,
-          los jueces no los van a ver en el teléfono: buscan al competidor por
-          nombre, que funciona bien. Si de todas formas repartes números en
-          papel, avísale a tus jueces que en la pantalla van a buscar por
-          nombre.
-        </p>
-      </div>
+      <h3>Dorsales</h3>
+      <p>
+        En <span class="ui">Inscritos</span> aparece quién se inscribió, por
+        categoría, y al lado de cada nombre una casilla para su dorsal. Arriba
+        siempre dice cuántos van sin dorsal, que es lo que hay que dejar en cero
+        antes de empezar.
+      </p>
+      <p>Sirve para las dos formas de repartir números:</p>
+      <ul>
+        <li>
+          <strong>Ya tienes los números repartidos</strong> (petos impresos,
+          lista en papel): escríbelos uno por uno. Se guardan al salir de la
+          casilla, sin botón de guardar.
+        </li>
+        <li>
+          <strong>No tienes números</strong>: el botón
+          <span class="ui">Numerar desde…</span> los pone en orden de
+          inscripción. Solo llena las casillas vacías, así que puedes escribir a
+          mano los que ya venían con número y dejar que Crux complete el resto.
+        </li>
+      </ul>
+      <p>
+        El dorsal es opcional. Si lo dejas vacío, los jueces buscan al
+        competidor por nombre y todo funciona igual.
+      </p>
 
       <!-- Esta sección es la que se reenvía. Va cerrada en su propio marco
            para que se entienda dónde empieza y dónde termina. -->
@@ -463,11 +497,13 @@
           con el código correcto a la mano.
         </dd>
 
-        <dt>Perdí el código de los jueces</dt>
+        <dt>Perdí el código de los jueces, o se filtró</dt>
         <dd>
-          Está en el panel del evento, siempre visible. No se puede cambiar sin
-          que nosotros lo cambiemos en la base, así que si se filtró,
-          escríbenos.
+          Está en el panel del evento, siempre visible. Si se filtró, en
+          <span class="ui">Editar el evento</span> lo cambias por otro. Los
+          teléfonos que ya estaban juzgando lo van a pedir de nuevo, y los
+          intentos que tengan sin enviar esperan ahí hasta que lo escriban: no
+          se pierde ninguno.
         </dd>
 
         <dt>Un juez no puede copiar el enlace</dt>
