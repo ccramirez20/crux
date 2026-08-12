@@ -3,7 +3,15 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { RankedResult } from '@crux/scoring';
 import { TopographicMotif } from '@/components/topographic-motif';
-import { DISCIPLINE_LABEL, ROUND_TYPE_LABEL, SCORE_TERM, formatEventDate, labelFor, problemUnit } from '@/lib/labels';
+import {
+  DISCIPLINE_LABEL,
+  ROUND_TYPE_LABEL,
+  SCORE_TERM,
+  attemptSummary,
+  formatEventDate,
+  labelFor,
+  problemUnit,
+} from '@/lib/labels';
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 import { LeaderboardCharts } from './leaderboard-charts';
 
@@ -89,36 +97,32 @@ function BlockBadge({ cell, isHeight }: { cell: LeaderboardRow['cells'][number] 
 
 function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; row: LeaderboardRow; unit: string; isHeight: boolean }) {
   return (
-    <ul className="flex flex-wrap gap-3 px-6 pb-6 pt-5">
+    <ul className="flex flex-wrap items-center gap-3 px-6 pb-6 pt-5">
       {round.problems.map((problem) => {
         const cell = row.cells.find((c) => c.problemId === problem.id);
-        let said = 'Sin registro';
-        if (cell?.top) {
-          // Un top pasa por la zona en el camino, así que el detalle dice las
-          // dos cosas: es lo que suman las dos columnas de intentos de arriba, y
-          // sin la segunda el número de zonas no se reconciliaba con nada. Si el
-          // juez no anotó la zona aparte, cuenta en el mismo intento del top —
-          // que es exactamente lo que hace el scoring.
-          said = isHeight
-            ? 'Llegó al top'
-            : `Top en ${cell.topAttempts ?? 1} · ${SCORE_TERM.zone} en ${cell.zoneAttempts ?? cell.topAttempts ?? 1}`;
-        } else if (cell?.zone) {
-          said = `Zona en ${cell.zoneAttempts ?? 1}`;
-        } else if (cell && cell.height !== null) {
-          said = `${cell.height} m`;
-        } else if (cell) {
-          said = 'Sin zona';
-        }
         return (
           <li key={problem.id} className="rounded-lg border border-cardborder bg-card px-4 py-3">
             <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
               {unit} {problem.number}
               {problem.name ? ` · ${problem.name}` : ''}
             </span>
-            <span className="font-display text-xl font-semibold">{said}</span>
+            <span className="font-display text-xl font-semibold">{attemptSummary(cell, isHeight)}</span>
           </li>
         );
       })}
+      {/* El enlace vive aquí y no en la fila: la fila entera abre y cierra este
+          panel, así que un enlace ahí adentro tendría que pelear con ese click.
+          Este <tr> no tiene handler. */}
+      {row.athleteId && (
+        <li>
+          <a
+            href={`/competidor/${row.athleteId}`}
+            className="font-display text-lg font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
+          >
+            Ver historial de {row.athleteName} →
+          </a>
+        </li>
+      )}
     </ul>
   );
 }

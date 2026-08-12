@@ -57,8 +57,8 @@ const tree: TreeRow[] = [
 ];
 
 const registrations: RegistrationRow[] = [
-  { id: 'reg-ana', bibNumber: '10', categoryId: 'cat-1', athleteFullName: 'Ana Ríos' },
-  { id: 'reg-beto', bibNumber: '11', categoryId: 'cat-1', athleteFullName: 'Beto Cano' },
+  { id: 'reg-ana', bibNumber: '10', categoryId: 'cat-1', athleteId: 'ath-ana', athleteFullName: 'Ana Ríos' },
+  { id: 'reg-beto', bibNumber: '11', categoryId: 'cat-1', athleteId: 'ath-beto', athleteFullName: 'Beto Cano' },
 ];
 
 function qualification(attempts: Attempt[]) {

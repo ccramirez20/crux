@@ -65,6 +65,48 @@ export function flashCount(count: number): string {
   return `${count} ${SCORE_TERM.flash}`;
 }
 
+/**
+ * Lo que hizo un competidor en un bloque, en una frase. La tabla pública y el
+ * perfil del competidor tienen que decirlo con las mismas palabras: si en una
+ * pantalla se lee "Top en 3 · Zona en 1" y en la otra otra cosa, parecen dos
+ * datos distintos.
+ */
+export function attemptSummary(
+  cell:
+    | { top: boolean; topAttempts: number | null; zone: boolean; zoneAttempts: number | null; height: number | null }
+    | undefined,
+  isHeight: boolean,
+): string {
+  if (!cell) {
+    return 'Sin registro';
+  }
+  if (cell.top) {
+    // Un top pasa por la zona en el camino, así que el detalle dice las dos
+    // cosas: es lo que suman las dos columnas de intentos de la tabla, y sin la
+    // segunda el número de zonas no reconciliaba con nada. Si el juez no anotó
+    // la zona aparte, cuenta en el mismo intento del top — que es exactamente
+    // lo que hace el scoring.
+    return isHeight
+      ? 'Llegó al top'
+      : `${SCORE_TERM.top} en ${cell.topAttempts ?? 1} · ${SCORE_TERM.zone} en ${cell.zoneAttempts ?? cell.topAttempts ?? 1}`;
+  }
+  if (cell.zone) {
+    return `${SCORE_TERM.zone} en ${cell.zoneAttempts ?? 1}`;
+  }
+  if (cell.height !== null) {
+    return `${cell.height} m`;
+  }
+  return 'Sin zona';
+}
+
+/**
+ * Ordinal en español: "1.º", "12.º". Con punto antes de la o volada, que es
+ * como se escribe en es-CO — ni "1°" (que es grado) ni "1er".
+ */
+export function ordinal(place: number): string {
+  return `${place}.º`;
+}
+
 /** Reads a date-only column (yyyy-mm-dd) without letting the local timezone shift the day. */
 export function formatEventDate(date: string | null): string | null {
   if (!date) {

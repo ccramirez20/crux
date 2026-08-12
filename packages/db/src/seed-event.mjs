@@ -7,16 +7,45 @@
 // pueda importar. Un seed que escribe columnas explícitas también falla ruidoso
 // el día que el esquema cambie, que es justo lo que uno quiere de un seed.
 //
-// Uso:  pnpm seed:event            crea la competencia demo
-//       pnpm seed:event --reset    borra la anterior y la vuelve a crear
+// Uso:  pnpm seed:event            crea las dos fechas de la liga demo
+//       pnpm seed:event --reset    las borra y las vuelve a crear
 
 import { randomUUID } from 'node:crypto';
 import postgres from 'postgres';
 
 process.loadEnvFile(new URL('../.env', import.meta.url).pathname.slice(1));
 
-const SLUG = 'liga-paramo';
-const JUDGE_CODE = 'LIGA26';
+// Dos fechas de la misma liga, no una. El perfil del competidor no se puede
+// mirar con un solo evento: sin una segunda fecha, "historial entre eventos" se
+// ve idéntico a no tener historial. Los atletas se reutilizan solos porque el
+// documento (`DEMO-<dorsal>`) es el mismo en las dos y el script ya busca por
+// ahí antes de insertar.
+//
+// La Fecha 2 no se toca: mismo slug, misma fecha y misma semilla que antes de
+// que existiera la Fecha 1. Es el evento contra el que se cerró el diseño de la
+// tabla pública, y si la semilla se corre, se corren las gráficas.
+const FECHAS = [
+  {
+    slug: 'liga-paramo-f1',
+    name: 'Liga Páramo · Fecha 1',
+    date: '2026-06-13',
+    judgeCode: 'LIGA26F1',
+    seed: 20260613,
+    // Dos competidoras de cada categoría no corrieron esta fecha: así hay
+    // perfiles de un solo evento al lado de perfiles de dos, que es la
+    // diferencia que hay que poder ver en pantalla.
+    skipLast: 2,
+  },
+  {
+    slug: 'liga-paramo',
+    name: 'Liga Páramo · Fecha 2',
+    date: '2026-08-22',
+    judgeCode: 'LIGA26',
+    seed: 20260822,
+    skipLast: 0,
+  },
+];
+
 const RESET = process.argv.includes('--reset');
 
 /** PRNG con semilla: la misma competencia en cada corrida, para poder comparar diseños. */
@@ -44,8 +73,8 @@ const MALE = [
 
 const sql = postgres(process.env.DATABASE_URL ?? '', { max: 1 });
 
-async function reset() {
-  const [event] = await sql`select id from events where slug = ${SLUG}`;
+async function reset(slug) {
+  const [event] = await sql`select id from events where slug = ${slug}`;
   if (!event) return false;
   // De la hoja a la raíz: cada tabla referencia a la anterior.
   await sql`delete from attempts where registration_id in (select id from registrations where event_id = ${event.id})`;
@@ -57,40 +86,19 @@ async function reset() {
   return true;
 }
 
-async function main() {
-  const existing = await sql`select id from events where slug = ${SLUG}`;
-  if (existing.length > 0) {
-    if (!RESET) {
-      console.error(`Ya existe un evento con slug "${SLUG}".`);
-      console.error('Corre con --reset para borrarlo y volver a sembrarlo.');
-      process.exit(1);
-    }
-    await reset();
-    console.log('Evento anterior borrado.');
-  }
-
-  const [owner] = await sql`select id from "user" order by created_at limit 1`;
-  if (!owner) {
-    console.error('No hay ninguna cuenta todavía. Regístrate en /sign-up y vuelve a correr esto.');
-    process.exit(1);
-  }
-
-  let [org] = await sql`select id from organizations where owner_id = ${owner.id} limit 1`;
-  if (!org) {
-    [org] = await sql`
-      insert into organizations (owner_id, name, location)
-      values (${owner.id}, 'Gimnasio Páramo', 'Medellín')
-      returning id`;
-  }
-
+async function seedFecha(fecha, org, owner) {
   const [event] = await sql`
     insert into events (organization_id, owner_id, name, discipline, scoring_format, slug, judge_code, timezone, date)
-    values (${org.id}, ${owner.id}, 'Liga Páramo · Fecha 2', 'boulder', 'classic_tops_zones',
-            ${SLUG}, ${JUDGE_CODE}, 'America/Bogota', '2026-08-22')
+    values (${org.id}, ${owner.id}, ${fecha.name}, 'boulder', 'classic_tops_zones',
+            ${fecha.slug}, ${fecha.judgeCode}, 'America/Bogota', ${fecha.date})
     returning id`;
 
-  const random = mulberry32(20260822);
-  const start = new Date('2026-08-22T14:00:00Z');
+  // Un generador por fecha. Compartir uno solo entre las dos correría la
+  // secuencia de la Fecha 2 y cambiaría la tabla ya diseñada.
+  const random = mulberry32(fecha.seed);
+  const start = new Date(`${fecha.date}T14:00:00Z`);
+  // El dorsal reinicia en 100 en cada fecha: así DEMO-101 es Valentina en las
+  // dos y el historial se acumula sobre el mismo atleta.
   let bib = 100;
   let clock = 0;
   let totalAttempts = 0;
@@ -119,8 +127,14 @@ async function main() {
     // en cuántos intentos. Sin esto todo el mundo hace lo mismo y la tabla no
     // tiene historia que contar.
     const registrations = [];
-    for (const fullName of group.names) {
+    for (const [position, fullName] of group.names.entries()) {
       bib += 1;
+      // El dorsal corre aunque la competidora no haya venido a esta fecha: es
+      // lo que mantiene DEMO-101 apuntando a la misma persona en las dos, y sin
+      // eso el historial se mezclaría entre atletas distintos.
+      if (position >= group.names.length - fecha.skipLast) {
+        continue;
+      }
       const documentId = `DEMO-${bib}`;
       let [athlete] = await sql`select id from athletes where document_id = ${documentId}`;
       if (!athlete) {
@@ -158,12 +172,50 @@ async function main() {
       }
     }
 
-    console.log(`${group.name}: ${registrations.length} inscritos, 5 bloques.`);
+    console.log(`  ${group.name}: ${registrations.length} inscritos, 5 bloques.`);
   }
 
-  console.log(`\nListo. ${totalAttempts} intentos sembrados.`);
-  console.log(`  Tabla:  /resultados/${SLUG}`);
-  console.log(`  Jueces: /juzgar/${SLUG}  (código ${JUDGE_CODE})`);
+  console.log(`  ${totalAttempts} intentos.`);
+  console.log(`  Tabla:  /resultados/${fecha.slug}`);
+  console.log(`  Jueces: /juzgar/${fecha.slug}  (código ${fecha.judgeCode})`);
+}
+
+async function main() {
+  const existing = await sql`select slug from events where slug in ${sql(FECHAS.map((f) => f.slug))}`;
+  if (existing.length > 0) {
+    if (!RESET) {
+      console.error(`Ya existe: ${existing.map((e) => e.slug).join(', ')}.`);
+      console.error('Corre con --reset para borrarlo y volver a sembrarlo.');
+      process.exit(1);
+    }
+    for (const fecha of FECHAS) {
+      await reset(fecha.slug);
+    }
+    console.log('Eventos anteriores borrados.');
+  }
+
+  const [owner] = await sql`select id from "user" order by created_at limit 1`;
+  if (!owner) {
+    console.error('No hay ninguna cuenta todavía. Regístrate en /sign-up y vuelve a correr esto.');
+    process.exit(1);
+  }
+
+  let [org] = await sql`select id from organizations where owner_id = ${owner.id} limit 1`;
+  if (!org) {
+    [org] = await sql`
+      insert into organizations (owner_id, name, location)
+      values (${owner.id}, 'Gimnasio Páramo', 'Medellín')
+      returning id`;
+  }
+
+  // En orden cronológico: la Fecha 1 crea los atletas y la Fecha 2 los
+  // reutiliza por documento, que es de donde sale el historial.
+  for (const fecha of FECHAS) {
+    console.log(`\n${fecha.name} (${fecha.date})`);
+    await seedFecha(fecha, org, owner);
+  }
+
+  console.log('\nListo. Perfil de un competidor: abre una fila en la tabla y sigue "Ver historial".');
   await sql.end();
 }
 

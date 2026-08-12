@@ -9,15 +9,89 @@ explicitamente fuera, y el criterio de desbloqueo de la siguiente.
 ### Dentro del alcance
 
 - Autenticación de organizador (sign-up con código de acceso, sign-in) — **listo**
-- Recuperación de contraseña ("olvidé mi clave") para cuentas con clave — **pendiente**. Hoy no existe: la clave se guarda hasheada con scrypt, así que una cuenta sin acceso solo se recupera tocando la base a mano. Es tapón real, no comodidad: el organizador entra al panel una vez cada varios meses, justo antes de un evento, que es el peor momento para quedar afuera. Requiere decidir cómo se manda el correo (proveedor + dominio); esa decisión es lo único que lo bloquea, no el código.
+- Recuperación de contraseña ("olvidé mi clave") para cuentas con clave — **pendiente, esperando el dominio**. Hoy no existe: la clave se guarda hasheada con scrypt, así que una cuenta sin acceso solo se recupera tocando la base a mano. Es tapón real, no comodidad: el organizador entra al panel una vez cada varios meses, justo antes de un evento, que es el peor momento para quedar afuera. Lo bloquea una decisión, no el código — ver abajo.
 - Panel del organizador: crear evento, categorías, rondas, bloques — **listo**
 - Inscripción pública (`/inscripcion/[slug]`, sin cuenta), con dedupe de atleta por documento y elegibilidad por edad/género contra la fecha del evento — **listo**
 - Captura de intentos por juez, offline-first — **listo**, probado en teléfono real
 - Scoring en vivo (`packages/scoring`) — **listo**: `classic_tops_zones`, `ifsc_boulder`, `league_points`, `max_height`, con tests de empate. Conectado a la tabla pública desde `apps/web/lib/leaderboard.ts`.
 - Tabla pública de resultados (`Leaderboard`) — **lista, en pulido de interfaz**. `/resultados/[slug]`, cálculo real vía `scoreRound`, refresco de 5s sobre respuesta cacheada, filtro por categoría y ronda, desempates en columnas visibles, detalle por competidor y tres gráficas. Lo que queda es acabado visual, no funcionalidad.
-- Historial de competidor entre eventos — el modelo de datos ya lo soporta (un `Athlete` se reutiliza entre inscripciones por `documentId`); falta la vista pública de perfil
+- Historial de competidor entre eventos — **listo**. `/competidor/[athleteId]`, enlazado desde el panel desplegado de cada fila de la tabla pública. Detalle abajo
 - Manual de uso corto, en lenguaje natural, como HTML diseñado y autocontenido (un archivo, se comparte por WhatsApp o se abre sin internet) — **al cerrar la etapa**, cuando el flujo ya no cambie
 - Portada pública (`/`) — **agregada por decisión explícita el 2026-08-11**, no estaba en la lista original. La tesis dice que el canal es "el siguiente gimnasio llega porque vio la tabla en vivo del anterior", así que la tabla pública lleva un gancho de una línea al pie y la portada es donde aterriza ese clic. Lleva imagen de Open Graph para poder moverse por redes. Sin precios: se cobra a mano y falta la conversación con el gimnasio piloto. Las fotos reales entran cuando corra el primer evento; hasta entonces la imagen es la interfaz del producto
+
+### El correo se aplaza entero hasta que haya dominio
+
+Decidido el 2026-08-12. Hay dos necesidades de correo y una sola respuesta.
+
+El `mailto:` de contacto de la portada lo resolvería cualquier Gmail. La
+recuperación de contraseña no: necesita correo transaccional, y sin dominio
+propio no hay forma decente de mandarlo. Resend solo deja enviar a la cuenta
+del dueño hasta que se verifica un dominio, y el SMTP de Gmail con contraseña
+de aplicación entrega mal — el correo de "olvidé mi clave" cae en spam justo el
+día que el organizador está afuera, que es el único día que importa.
+
+Así que no se pone un Gmail de relleno mientras tanto. Cuando se compre el
+dominio se monta todo de una: contacto y transaccional con correos propios.
+Hasta entonces `CONTACT_EMAIL` en `app/(public)/page.tsx` sigue vacío y el
+enlace no se dibuja.
+
+Lo que hace falta el día que se compre: un dominio (~$12-15 USD/año un .com,
+~$25 un .co), la cuenta de Resend (tier gratis, 3.000 correos al mes) y los
+registros DNS de verificación. Resend tiene API REST, así que se llama con
+`fetch` y no entra una dependencia nueva. El único paso que no se puede
+automatizar es comprar el dominio y poner los DNS.
+
+### El perfil del competidor
+
+`/competidor/[athleteId]`, público y sin cuenta. Se llega desde el panel
+desplegado de cada fila de la tabla: "Ver historial de …".
+
+**Va `noindex`.** Es nombre completo e historial deportivo de terceros que
+inscribió el organizador, posiblemente menores; bajo la Ley 1581 de 2012 eso no
+se publica en un buscador sin consentimiento. Se ve con el enlace, no entra a
+Google. La URL usa el UUID del atleta, nunca el documento. Indexarlo después es
+fácil; desindexarlo no.
+
+**No recalcula puntaje.** Cada evento se pide a `getLeaderboard`, que ya pasó
+por `scoreRound` y ya está cacheado; el perfil solo lee la fila del atleta y
+suma. El puesto que muestra de un evento es el de la ronda más avanzada en la
+que apareció: si llegó a la final, la clasificatoria ya no lo describe.
+
+**Qué se puede cruzar entre eventos y qué no.** Esta es la regla de la pantalla.
+El puntaje no se cruza: los cuatro formatos miden cosas distintas y una línea
+que junte puntos IFSC con conteo de tops mentiría. Se cruzan tres cosas:
+
+- Los conteos crudos — un top es un top venga del formato que venga, y un metro
+  es un metro. De ahí salen bloques intentados, tops, zonas, flashes; y en
+  dificultad rutas intentadas, completadas y altura máxima.
+- La **posición relativa al campo**, `(campo − puesto) / (campo − 1)`. Un 8.º de
+  26 es mejor resultado que un 3.º de 5, y el puesto pelado no lo dice. Es lo
+  que ordena "tus mejores resultados" y lo que mide la tendencia. Ordenar por
+  puesto crudo es el bug que esta pantalla existe para no cometer, y hay un test
+  que lo fija (`athlete-profile.test.ts`).
+- El podio: top 3 es top 3 en cualquier formato.
+
+Por eso **el puesto nunca aparece solo**: siempre "3.º de 24".
+
+**Lo que hay en pantalla.** Cifras de carrera agrupadas por modalidad, una barra
+apilada de en qué terminó cada bloque intentado (topado / zona sin top / sin
+zona), los tres mejores resultados con su medidor de posición dentro del campo,
+y una frase de tendencia contra la competencia anterior. Si el resultado fue
+peor, la frase lo dice sin suavizarlo. Con una sola competencia no hay
+tendencia y la pantalla lo dice en una línea.
+
+**Se descartó la gráfica de progresión entre eventos.** Sobre puntaje mentiría.
+Sobre posición relativa sería honesta, pero con dos o tres fechas es una línea
+de dos o tres puntos que no dice nada que la frase no diga ya; el medidor por
+resultado funciona desde la primera competencia. Entra el día que una liga
+tenga historia de verdad.
+
+**Colores de la barra.** Oro para el top y verde para la zona son los de la
+tabla, para que las dos pantallas hablen el mismo idioma, pero el verde es
+`pine` y no el `sage` de las insignias: aquí los rellenos se tocan y sage contra
+oro se cae a ΔE 12.4 en visión normal, bajo el piso de 15. Pine contra oro da
+41.1, y 36.1 bajo protanopía. Validado con `validate_palette.js`, no elegido a
+ojo. Además van 2 px de hueso entre tramos y cada uno lleva su cifra escrita.
 
 ### La tabla pública no es una tabla a secas
 
