@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "echo 'sin lint todavia'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

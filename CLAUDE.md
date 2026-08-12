@@ -33,7 +33,7 @@ Retención y adquisición de consumidor, no ingreso. Solo tiene sentido con base
 
 ## Stack
 
-Node 22, TypeScript estricto, Next.js 15 (App Router), Tailwind + shadcn/ui (shadcn/ui aún no instalado), Postgres + Drizzle, Better Auth, Vitest + Playwright (Playwright aún no instalado; `pnpm test:e2e` no ejecuta nada todavía), pnpm workspaces + Turborepo.
+Node 22, TypeScript estricto, Next.js 15 (App Router), Tailwind + shadcn/ui (shadcn/ui aún no instalado), Postgres + Drizzle, Better Auth, Vitest, pnpm workspaces + Turborepo. Sin linter y sin e2e: `tsc` estricto hace de linter, y Playwright entra el día que haya un flujo que valga la pena automatizar.
 
 **Sin librería de gráficas.** Las de la tabla pública son SVG y CSS a mano: cuestan 6.5 kB en la pantalla que abre toda la sala al tiempo, contra los 100 kB y pico de una librería. Antes de proponer una, mira `apps/web/app/(public)/resultados/[slug]/leaderboard-charts.tsx`.
 
