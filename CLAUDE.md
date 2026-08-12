@@ -138,9 +138,25 @@ pnpm test:e2e         # Playwright — pendiente, aún no instalado (no hace nad
 pnpm db:generate      # generar migración desde el esquema
 pnpm db:migrate
 pnpm db:studio
-pnpm seed:event       # siembra la competencia demo (26 inscritos, 5 bloques, 130 intentos)
-pnpm seed:event --reset   # la borra y la vuelve a sembrar
+pnpm seed:event       # siembra las dos fechas de la liga demo (22 y 26 inscritos)
+pnpm seed:event --reset   # las borra y las vuelve a sembrar
+
+node scripts/viewport.mjs <url> [ancho] [--shot out.png]   # revisar una pantalla a un ancho real
 ```
+
+### Verificar responsive: `scripts/viewport.mjs`, nunca `--window-size`
+
+`chrome --headless --window-size=390,844 --screenshot` **no maqueta a 390 px**:
+maqueta ancho y recorta la imagen a 390. La captura parece un teléfono y no lo
+es. Eso ya llevó dos veces a "arreglar" un desbordo que no existía, con
+comentario falso en el código incluido. La extensión de Chrome tampoco sirve:
+ignora el resize por debajo del ancho del monitor.
+
+Lo único que da un viewport real es `Emulation.setDeviceMetricsOverride` por
+CDP, que es lo que hace `scripts/viewport.mjs`. **Medir antes de tocar CSS**: el
+script imprime `scrollWidth` contra el viewport y lista qué elemento se sale,
+saltándose lo que vive dentro de un contenedor con scroll propio (una tabla
+ancha que scrollea sola no es un defecto). Sale con código 1 si hay desbordo.
 
 ## Convenciones
 
