@@ -36,6 +36,7 @@ export interface RegistrationRow {
   id: string;
   bibNumber: string | null;
   categoryId: string;
+  athleteId: string;
   athleteFullName: string;
 }
 
@@ -57,6 +58,8 @@ export interface LeaderboardCell {
 
 export interface LeaderboardRow {
   registrationId: string;
+  /** Links to the competitor's history. A random UUID — not the document id. */
+  athleteId: string | null;
   athleteName: string;
   bibNumber: string | null;
   /** Carries rank, tied, and the format's own columns — the visible tiebreaks. */
@@ -272,6 +275,7 @@ export function buildLeaderboard(
         const registration = categoryRegistrations.find((r) => r.id === result.registrationId);
         return {
           registrationId: result.registrationId,
+          athleteId: registration?.athleteId ?? null,
           athleteName: registration?.athleteFullName ?? 'Sin nombre',
           bibNumber: registration?.bibNumber ?? null,
           result,
@@ -358,13 +362,15 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
       .leftJoin(problems, eq(problems.roundId, rounds.id))
       .where(eq(categories.eventId, event.id))
       .orderBy(categories.name, rounds.order, problems.number),
-    // Name and bib only. This page is public and stays projected on a wall:
-    // document id and birth date have no business leaving the database.
+    // Name, bib, and the athlete's UUID — the last one only so a row can link
+    // to that competitor's history. This page is public and stays projected on
+    // a wall: document id and birth date have no business leaving the database.
     db
       .select({
         id: registrations.id,
         bibNumber: registrations.bibNumber,
         categoryId: registrations.categoryId,
+        athleteId: athletes.id,
         athleteFullName: athletes.fullName,
       })
       .from(registrations)
