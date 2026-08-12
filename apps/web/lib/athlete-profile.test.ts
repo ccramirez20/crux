@@ -53,7 +53,7 @@ function round(overrides: Partial<LeaderboardRound> = {}): LeaderboardRound {
     id: 'round-clasi',
     type: 'qualification',
     order: 1,
-    problems: [{ id: 'p1', number: 1, name: null }],
+    problems: [{ id: 'p1', number: 1, name: null, topPoints: null, zonePoints: null }],
     rows: [],
     error: null,
     timeline: [],

@@ -7,6 +7,7 @@ import { GENDERS, ROUND_TYPES, type RoundType } from '@crux/core';
 import { categories, eq, events, problems, rounds } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
+import { leagueBlockNeedsPoints } from '@/lib/problem-points';
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -113,13 +114,16 @@ export async function createProblem(input: CreateProblemInput): Promise<ActionRe
   const { eventId, roundId, ...problemInput } = parsed.data;
 
   const [row] = await db
-    .select({ ownerId: events.ownerId })
+    .select({ ownerId: events.ownerId, scoringFormat: events.scoringFormat })
     .from(rounds)
     .innerJoin(categories, eq(rounds.categoryId, categories.id))
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(eq(rounds.id, roundId));
   if (!row || row.ownerId !== session.user.id) {
     return { ok: false, error: 'Esa ronda no existe o no te pertenece.' };
+  }
+  if (leagueBlockNeedsPoints(row.scoringFormat, problemInput.topPoints)) {
+    return { ok: false, error: 'Este evento puntúa por bloque: falta cuántos puntos vale su top.' };
   }
 
   await db.insert(problems).values({ ...problemInput, roundId });

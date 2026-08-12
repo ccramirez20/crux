@@ -184,6 +184,8 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
+  const hasAttemptColumns = data.event.scoringFormat === 'classic_tops_zones';
+  const isLeague = data.event.scoringFormat === 'league_points';
   const groups = SCORE_HEADERS[data.event.scoringFormat] ?? [];
   const headers = groups.flat();
   // En qué índice arranca cada grupo: ahí van la línea divisoria y la cifra
@@ -294,11 +296,23 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                   {/* "Intentos" se lee como cuántas veces lo intentó, y es otra
                       cosa: la suma de los intentos que le costó cada logro. El
                       título de la columna se queda —así se llama en cualquier
-                      planilla— y la frase es la que desarma la confusión. */}
-                  {!isHeight && (
+                      planilla— y la frase es la que desarma la confusión.
+                      Va atada a las columnas, no a la modalidad: los formatos
+                      de puntaje resuelven en una sola columna y la frase
+                      explicaba unas columnas que ahí no existen. */}
+                  {hasAttemptColumns && (
                     <span>
                       Las columnas de intentos suman los intentos que le tomó alcanzar todos los tops y
                       todas las zonas: menos es mejor.
+                    </span>
+                  )}
+                  {/* Los intentos siguen en las casillas porque el juez los
+                      capturó y son el detalle del evento, pero aquí no puntúan.
+                      Sin decirlo, un competidor lee la tabla como si sí. */}
+                  {isLeague && (
+                    <span>
+                      Bajo cada {unit.singular}, lo que paga su top y lo que paga su zona; la raya es un{' '}
+                      {unit.singular} que no paga zona. Los intentos no cambian el puntaje.
                     </span>
                   )}
                 </div>
@@ -340,6 +354,31 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                         >
                           {unit.singular.slice(0, 1).toUpperCase()}
                           {problem.number}
+                          {/* En una liga los bloques no valen lo mismo, y sin
+                              el precio aquí la fila es indescifrable: cinco
+                              casillas doradas y un puntaje de 1600 sin nada
+                              que los conecte. Con él, una casilla dorada en el
+                              bloque de 600 se lee de un vistazo como seis
+                              veces la del de 100.
+
+                              Los dos números en oro y salvia serían lo elegante
+                              y son ilegibles: a 11px, salvia sobre la tarjeta
+                              no llega ni a 2:1 de contraste. Van en bark, y
+                              cuál es cuál lo dice la leyenda. La raya es el
+                              bloque sin crédito parcial: llegar a la zona ahí
+                              no paga, y anunciarlo en el encabezado es más
+                              barato que discutirlo con la tabla ya puesta. */}
+                          {/* `typeof` y no `!== null`: la respuesta viene de
+                              una caché de 5s, así que justo después de un
+                              despliegue que agregue un campo el cliente recibe
+                              un payload viejo donde este llega `undefined`. Con
+                              `!== null` eso dibuja un "· —" bajo cada bloque de
+                              todas las tablas del producto. */}
+                          {typeof problem.topPoints === 'number' && (
+                            <span className="mt-0.5 block font-display text-[11px] font-semibold tracking-normal text-bark">
+                              {problem.topPoints} · {problem.zonePoints ?? '—'}
+                            </span>
+                          )}
                         </th>
                       ))}
                       {headers.map((header, index) => (

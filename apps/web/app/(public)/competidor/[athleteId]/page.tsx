@@ -97,16 +97,21 @@ function plural(count: number, one: string, many: string): string {
 
 function TrendLine({ trend }: { trend: Trend }) {
   const now = aboveField(trend.latest.standing!);
-  const points = Math.abs(Math.round(trend.delta * 100));
+  const before = aboveField(trend.previous.standing!);
   return (
     <p className="text-base leading-relaxed">
       En <span className="font-semibold">{trend.latest.eventName}</span> quedaste por encima del{' '}
       <span className="font-display font-bold tabular-nums">{now} %</span> del campo
-      {points === 0 ? (
+      {/* Antes decía "92 puntos abajo de", y "puntos" ya significa otra cosa en
+          esta misma pantalla: en un evento de liga el puntaje son puntos de
+          verdad. Los dos porcentajes uno al lado del otro dicen lo mismo sin
+          inventar una unidad que compita con la que ya existe. */}
+      {now === before ? (
         <>, lo mismo que en {trend.previous.eventName}.</>
       ) : (
         <>
-          , {points} puntos {trend.delta > 0 ? 'arriba' : 'abajo'} de {trend.previous.eventName}.
+          , contra el <span className="font-display font-bold tabular-nums">{before} %</span> en{' '}
+          {trend.previous.eventName}.
         </>
       )}
     </p>

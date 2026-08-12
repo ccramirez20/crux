@@ -44,6 +44,16 @@ export interface LeaderboardProblem {
   id: string;
   number: number;
   name: string | null;
+  /**
+   * Cuánto vale el bloque, y `null` en los formatos que no puntúan por bloque.
+   * Van en pantalla, no solo en el cálculo: sin el precio a la vista, una tabla
+   * de liga muestra un puntaje de 1600 al lado de cinco casillas doradas y no
+   * hay forma de llegar de las unas al otro. `zonePoints` en `null` con
+   * `topPoints` puesto es el bloque sin crédito parcial, que es justo el que
+   * genera el reclamo si no se anuncia.
+   */
+  topPoints: number | null;
+  zonePoints: number | null;
 }
 
 /** What a competitor did on one block — the detail panel, block by block. */
@@ -221,7 +231,13 @@ export function buildLeaderboard(
     if (row.problemId === null || row.problemNumber === null) {
       continue;
     }
-    round.problems.push({ id: row.problemId, number: row.problemNumber, name: row.problemName });
+    round.problems.push({
+      id: row.problemId,
+      number: row.problemNumber,
+      name: row.problemName,
+      topPoints: row.problemTopPoints,
+      zonePoints: row.problemZonePoints,
+    });
     // Only league_points events fill these in. A block left without topPoints
     // simply stays out of the map, which scoreLeaguePoints already reads as 0.
     if (row.problemTopPoints !== null) {

@@ -7,23 +7,30 @@
 // pueda importar. Un seed que escribe columnas explícitas también falla ruidoso
 // el día que el esquema cambie, que es justo lo que uno quiere de un seed.
 //
-// Uso:  pnpm seed:event            crea las dos fechas de la liga demo
-//       pnpm seed:event --reset    las borra y las vuelve a crear
+// Uso:  pnpm seed:event            crea los tres eventos demo
+//       pnpm seed:event --reset    los borra y los vuelve a crear
 
 import { randomUUID } from 'node:crypto';
 import postgres from 'postgres';
 
 process.loadEnvFile(new URL('../.env', import.meta.url).pathname.slice(1));
 
-// Dos fechas de la misma liga, no una. El perfil del competidor no se puede
-// mirar con un solo evento: sin una segunda fecha, "historial entre eventos" se
-// ve idéntico a no tener historial. Los atletas se reutilizan solos porque el
-// documento (`DEMO-<dorsal>`) es el mismo en las dos y el script ya busca por
-// ahí antes de insertar.
+// Tres eventos, no uno. El perfil del competidor no se puede mirar con un solo
+// evento: sin un segundo, "historial entre eventos" se ve idéntico a no tener
+// historial. Los atletas se reutilizan solos porque el documento
+// (`DEMO-<dorsal>`) es el mismo en los tres y el script ya busca por ahí antes
+// de insertar.
 //
 // La Fecha 2 no se toca: mismo slug, misma fecha y misma semilla que antes de
 // que existiera la Fecha 1. Es el evento contra el que se cerró el diseño de la
 // tabla pública, y si la semilla se corre, se corren las gráficas.
+//
+// El tercer evento no es una fecha de la liga: es otra copa, con otro formato
+// de puntaje. `league_points` era la única de las cuatro estrategias que no se
+// había visto nunca en pantalla, y no se puede juzgar un formato leyendo sus
+// tests. Reutiliza los mismos documentos `DEMO-1xx`, así que además pone al
+// perfil del competidor a cruzar dos formatos distintos, que es lo que hace de
+// verdad cuando alguien compite en dos gimnasios.
 const FECHAS = [
   {
     slug: 'liga-paramo-f1',
@@ -35,6 +42,32 @@ const FECHAS = [
     // perfiles de un solo evento al lado de perfiles de dos, que es la
     // diferencia que hay que poder ver en pantalla.
     skipLast: 2,
+  },
+  {
+    slug: 'copa-suesca',
+    name: 'Copa Suesca',
+    // Entre las dos fechas a propósito: el historial del competidor se lee en
+    // orden cronológico y con la copa en medio se ve que la línea de tiempo es
+    // una línea de tiempo, no la lista de la liga con algo pegado al final.
+    date: '2026-07-18',
+    judgeCode: 'SUESCA26',
+    seed: 20260718,
+    skipLast: 3,
+    scoringFormat: 'league_points',
+    // Los cinco bloques valiendo lo mismo haría de este formato una forma cara
+    // de contar tops. El escalón es la razón de ser de la liga local: el crux
+    // de la sala paga seis veces lo que paga el de calentamiento.
+    //
+    // El Nevado va sin puntos de zona (`null`). Es el interruptor "sin crédito
+    // parcial" que el esquema documenta y que hasta ahora no ejercitaba nadie:
+    // en ese bloque, o se topa o no cuenta.
+    problemPoints: [
+      { top: 100, zone: 40 },
+      { top: 200, zone: 80 },
+      { top: 300, zone: 120 },
+      { top: 400, zone: 160 },
+      { top: 600, zone: null },
+    ],
   },
   {
     slug: 'liga-paramo',
@@ -89,7 +122,7 @@ async function reset(slug) {
 async function seedFecha(fecha, org, owner) {
   const [event] = await sql`
     insert into events (organization_id, owner_id, name, discipline, scoring_format, slug, judge_code, timezone, date)
-    values (${org.id}, ${owner.id}, ${fecha.name}, 'boulder', 'classic_tops_zones',
+    values (${org.id}, ${owner.id}, ${fecha.name}, 'boulder', ${fecha.scoringFormat ?? 'classic_tops_zones'},
             ${fecha.slug}, ${fecha.judgeCode}, 'America/Bogota', ${fecha.date})
     returning id`;
 
@@ -118,8 +151,14 @@ async function seedFecha(fecha, org, owner) {
     const problems = [];
     const blockNames = ['Frailejón', 'Cóndor', 'Chingaza', 'Sumapaz', 'Nevado'];
     for (let number = 1; number <= 5; number++) {
+      // Sin `problemPoints` los dos quedan en NULL, que es exactamente lo que
+      // tenían las dos fechas de la liga antes de que existiera la copa: para
+      // ellas la fila insertada no cambia.
+      const points = fecha.problemPoints?.[number - 1] ?? { top: null, zone: null };
       const [problem] = await sql`
-        insert into problems (round_id, number, name) values (${round.id}, ${number}, ${blockNames[number - 1]}) returning id`;
+        insert into problems (round_id, number, name, top_points, zone_points)
+        values (${round.id}, ${number}, ${blockNames[number - 1]}, ${points.top}, ${points.zone})
+        returning id`;
       problems.push(problem.id);
     }
 
@@ -208,8 +247,8 @@ async function main() {
       returning id`;
   }
 
-  // En orden cronológico: la Fecha 1 crea los atletas y la Fecha 2 los
-  // reutiliza por documento, que es de donde sale el historial.
+  // En orden cronológico: la Fecha 1 crea los atletas y los dos eventos que
+  // siguen los reutilizan por documento, que es de donde sale el historial.
   for (const fecha of FECHAS) {
     console.log(`\n${fecha.name} (${fecha.date})`);
     await seedFecha(fecha, org, owner);
