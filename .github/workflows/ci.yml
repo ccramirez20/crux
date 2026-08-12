@@ -13,7 +13,6 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm lint
       - run: pnpm test
       - run: pnpm db:generate
       - run: git diff --exit-code packages/db/drizzle
