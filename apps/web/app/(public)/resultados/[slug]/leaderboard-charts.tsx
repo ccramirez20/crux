@@ -483,18 +483,23 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
           flotante movería las barras justo cuando se están mirando. */}
       {/* h-7: la fila reserva el alto del texto aunque esté vacía. Sin eso, la
           lectura empuja las barras hacia abajo justo cuando les estás apuntando. */}
-      <div className="mb-3 flex h-7 items-center gap-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
-        <span className="w-36 shrink-0" />
+      {/* Las columnas fijas ceden en el teléfono en vez de sacar la página de
+          cuadro: sumaban 380 px contra los 316 que quedan dentro de la tarjeta
+          a 390 px de ancho. Aquí no hace falta desplazar como en la gráfica de
+          puestos —son tres cifras y una barra, no un eje de quince nombres—,
+          así que se encogen y todo sigue visible sin tener que arrastrar. */}
+      <div className="mb-3 flex h-7 items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:gap-5">
+        <span className="w-20 shrink-0 sm:w-36" />
         <span className="flex-1 truncate text-base font-semibold normal-case tracking-normal text-ink">
           {reading}
         </span>
-        <span className="w-24 shrink-0 text-center">{SCORE_TERM.top}</span>
-        {!isHeight && <span className="w-20 shrink-0 text-center">{SCORE_TERM.flash}</span>}
+        <span className="w-16 shrink-0 text-center sm:w-24">{SCORE_TERM.top}</span>
+        {!isHeight && <span className="w-12 shrink-0 text-center sm:w-20">{SCORE_TERM.flash}</span>}
       </div>
       <ul className="flex flex-col gap-5">
         {stats.map((stat, index) => (
-          <li key={stat.problemId} className="flex items-center gap-5">
-            <span className="w-36 shrink-0">
+          <li key={stat.problemId} className="flex items-center gap-2 sm:gap-5">
+            <span className="w-20 shrink-0 sm:w-36">
               <span className="block font-display text-xl font-bold leading-tight">
                 {unit.slice(0, 1).toUpperCase()}
                 {stat.number}
@@ -534,14 +539,14 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
               ))}
             </span>
 
-            <span className="w-24 shrink-0 text-center">
-              <span className="block font-display text-2xl font-bold leading-none tabular-nums">
+            <span className="w-16 shrink-0 text-center sm:w-24">
+              <span className="block font-display text-xl font-bold leading-none tabular-nums sm:text-2xl">
                 {stat.tops}
-                <span className="text-lg font-semibold text-muted">/{stat.field}</span>
+                <span className="text-base font-semibold text-muted sm:text-lg">/{stat.field}</span>
               </span>
             </span>
             {!isHeight && (
-              <span className="w-20 shrink-0 text-center font-display text-2xl font-bold leading-none tabular-nums">
+              <span className="w-12 shrink-0 text-center font-display text-xl font-bold leading-none tabular-nums sm:w-20 sm:text-2xl">
                 {stat.flashes}
               </span>
             )}
@@ -587,7 +592,13 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
     <div>
       {/* Sin encabezados, el "5" de al lado no se leía como la cantidad de
           tops: cada número necesita su nombre encima, igual que en la tabla. */}
-      <div className="mb-3 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+      {/* Esta sí se desplaza en vez de encogerse, como la gráfica de puestos.
+          Se probó estrechando las columnas y no sirve: "Promedio" y "Tops"
+          chocan hasta leerse "PROMEDITOPS", y la barra queda en 48 px, donde
+          todas se ven iguales y dejan de comparar nada — que es lo único que
+          esta gráfica hace. El min-w le garantiza a la barra el ancho con el
+          que sí se distinguen los promedios. */}
+      <div className="mb-3 flex min-w-[33rem] items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
         <span className="w-44 shrink-0" />
         <span className="flex-1" />
         <span className="w-20 shrink-0 text-right">Promedio</span>
@@ -600,7 +611,7 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
             onMouseEnter={() => onHover(climber.id)}
             onMouseLeave={() => onHover(null)}
             onClick={() => onSelect(climber.id)}
-            className={`flex cursor-pointer items-center gap-4 transition-opacity duration-200 ${
+            className={`flex min-w-[33rem] cursor-pointer items-center gap-4 transition-opacity duration-200 ${
               hovered !== null && hovered !== climber.id ? 'opacity-60' : ''
             }`}
           >
@@ -699,9 +710,12 @@ export function LeaderboardCharts({
         {hasAttemptsPerTop && (
           <Panel
             title="Cuántos intentos al top"
-            hint={`Promedio de intentos por cada top logrado. Solo cuenta los ${unit.plural} que sí topó; entra quien tenga dos tops o más.`}
+            hint={`Promedio de intentos por cada top logrado. Solo cuenta los ${unit.plural} que sí topó; entra quien tenga dos tops o más. En el teléfono se desplaza a lo ancho.`}
           >
-            <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} onSelect={onSelect} />
+            {/* Igual que la gráfica de puestos: en el teléfono se desplaza. */}
+            <div className="overflow-x-auto">
+              <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} onSelect={onSelect} />
+            </div>
           </Panel>
         )}
       </div>
