@@ -16,7 +16,7 @@ explicitamente fuera, y el criterio de desbloqueo de la siguiente.
 - Scoring en vivo (`packages/scoring`) — **listo**: `classic_tops_zones`, `ifsc_boulder`, `league_points`, `max_height`, con tests de empate. Conectado a la tabla pública desde `apps/web/lib/leaderboard.ts`.
 - Tabla pública de resultados (`Leaderboard`) — **lista, en pulido de interfaz**. `/resultados/[slug]`, cálculo real vía `scoreRound`, refresco de 5s sobre respuesta cacheada, filtro por categoría y ronda, desempates en columnas visibles, detalle por competidor y tres gráficas. Lo que queda es acabado visual, no funcionalidad.
 - Historial de competidor entre eventos — **listo**. `/competidor/[athleteId]`, enlazado desde el panel desplegado de cada fila de la tabla pública. Detalle abajo
-- Manual de uso corto, en lenguaje natural, como HTML diseñado y autocontenido (un archivo, se comparte por WhatsApp o se abre sin internet) — **al cerrar la etapa**, cuando el flujo ya no cambie
+- Manual de uso corto, en lenguaje natural, como HTML diseñado y autocontenido (un archivo, se comparte por WhatsApp o se abre sin internet) — **listo el 2026-08-12**, en `docs/manual.html`. Cero referencias externas, así que abre sin señal; tipografías del sistema a propósito (embeber Space Grotesk costaba más de 100 kB y el color y el motivo topográfico ya cargan la identidad). Cubre organizador y jueces; la sección de jueces va en su propio marco para poder reenviarse sola. No se sirve desde la app: no hay ruta `/manual` ni `apps/web/public/`, se comparte a mano. Escribirlo destapó dos cosas que el producto promete y no hace — ver abajo
 - Portada pública (`/`) — **agregada por decisión explícita el 2026-08-11**, no estaba en la lista original. La tesis dice que el canal es "el siguiente gimnasio llega porque vio la tabla en vivo del anterior", así que la tabla pública lleva un gancho de una línea al pie y la portada es donde aterriza ese clic. Lleva imagen de Open Graph para poder moverse por redes. Sin precios: se cobra a mano y falta la conversación con el gimnasio piloto. Las fotos reales entran cuando corra el primer evento; hasta entonces la imagen es la interfaz del producto
 
 ### El correo se aplaza entero hasta que haya dominio
@@ -209,8 +209,37 @@ elige a ojo. Dos resultados que hay que respetar:
 - Falta verlo por debajo de 500 px de ancho: Chrome no deja achicar más la
   ventana. A 500 px la gráfica y la tabla se desplazan a lo ancho dentro de su
   caja y la página no se desborda.
-- El formato `league_points` sigue sin verse en pantalla con datos reales.
-  `classic_tops_zones` ya se ve, gracias a `pnpm seed:event`.
+- `league_points` ya se ve con datos reales desde el 2026-08-12: `pnpm
+  seed:event` siembra la **Copa Suesca** con ese formato y con puntos
+  escalonados por bloque (100 · 40 hasta 600 · sin zona). Mirarla cambió la
+  tabla: el encabezado de cada bloque ahora lleva lo que paga su top y su zona,
+  porque sin el precio a la vista una fila es cinco casillas doradas y un
+  puntaje de 1600 sin nada que los conecte. Ahí también se anuncia el bloque
+  sin crédito parcial, que es el que genera el reclamo si no se dice antes.
+- Empates: `league_points` no tiene desempate ninguno y en la copa sembrada se
+  ve — hay tres competidoras en `=3`. Es propiedad del formato, no defecto; si
+  un gimnasio real lo pide, el desempate se agrega como estrategia aparte.
+
+### Lo que el manual destapó (2026-08-12)
+
+Escribir el manual obliga a decir en voz alta lo que el producto hace, y ahí se
+ven los huecos que leyendo el código no se ven.
+
+- **Nadie asigna dorsales.** `bibNumber` existe en el esquema y se lee en la
+  tabla, en la pantalla del juez y en el buscador, pero **ninguna pantalla lo
+  escribe**: solo lo pone `pnpm seed:event`. En un evento real todos los
+  competidores salen con `—` de dorsal y el juez busca por nombre, que
+  funciona. El problema es la promesa: la pantalla de inscripción le dice al
+  competidor *"El día del evento te asignan un dorsal y con ese número los
+  jueces registran tus intentos"*, y eso hoy es mentira. O se agrega el
+  asignador de dorsales al panel, o se cambia esa frase. Lo segundo es gratis
+  y probablemente lo correcto hasta que un gimnasio lo pida.
+- **No hay pantalla de edición de nada.** Ni del evento ni de los bloques.
+  Formato de puntaje y puntos por bloque se fijan al crear y solo se arreglan
+  con SQL. El manual lo dice explícito dos veces, que es lo mínimo mientras
+  siga así. Se cerró la mitad más peligrosa: `createProblem` ya no acepta un
+  bloque de liga sin puntos, que era lo que producía una tabla entera en cero
+  sin un solo error en pantalla.
 
 ### Fuera del alcance
 

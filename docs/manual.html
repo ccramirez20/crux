@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Crux · Cómo correr una competencia</title>
+    <!--
+      Un archivo, sin red. Se manda por WhatsApp y se abre en el gimnasio
+      aunque no haya señal, que es justo el día que se necesita. Por eso las
+      tipografías son las del sistema y no las del producto: traer Space
+      Grotesk embebida cuesta más de 100 kB en base64 y la identidad la
+      cargan el color y el motivo topográfico, que sí viajan gratis.
+    -->
+    <style>
+      :root {
+        --stone: #efebdd;
+        --card: #fbf8f0;
+        --cardborder: #dad2bc;
+        --ink: #241f19;
+        --muted: #7a7266;
+        --pine: #2f4a3e;
+        --bark: #6b4a34;
+        --gold: #e3a83b;
+        --sage: #b9c4ac;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        padding: 1.5rem 1.25rem 4rem;
+        background: var(--stone);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 17px;
+        line-height: 1.6;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      .hoja { max-width: 44rem; margin: 0 auto; }
+
+      /* Encabezado */
+      .marca {
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        font-size: 0.95rem;
+        color: var(--pine);
+      }
+      .motivo { display: block; width: 100%; margin: 0.75rem 0 1.5rem; }
+
+      h1 {
+        font-size: clamp(1.9rem, 7vw, 2.6rem);
+        line-height: 1.15;
+        margin: 0 0 0.6rem;
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        font-size: 1.4rem;
+        line-height: 1.25;
+        margin: 2.75rem 0 0.75rem;
+        padding-top: 1.25rem;
+        border-top: 2px solid var(--cardborder);
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        font-size: 1.08rem;
+        margin: 1.75rem 0 0.4rem;
+      }
+      .entrada { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+
+      p, li { margin: 0.6rem 0; }
+      ul, ol { padding-left: 1.25rem; }
+      li { padding-left: 0.15rem; }
+
+      strong { font-weight: 650; }
+
+      /* Lo que se ve en pantalla, citado igual que en la app. */
+      .ui {
+        font-weight: 600;
+        color: var(--pine);
+        white-space: nowrap;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+        background: var(--card);
+        border: 1px solid var(--cardborder);
+        border-radius: 4px;
+        padding: 0.05em 0.35em;
+        overflow-wrap: anywhere;
+      }
+
+      .tarjeta {
+        background: var(--card);
+        border: 1px solid var(--cardborder);
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+        margin: 1.25rem 0;
+      }
+      .tarjeta > :first-child { margin-top: 0; }
+      .tarjeta > :last-child { margin-bottom: 0; }
+
+      /* El aviso de algo que hoy no existe o muerde. */
+      .ojo {
+        border-left: 4px solid var(--bark);
+        background: var(--card);
+        border-radius: 0 10px 10px 0;
+        padding: 0.85rem 1.1rem;
+        margin: 1.25rem 0;
+      }
+      .ojo p:first-child { margin-top: 0; }
+      .ojo p:last-child { margin-bottom: 0; }
+      .ojo b { color: var(--bark); }
+
+      /* La sección que el organizador reenvía a sus jueces. */
+      .jueces {
+        background: var(--card);
+        border: 2px solid var(--pine);
+        border-radius: 12px;
+        padding: 0.25rem 1.15rem 1.25rem;
+        margin: 2rem 0;
+      }
+      .jueces h2 {
+        border-top: none;
+        padding-top: 0;
+        margin-top: 1.25rem;
+        color: var(--pine);
+      }
+
+      .paso {
+        counter-reset: none;
+        list-style: none;
+        padding-left: 0;
+      }
+      .paso > li {
+        position: relative;
+        padding-left: 2.4rem;
+        margin: 1.1rem 0;
+      }
+      .paso > li::before {
+        content: counter(pasos);
+        counter-increment: pasos;
+        position: absolute;
+        left: 0;
+        top: 0.05rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 50%;
+        background: var(--gold);
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .paso { counter-reset: pasos; }
+
+      dl { margin: 0.75rem 0; }
+      dt { font-weight: 650; margin-top: 0.9rem; }
+      dd { margin: 0.2rem 0 0; color: var(--ink); }
+
+      footer {
+        margin-top: 3rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--cardborder);
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      @media print {
+        body { background: #fff; padding: 0; font-size: 11pt; }
+        h2 { break-after: avoid; }
+        .tarjeta, .ojo, .jueces { break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hoja">
+      <p class="marca">CRUX</p>
+      <svg class="motivo" viewBox="0 0 800 90" aria-hidden="true">
+        <path d="M0,60 Q100,20 200,55 T400,50 T600,60 T800,45" fill="none" stroke="#B9C4AC" stroke-width="1.5" opacity="0.7" />
+        <path d="M0,72 Q100,35 200,68 T400,64 T600,74 T800,58" fill="none" stroke="#2F4A3E" stroke-width="1.5" opacity="0.5" />
+        <path d="M0,84 Q100,50 200,80 T400,78 T600,86 T800,72" fill="none" stroke="#E3A83B" stroke-width="1.5" opacity="0.6" />
+      </svg>
+
+      <h1>Cómo correr una competencia con Crux</h1>
+      <p class="entrada">
+        Todo lo que hay que hacer, en el orden en que pasa: armar el evento
+        días antes, abrir inscripciones, y el día de la competencia poner a
+        tres jueces a capturar desde el teléfono mientras la sala mira la
+        tabla. Se lee en diez minutos.
+      </p>
+
+      <div class="tarjeta">
+        <h3 style="margin-top: 0.75rem">Lo que necesitas</h3>
+        <ul>
+          <li>Una <strong>cuenta de organizador</strong>. Se crea con un código de acceso que te damos nosotros.</li>
+          <li>Un <strong>teléfono por juez</strong>, con la cámara para escanear los QR. No hay que instalar nada.</li>
+          <li>Una <strong>pantalla o proyector</strong> para la tabla de resultados.</li>
+          <li>Una <strong>impresora</strong>, para pegar el QR de cada bloque en la pared.</li>
+        </ul>
+        <p style="color: var(--muted); font-size: 0.95rem">
+          Los competidores no necesitan cuenta, ni aplicación, ni nada
+          instalado. Se inscriben desde un enlace.
+        </p>
+      </div>
+
+      <h2>1. Crear tu cuenta</h2>
+      <p>
+        Entra a <code>/sign-up</code>. Te pide nombre, correo, una contraseña
+        de mínimo 8 caracteres y un <span class="ui">Código de acceso</span>.
+      </p>
+      <p>
+        Ese código lo damos nosotros: por ahora las cuentas de organizador son
+        solo por invitación. Si no lo tienes, pídelo antes de sentarte a armar
+        el evento.
+      </p>
+
+      <div class="ojo">
+        <p>
+          <b>Todavía no hay «olvidé mi clave».</b> Si pierdes la contraseña,
+          hoy la única forma de recuperar la cuenta es escribirnos para que la
+          restablezcamos a mano. Guarda la clave en algún lado — entras al
+          panel una vez cada varios meses, y siempre justo antes de un evento.
+        </p>
+      </div>
+
+      <h2>2. Crear el evento</h2>
+      <p>
+        En <span class="ui">Tus eventos</span>, botón
+        <span class="ui">Crear evento</span>. Casi todos los campos se
+        explican solos; estos cuatro no:
+      </p>
+
+      <dl>
+        <dt>Fecha del evento</dt>
+        <dd>
+          Con esta fecha se calcula la edad de cada competidor para saber en
+          qué categoría entra. No es decorativa: si la pones mal, la gente ve
+          categorías que no le corresponden.
+        </dd>
+
+        <dt>Enlace público</dt>
+        <dd>
+          Se arma solo con el nombre del evento (<code>copa-paramo-2026</code>).
+          Es el que vas a compartir. Puedes cambiarlo antes de crear el evento;
+          después no.
+        </dd>
+
+        <dt>Cómo se puntúa</dt>
+        <dd>
+          Cuatro formatos, y <strong>no se puede cambiar después de crear el
+          evento</strong>. En boulder: puntos IFSC de bloque, el conteo clásico
+          de tops y zonas, o puntos por bloque estilo liga local. En dificultad:
+          altura máxima. Si tu liga tiene su propia forma de contar, escríbenos
+          antes de crear el evento.
+        </dd>
+
+        <dt>Código para los jueces</dt>
+        <dd>
+          Ocho letras y números que Crux genera solo (el botón
+          <span class="ui">Otro</span> te da otro). Quien escanee el QR de un
+          bloque tiene que escribirlo antes de poder registrar nada.
+          <strong>Dáselo solo a tus jueces.</strong> Es lo único que separa a
+          un juez de cualquiera que pase y escanee el código de la pared.
+        </dd>
+      </dl>
+
+      <h2>3. Armar la competencia</h2>
+      <p>
+        Dentro del evento, en <span class="ui">Estructura de la
+        competencia</span>, se arma de afuera hacia adentro. En este orden, sin
+        saltarse ninguno:
+      </p>
+
+      <ol class="paso">
+        <li>
+          <strong>Categorías.</strong> Agrupan por edad, género y nivel
+          («Avanzado Masculino», «Sub-16 Femenina»). Puedes dejar las edades en
+          blanco si la categoría no tiene tope.
+          <br />
+          <em>Sin categorías nadie puede inscribirse</em>, porque al inscribirse
+          cada persona elige la suya.
+        </li>
+        <li>
+          <strong>Rondas</strong> dentro de cada categoría: clasificatoria,
+          semifinal, final. Se ordenan solas. Con la clasificatoria basta para
+          empezar.
+        </li>
+        <li>
+          <strong>Bloques</strong> (o rutas, si es dificultad) dentro de cada
+          ronda. Número y, si quieres, un nombre. Cada bloque que agregas
+          genera su propio QR.
+        </li>
+      </ol>
+
+      <div class="ojo">
+        <p>
+          <b>Si escogiste puntos por bloque estilo liga:</b> a cada bloque le
+          pones cuánto paga su top, y opcionalmente cuánto paga su zona. Un
+          bloque sin puntos de zona es un bloque donde llegar a la zona no
+          suma nada — es válido, pero anúncialo.
+        </p>
+        <p>
+          Esos puntos <b>no se pueden editar después de crear el bloque</b>.
+          Revísalos antes de guardar.
+        </p>
+      </div>
+
+      <h3>Imprimir los QR</h3>
+      <p>
+        En cada bloque, botón <span class="ui">QR para juzgar</span>. Imprímelo
+        y pégalo junto al bloque, en la pared. El juez lo escanea y entra
+        directo a puntuar ese bloque, sin buscar nada en un menú.
+      </p>
+
+      <h2>4. Abrir inscripciones</h2>
+      <p>
+        En la parte de arriba del evento está la tarjeta
+        <span class="ui">Enlace de inscripción</span>, con un botón
+        <span class="ui">Copiar</span>. Compártelo por WhatsApp o redes.
+      </p>
+      <p>
+        Quien lo abre llena nombre, documento, fecha de nacimiento y género, y
+        el sistema le muestra <em>solo</em> las categorías que le corresponden
+        por edad y género. No crea cuenta ni instala nada.
+      </p>
+      <p>
+        El documento es lo que reconoce a una persona entre eventos: quien
+        compite en dos fechas acumula historial solo porque puso el mismo
+        documento.
+      </p>
+
+      <h2>5. El día del evento</h2>
+      <ol class="paso">
+        <li>
+          <strong>Proyecta la tabla.</strong> En el evento, tarjeta
+          <span class="ui">Tabla de resultados</span>. Se actualiza sola cada
+          pocos segundos y no pide cuenta: cualquiera en la sala la puede abrir
+          en su teléfono.
+        </li>
+        <li>
+          <strong>Reparte el código a los jueces.</strong> De viva voz o por
+          mensaje. No lo pegues en la pared junto al QR.
+        </li>
+        <li>
+          <strong>Manda a cada juez la sección de abajo</strong> de este
+          manual. Con eso ya sabe todo lo que necesita.
+        </li>
+      </ol>
+
+      <div class="ojo">
+        <p>
+          <b>Hoy Crux no asigna dorsales.</b> Si le pones dorsales a la gente,
+          los jueces no los van a ver en el teléfono: buscan al competidor por
+          nombre, que funciona bien. Si de todas formas repartes números en
+          papel, avísale a tus jueces que en la pantalla van a buscar por
+          nombre.
+        </p>
+      </div>
+
+      <!-- Esta sección es la que se reenvía. Va cerrada en su propio marco
+           para que se entienda dónde empieza y dónde termina. -->
+      <section class="jueces">
+        <h2>Para los jueces</h2>
+        <p class="entrada" style="font-size: 1rem">
+          Esta parte es la que le puedes mandar a cada juez. Se entiende sola.
+        </p>
+
+        <ol class="paso">
+          <li>
+            <strong>Escanea el QR del bloque</strong> que te toca juzgar, con
+            la cámara del teléfono. Se abre una página; no instalas nada.
+          </li>
+          <li>
+            <strong>Escribe el código del evento</strong> que te dio quien
+            organiza, y toca
+            <span class="ui">Empezar a juzgar</span>. Se pide una sola vez en
+            este teléfono.
+          </li>
+          <li>
+            <strong>Pon tu nombre.</strong> Queda guardado en cada intento que
+            registres, para poder resolver dudas después.
+          </li>
+          <li>
+            <strong>Toca al competidor</strong> en la lista y registra lo que
+            hizo: si logró el <span class="ui">Top</span>, si llegó a la
+            <span class="ui">Zona</span>, y en cuántos intentos logró cada uno.
+            Si no logró ninguno de los dos, guardas igual: queda como intento
+            sin logro.
+            <br />
+            En dificultad es distinto: marcas
+            <span class="ui">Llegó al top</span> si terminó la vía, o escribes
+            la altura en metros.
+          </li>
+        </ol>
+
+        <h3>Si se cae el wifi, sigue juzgando</h3>
+        <p>
+          Aparece un aviso que dice que no hay conexión. <strong>No pares.</strong>
+          Lo que registres se guarda en el teléfono y se envía solo cuando
+          vuelva la señal.
+        </p>
+        <p>
+          Abajo de la pantalla siempre hay un contador:
+          <span class="ui">3 intentos por enviar</span> mientras falte algo,
+          <span class="ui">Todo enviado</span> cuando ya subió todo.
+          <strong>No cierres la página hasta que diga «Todo enviado».</strong>
+        </p>
+
+        <h3>Si te equivocaste</h3>
+        <p>
+          Vuelve a tocar al competidor y guarda el resultado correcto. El
+          anterior no se borra: se conserva para poder auditar el evento, pero
+          el que cuenta es el último. No hace falta avisarle a nadie.
+        </p>
+
+        <h3>Dos cosas que confunden</h3>
+        <ul>
+          <li>
+            <strong>Los intentos son cuántos le costó lograrlo</strong>, no
+            cuántas veces se tiró. Si topó en el tercer intento, son 3.
+          </li>
+          <li>
+            <strong>La altura se escribe con coma</strong>, como la dice todo el
+            mundo: <code>18,5</code>. Con punto también sirve.
+          </li>
+        </ul>
+
+        <p style="color: var(--muted); font-size: 0.95rem">
+          Arriba de la lista dice cuántos llevas: <span class="ui">4 de 11
+          juzgados</span>. Si son muchos, aparece un buscador — busca por
+          nombre.
+        </p>
+      </section>
+
+      <h2>6. Si algo sale mal</h2>
+
+      <dl>
+        <dt>El QR no abre nada en el teléfono del juez</dt>
+        <dd>
+          El QR guarda la dirección con la que <em>tú</em> tenías abierto el
+          panel cuando lo generaste. Si lo generaste desde
+          <code>localhost</code>, ese QR solo funciona en tu computador.
+          Vuelve a abrir el panel desde la dirección que usan los demás y
+          genera el QR otra vez.
+        </dd>
+
+        <dt>«Ese código no corresponde a este evento»</dt>
+        <dd>
+          El juez escribió mal el código, o está en el evento equivocado. El
+          código está en el panel del evento, en la tarjeta
+          <span class="ui">Código para los jueces</span>.
+        </dd>
+
+        <dt>«Demasiados intentos seguidos»</dt>
+        <dd>
+          Cinco códigos malos seguidos y ese teléfono queda bloqueado unos
+          minutos. Es a propósito. Espera cinco minutos y vuelve a intentar,
+          con el código correcto a la mano.
+        </dd>
+
+        <dt>Perdí el código de los jueces</dt>
+        <dd>
+          Está en el panel del evento, siempre visible. No se puede cambiar sin
+          que nosotros lo cambiemos en la base, así que si se filtró,
+          escríbenos.
+        </dd>
+
+        <dt>Un juez no puede copiar el enlace</dt>
+        <dd>
+          Algunos navegadores no dejan copiar automáticamente. Si sale el
+          aviso, selecciona el enlace de la pantalla y cópialo a mano.
+        </dd>
+
+        <dt>Se me olvidó la contraseña</dt>
+        <dd>
+          Escríbenos. Todavía no hay recuperación automática.
+        </dd>
+      </dl>
+
+      <h2>7. Después del evento</h2>
+      <p>
+        La tabla queda pública en su enlace: puedes compartirla el mismo día o
+        la semana siguiente y sigue ahí. Desde cada fila se abre el historial
+        del competidor, que acumula lo que ha hecho en todos los eventos donde
+        se inscribió con el mismo documento.
+      </p>
+      <p>
+        Los intentos no se borran nunca. Si alguien reclama un puesto tres
+        semanas después, el registro de qué juez capturó qué, y a qué hora,
+        sigue completo.
+      </p>
+
+      <footer>
+        <p>
+          Crux · plataforma de competencias de escalada.<br />
+          ¿Algo no cuadra con lo que ves en pantalla? Escríbenos: este manual se
+          corrige.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

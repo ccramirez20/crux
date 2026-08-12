@@ -87,8 +87,10 @@ Ya están tomadas. Si vas a contradecir alguna, dilo explícitamente antes de es
 Los scripts de rutina están en `package.json`. Los que no se adivinan:
 
 ```bash
-pnpm seed:event       # siembra las dos fechas de la liga demo (22 y 26 inscritos)
-pnpm seed:event --reset   # las borra y las vuelve a sembrar
+pnpm seed:event       # siembra los tres eventos demo: dos fechas de liga (22 y
+                      # 26 inscritos, tops/zonas) y la Copa Suesca (20, puntos
+                      # por bloque). Mismos atletas en los tres, de ahí el historial
+pnpm seed:event --reset   # los borra y los vuelve a sembrar
 
 node scripts/viewport.mjs <url> [ancho] [--shot out.png]   # revisar una pantalla a un ancho real
 ```
