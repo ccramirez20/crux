@@ -19,8 +19,29 @@ repite lo que ya dice el panel es una cosa más que se desincroniza.
    tráfico: `pnpm db:migrate` con `DATABASE_URL` apuntando allá. Nada en el
    despliegue las aplica solo, y CI únicamente verifica que el SQL generado
    esté al día, no lo corre.
+
+   El comando carga `packages/db/.env` por defecto (ahí vive la cadena de
+   desarrollo) — `dotenv` no sobreescribe una variable que ya esté puesta en
+   la sesión, así que hay que fijar `DATABASE_URL` a mano *antes* de correrlo
+   o migra calladamente contra la base equivocada, sin error visible:
+
+   ```powershell
+   $env:DATABASE_URL = "postgres://...-pooler.../..."
+   pnpm db:migrate
+   ```
+
+   Cerrar esa terminal (o borrar la variable) después, para no dejarla puesta
+   en una sesión que luego se use para desarrollo normal.
 6. **Comprobar**: abrir `/api/health`. Devuelve `{"ok":true}` solo si la
    aplicación levantó **y** la base responde. Si da 503, es la base.
+7. **Smoke test.** `/api/health` en verde no prueba el flujo real. Antes de
+   compartir el enlace con un gimnasio: crear un evento de prueba desde el
+   panel de producción, inscribirse por el enlace público, capturar un
+   intento desde `/juzgar/...` con el código del evento, y confirmar que
+   `/resultados/...` lo refleja. Es el mismo recorrido que se probó en local
+   el 2026-08-13 — repetirlo contra producción es lo que confirma que las
+   variables de entorno y la migración quedaron bien, no solo que el proceso
+   arrancó. Borrar el evento de prueba al terminar.
 
 ## Variables de entorno
 

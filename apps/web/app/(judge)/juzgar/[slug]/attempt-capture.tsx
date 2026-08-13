@@ -84,10 +84,14 @@ export function AttemptCapture({
       for (const attempt of ordered) {
         let status: number | 'offline';
         try {
+          // judgeCode is overridden with the live prop, not attempt.judgeCode:
+          // a code rotated after this attempt was queued would otherwise keep
+          // resending the stale one forever, stuck asking for a code that
+          // re-entering it can never fix (it only affects new captures).
           const response = await fetch('/api/attempts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(attempt),
+            body: JSON.stringify({ ...attempt, judgeCode }),
           });
           status = response.status;
         } catch {
@@ -132,7 +136,7 @@ export function AttemptCapture({
     } finally {
       drainingRef.current = false;
     }
-  }, [problemId, onCodeRejected]);
+  }, [problemId, judgeCode, onCodeRejected]);
 
   useEffect(() => {
     void sync();

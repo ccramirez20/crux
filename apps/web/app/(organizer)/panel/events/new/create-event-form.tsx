@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { createEvent } from './actions';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 import { DISCIPLINE_LABEL, labelFor } from '@/lib/labels';
+import { generateJudgeCode } from '@/lib/judge-code';
 
 const DISCIPLINES = ['boulder', 'lead'] as const;
 type Discipline = (typeof DISCIPLINES)[number];
@@ -31,17 +32,6 @@ const DEFAULT_SCORING_FORMAT: Record<Discipline, ScoringFormat> = {
   boulder: 'ifsc_boulder',
   lead: 'max_height',
 };
-
-// No I/O/0/1: these get read off a printed sheet and typed on a phone at the
-// wall. 8 characters from a 32-symbol alphabet is ~10^12 combinations, which
-// is what stands between the code and someone guessing it — there is no rate
-// limiting on the sync endpoint yet.
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-function generateJudgeCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  return Array.from(bytes, (byte) => CODE_ALPHABET[byte % CODE_ALPHABET.length]).join('');
-}
 
 function slugify(value: string): string {
   return value

@@ -100,7 +100,7 @@ export function ProblemForm({
                   value={topPoints}
                   onChange={(event) => setTopPoints(event.target.value)}
                   required
-                  min={1}
+                  min={0}
                   className={fieldClass}
                 />
               </div>

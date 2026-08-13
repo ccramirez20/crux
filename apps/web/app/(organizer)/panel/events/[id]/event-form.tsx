@@ -3,16 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
 import { updateEvent } from './actions';
-
-// Mismo alfabeto que al crear el evento: sin I, O, 0 ni 1, porque el código se
-// lee de un papel y se teclea con el pulgar.
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-function generateCode(): string {
-  return Array.from(
-    { length: 8 },
-    () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)],
-  ).join('');
-}
+import { generateJudgeCode } from '@/lib/judge-code';
 
 const COMMON_TIMEZONES = [
   { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
@@ -40,7 +31,7 @@ export function EventForm({
   const [name, setName] = useState(initialName);
   const [date, setDate] = useState(initialDate ?? '');
   const [timezone, setTimezone] = useState(initialTimezone);
-  const [judgeCode, setJudgeCode] = useState(initialJudgeCode ?? generateCode());
+  const [judgeCode, setJudgeCode] = useState(initialJudgeCode ?? generateJudgeCode());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -150,7 +141,7 @@ export function EventForm({
           />
           <button
             type="button"
-            onClick={() => setJudgeCode(generateCode())}
+            onClick={() => setJudgeCode(generateJudgeCode())}
             className="shrink-0 rounded border-[1.5px] border-pine px-3 text-xs font-semibold text-pine transition hover:bg-pine hover:text-white"
           >
             Otro
