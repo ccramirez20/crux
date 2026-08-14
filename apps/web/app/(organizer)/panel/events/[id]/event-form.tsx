@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
 import { updateEvent } from './actions';
-import { generateJudgeCode } from '@/lib/judge-code';
+import { generateCode } from '@/lib/codes';
 
 const COMMON_TIMEZONES = [
   { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
@@ -31,7 +31,7 @@ export function EventForm({
   const [name, setName] = useState(initialName);
   const [date, setDate] = useState(initialDate ?? '');
   const [timezone, setTimezone] = useState(initialTimezone);
-  const [judgeCode, setJudgeCode] = useState(initialJudgeCode ?? generateJudgeCode());
+  const [judgeCode, setJudgeCode] = useState(initialJudgeCode ?? generateCode());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -141,7 +141,7 @@ export function EventForm({
           />
           <button
             type="button"
-            onClick={() => setJudgeCode(generateJudgeCode())}
+            onClick={() => setJudgeCode(generateCode())}
             className="shrink-0 rounded border-[1.5px] border-pine px-3 text-xs font-semibold text-pine transition hover:bg-pine hover:text-white"
           >
             Otro

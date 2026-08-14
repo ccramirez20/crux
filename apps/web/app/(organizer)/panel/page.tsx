@@ -5,6 +5,7 @@ import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
 import { cardClass, primaryButtonClass } from '@/lib/ui';
+import { isAdmin } from '@/lib/admin';
 import { DISCIPLINE_LABEL, formatEventDate, labelFor } from '@/lib/labels';
 import { SignOutButton } from './sign-out-button';
 
@@ -38,7 +39,16 @@ export default async function OrganizerHomePage() {
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
           <span className="font-display text-lg font-bold tracking-wide text-pine">CRUX</span>
-          <SignOutButton />
+          <div className="flex items-center gap-4">
+            {/* Solo para quien administra la plataforma. Para el resto el enlace
+                no existe, igual que la ruta. */}
+            {isAdmin(session?.user.email) && (
+              <Link href="/panel/invites" className="text-sm font-medium text-pine underline">
+                Invitaciones
+              </Link>
+            )}
+            <SignOutButton />
+          </div>
         </div>
 
         <div>

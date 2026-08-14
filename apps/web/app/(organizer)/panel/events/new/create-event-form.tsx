@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { createEvent } from './actions';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 import { DISCIPLINE_LABEL, labelFor } from '@/lib/labels';
-import { generateJudgeCode } from '@/lib/judge-code';
+import { generateCode } from '@/lib/codes';
 
 const DISCIPLINES = ['boulder', 'lead'] as const;
 type Discipline = (typeof DISCIPLINES)[number];
@@ -73,7 +73,7 @@ export function CreateEventForm({
   const [scoringFormat, setScoringFormat] = useState<ScoringFormat>(
     DEFAULT_SCORING_FORMAT.boulder,
   );
-  const [judgeCode, setJudgeCode] = useState(generateJudgeCode);
+  const [judgeCode, setJudgeCode] = useState(generateCode);
   const [timezone, setTimezone] = useState('America/Bogota');
   const [showAllTimezones, setShowAllTimezones] = useState(false);
   const [date, setDate] = useState('');
@@ -304,7 +304,7 @@ export function CreateEventForm({
           />
           <button
             type="button"
-            onClick={() => setJudgeCode(generateJudgeCode())}
+            onClick={() => setJudgeCode(generateCode())}
             className="shrink-0 rounded-lg border-[1.5px] border-pine px-3 py-2 text-sm font-semibold text-pine transition hover:bg-pine hover:text-white"
           >
             Otro
