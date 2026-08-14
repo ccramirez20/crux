@@ -25,6 +25,23 @@
   --color-silver: #8fa3ae;
   --color-bronze: #7e4f2c;
 
+  /* Oro y plata **para texto**. Los de arriba están hechos para rellenos —una
+     barra, un filete, un botón— donde el color ocupa área y se ve. Como letras
+     sobre el hueso de una tarjeta el oro mide 1.99:1 y la plata 2.47:1, contra
+     el piso de 3.0:1 que WCAG pide para texto grande: en un monitor bueno se
+     leen, proyectados en la pared de un gimnasio con luz de día desaparecen.
+     Estos bajan la luminosidad dejando el matiz donde estaba, así que siguen
+     leyéndose como oro y plata.
+
+     Calibrados contra --color-stone, que es el fondo más oscuro de los dos, así
+     que funcionan igual sobre la página y sobre una tarjeta: 3.21:1 y 3.60:1
+     respectivamente. No se bajó más a propósito — llevarlos a 4.5:1 acerca el
+     oro al bronce hasta ΔE 19.6, y esos dos son justo los que distinguen un
+     primer puesto de un tercero. Así quedan en ΔE 26.5, muy por encima del piso
+     de 15 con que se validó el resto de la paleta. */
+  --color-gold-ink: #a67b2b;
+  --color-silver-ink: #74858e;
+
   --font-display: var(--font-space-grotesk), sans-serif;
   --font-body: var(--font-public-sans), sans-serif;
 }

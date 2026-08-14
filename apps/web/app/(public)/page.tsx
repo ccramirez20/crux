@@ -234,7 +234,7 @@ export default function HomePage() {
         <ol className="grid gap-10 md:grid-cols-3">
           {STEPS.map((step, index) => (
             <li key={step.title} className="flex flex-col gap-3 border-t-2 border-cardborder pt-5">
-              <span className="font-display text-4xl font-bold tabular-nums text-gold">
+              <span className="font-display text-4xl font-bold tabular-nums text-gold-ink">
                 {index + 1}
               </span>
               <h3 className="font-display text-xl font-semibold leading-snug">{step.title}</h3>
