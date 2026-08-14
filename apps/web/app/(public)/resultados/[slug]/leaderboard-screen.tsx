@@ -320,8 +320,8 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                       Sin decirlo, un competidor lee la tabla como si sí. */}
                   {isLeague && (
                     <span>
-                      Bajo cada {unit.singular}, lo que paga su top y lo que paga su zona; la raya es un{' '}
-                      {unit.singular} que no paga zona. Los intentos no cambian el puntaje.
+                      Bajo cada {unit.singular}, cuánto puntúa su top y cuánto su zona; la raya es un{' '}
+                      {unit.singular} donde la zona no puntúa. Los intentos no cambian el puntaje.
                     </span>
                   )}
                 </div>
@@ -375,7 +375,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                               no llega ni a 2:1 de contraste. Van en bark, y
                               cuál es cuál lo dice la leyenda. La raya es el
                               bloque sin crédito parcial: llegar a la zona ahí
-                              no paga, y anunciarlo en el encabezado es más
+                              no puntúa, y anunciarlo en el encabezado es más
                               barato que discutirlo con la tabla ya puesta. */}
                           {/* `typeof` y no `!== null`: la respuesta viene de
                               una caché de 5s, así que justo después de un

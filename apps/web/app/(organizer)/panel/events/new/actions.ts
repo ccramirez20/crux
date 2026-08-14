@@ -7,6 +7,7 @@ import { eq, events, organizations } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
+import { slugify } from '@/lib/slug';
 
 const createEventInputSchema = z.object({
   organization: z.discriminatedUnion('mode', [
@@ -25,7 +26,9 @@ const createEventInputSchema = z.object({
     'league_points',
     'max_height',
   ]),
-  slug: z.string().regex(/^[a-z0-9-]+$/),
+  // Sin `slug`: lo calcula el servidor a partir del nombre. El navegador solo
+  // enseña una vista previa, y ese texto va impreso en los QR de la pared —
+  // no puede venir de lo que mande el cliente.
   judgeCode: z.string().min(4).max(32),
   timezone: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -48,6 +51,13 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
 
   const db = getDb();
   const { organization, ...eventInput } = parsed.data;
+  const slug = slugify(eventInput.name);
+  if (slug === '') {
+    return {
+      ok: false,
+      error: 'Ese nombre no alcanza para armar un enlace. Usa al menos una letra o un número.',
+    };
+  }
 
   let organizationId: string;
   if (organization.mode === 'existing') {
@@ -77,12 +87,18 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
   try {
     await db.insert(events).values({
       ...eventInput,
+      slug,
       organizationId,
       ownerId: session.user.id,
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { ok: false, error: 'Ese slug ya está en uso, elige otro.' };
+      // Ya no se puede "elegir otro": el enlace sale del nombre. Lo que hay que
+      // cambiar es el nombre, y el mensaje lo dice.
+      return {
+        ok: false,
+        error: 'Ya tienes un evento con ese nombre. Cámbialo un poco para que el enlace sea distinto.',
+      };
     }
     throw error;
   }
