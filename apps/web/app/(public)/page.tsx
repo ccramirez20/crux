@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { StandingsMotif } from '@/components/standings-motif';
+import { TopographicMotif } from '@/components/topographic-motif';
 import { eyebrowClass, primaryButtonClass, secondaryButtonClass } from '@/lib/ui';
 import { HEADLINE, HEADLINE_LINES } from '@/lib/labels';
 
@@ -12,10 +13,10 @@ const sectionEyebrowClass = 'text-sm font-semibold uppercase tracking-[0.14em] t
 export const metadata: Metadata = {
   title: 'Crux — Competencias de escalada',
   description:
-    'Inscripción por enlace, jueces que capturan desde el teléfono aunque se caiga el wifi, y una tabla pública que se actualiza sola. En español y en pesos.',
+    'Inscripción por enlace, jueces que puntúan desde el celular aunque se caiga el wifi, y una tabla pública que se actualiza sola.',
   openGraph: {
     title: 'Crux — Competencias de escalada',
-    description: `${HEADLINE} En español y en pesos.`,
+    description: HEADLINE,
     locale: 'es_CO',
     type: 'website',
   },
@@ -25,13 +26,15 @@ export const metadata: Metadata = {
 const DEMO_BOARD = '/resultados/liga-paramo';
 
 /**
- * Decidido el 2026-08-11: el contacto va a un correo propio del proyecto (algo
- * como hola@crux.co), no a una dirección personal ni a WhatsApp — una dirección
- * personal en una página abierta no se deshace. Falta el dominio y la cuenta,
- * así que sigue vacío y el enlace no se dibuja: escribir el correo aquí es todo
- * lo que hace falta para que aparezca.
+ * Correo del proyecto, no una dirección personal: lo que se publica en una
+ * página abierta no se deshace, y una cuenta propia se puede pasar a otra
+ * persona el día que alguien más responda los correos.
+ *
+ * Provisional hasta que haya dominio, y entonces esto pasa a algo como
+ * hola@crux.co — es el único sitio del código donde vive, así que cambiarlo es
+ * una línea.
  */
-const CONTACT_EMAIL = '';
+const CONTACT_EMAIL = 'crux.competencias@gmail.com';
 
 const STEPS = [
   {
@@ -39,7 +42,7 @@ const STEPS = [
     body: 'Creas el evento con sus categorías y rondas, y compartes un enlace. La gente se inscribe sola, sin crear cuenta.',
   },
   {
-    title: 'Los jueces capturan desde el teléfono',
+    title: 'Los jueces puntúan desde el celular',
     body: 'Cada juez registra tops, zonas e intentos. Si el wifi se cae sigue funcionando, y sincroniza cuando vuelve.',
   },
   {
@@ -108,6 +111,10 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-28 px-6 py-16 md:px-10 md:py-24">
       <header className="flex flex-col gap-8">
+        {/* Las mismas curvas de nivel que encabezan el panel, la tabla y el
+            manual. La portada era la única pantalla sin ellas, y es la primera
+            que ve alguien que llega de un enlace. */}
+        <TopographicMotif />
         <span className="font-display text-lg font-bold tracking-[0.2em] text-pine">CRUX</span>
 
         <div className="flex flex-col gap-6">
@@ -124,7 +131,7 @@ export default function HomePage() {
           </h1>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted md:text-xl">
             Crux corre competencias de escalada de principio a fin: inscripción por enlace, jueces
-            que capturan desde el teléfono aunque se caiga el wifi, y una tabla pública que se
+            que puntúan desde el celular aunque se caiga el wifi, y una tabla pública que se
             actualiza sola.
           </p>
         </div>
@@ -280,14 +287,12 @@ export default function HomePage() {
           <Link href={DEMO_BOARD} className={secondaryButtonClass}>
             Ver la demostración
           </Link>
-          {CONTACT_EMAIL !== '' && (
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="font-display text-base font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
-            >
-              Escribirnos
-            </a>
-          )}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="font-display text-base font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
+          >
+            Escribirnos
+          </a>
         </div>
       </footer>
     </main>

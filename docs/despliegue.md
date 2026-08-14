@@ -69,7 +69,8 @@ repite lo que ya dice el panel es una cosa más que se desincroniza.
 ## Invitaciones de organizador
 
 El registro está cerrado: para crear una cuenta hace falta un código de un solo
-uso. Los emite quien tenga el correo de `ADMIN_EMAIL`, desde `/panel/invites`
+uso. Hoy `ADMIN_EMAIL` es `crux.competencias@gmail.com`, que es también el
+correo con el que se entra al panel. Los emite quien tenga ese correo, desde `/panel/invites`
 (la ruta devuelve 404 para cualquier otra cuenta). Un código sirve una vez: al
 consumirse queda marcado con quién lo usó, y reintentarlo da "Código de acceso
 inválido."
