@@ -20,6 +20,17 @@ export function claimInvite(db: Db, code: string) {
 }
 
 /**
+ * Descarta una invitación que nadie usó.
+ *
+ * El `used_at IS NULL` es parte del borrado, no una comprobación aparte: entre
+ * leer y borrar cabe un canje, y sin la condición en el WHERE ese borrado se
+ * llevaría por delante el rastro de un organizador que sí entró.
+ */
+export function deleteUnusedInvite(db: Db, id: string) {
+  return db.delete(inviteCodes).where(and(eq(inviteCodes.id, id), isNull(inviteCodes.usedAt)));
+}
+
+/**
  * Anota quién usó la invitación. Va aparte de `claimInvite` porque el id del
  * usuario solo existe después de que Better Auth crea la cuenta, y el consumo
  * tiene que ocurrir antes de crearla.

@@ -8,7 +8,7 @@ import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
 import { cardClass, eyebrowClass, primaryButtonClass } from '@/lib/ui';
 import { isAdmin } from '@/lib/admin';
-import { createInvite } from './actions';
+import { createInvite, deleteInvite } from './actions';
 
 export const metadata: Metadata = {
   title: 'Invitaciones · Crux',
@@ -98,11 +98,27 @@ export default async function InvitesPage() {
                 >
                   {invite.code}
                 </span>
-                <span className="text-sm text-muted">
-                  {invite.usedAt
-                    ? `Usada por ${invite.usedByName ?? 'un organizador'}`
-                    : `Emitida el ${formatIssued(invite.createdAt)}`}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted">
+                    {invite.usedAt
+                      ? `Usada por ${invite.usedByName ?? 'un organizador'}`
+                      : `Emitida el ${formatIssued(invite.createdAt)}`}
+                  </span>
+                  {/* Solo en las que nadie usó: una usada es rastro y se queda.
+                      El servidor lo vuelve a comprobar, esto solo evita ofrecer
+                      un botón que no haría nada. */}
+                  {!invite.usedAt && (
+                    <form action={deleteInvite}>
+                      <input type="hidden" name="id" value={invite.id} />
+                      <button
+                        type="submit"
+                        className="text-sm font-medium text-muted underline decoration-dotted underline-offset-4 transition hover:text-bark"
+                      >
+                        Descartar
+                      </button>
+                    </form>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
