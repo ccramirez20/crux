@@ -39,12 +39,15 @@ export const metadata: Metadata = {
 function Figure({
   value,
   label,
+  detail,
   unit,
   tone,
   large,
 }: {
   value: string;
   label: string;
+  /** De dónde sale la cifra: la fecha, el evento. Solo lo usa Trayectoria. */
+  detail?: string | undefined;
   unit?: string;
   tone?: string;
   large?: boolean;
@@ -57,6 +60,7 @@ function Figure({
         {unit && <span className="ml-1 font-body text-lg font-normal text-muted">{unit}</span>}
       </span>
       <span className={`${large ? 'mt-2' : 'mt-0.5'} block text-sm text-muted`}>{label}</span>
+      {detail && <span className="mt-0.5 block text-sm text-bark">{detail}</span>}
     </div>
   );
 }
@@ -105,30 +109,107 @@ function plural(count: number, one: string, many: string): string {
   return count === 1 ? one : many;
 }
 
-function TrendLine({ trend }: { trend: Trend }) {
+/**
+ * Una fila de la comparación: el mismo dato en las dos últimas competencias.
+ *
+ * `lowerIsBetter` existe por los intentos por top, que es la única cifra de la
+ * pantalla donde bajar es mejorar. Sin ese parámetro la flecha diría que
+ * empeoró justo cuando escaló más limpio.
+ */
+function TrendRow({
+  label,
+  now,
+  before,
+  nowValue,
+  beforeValue,
+  lowerIsBetter,
+}: {
+  label: string;
+  now: number | null;
+  before: number | null;
+  nowValue: string;
+  beforeValue: string;
+  lowerIsBetter?: boolean;
+}) {
+  const delta = now !== null && before !== null ? now - before : 0;
+  const better = lowerIsBetter ? delta < 0 : delta > 0;
+  const worse = lowerIsBetter ? delta > 0 : delta < 0;
+  return (
+    <>
+      <span className="self-center text-sm text-muted">{label}</span>
+      <span className="flex items-baseline justify-end gap-1.5 font-display text-2xl font-bold tabular-nums">
+        {nowValue}
+        {better && <span className="text-base text-pine" aria-label="mejor que la anterior">▲</span>}
+        {worse && <span className="text-base text-bronze" aria-label="peor que la anterior">▼</span>}
+      </span>
+      <span className="self-center text-right font-display text-lg tabular-nums text-muted">
+        {beforeValue}
+      </span>
+    </>
+  );
+}
+
+/**
+ * Las dos últimas competencias, una al lado de la otra.
+ *
+ * Cifras y no una frase: la pregunta que responde —¿topé más o menos que la vez
+ * pasada, y me costó más o menos?— se contesta de un vistazo comparando
+ * columnas, y en prosa había que leerla entera para extraer dos números.
+ *
+ * Son las dos **últimas en orden cronológico**, nunca las dos mejores, y por eso
+ * los nombres de los eventos encabezan las columnas: sin ellos la tarjeta
+ * parecía escoger dos eventos por una razón que nunca explicaba.
+ */
+function TrendTable({ trend }: { trend: Trend }) {
   const now = aboveField(trend.latest.standing!);
   const before = aboveField(trend.previous.standing!);
+  const a = trend.latestTotals;
+  const b = trend.previousTotals;
+  const rate = (t: typeof a) => (t.attemptsPerTop === null ? '—' : t.attemptsPerTop.toFixed(1));
+
   return (
-    <p className="text-base leading-relaxed">
-      {/* Se nombra el criterio: son los dos últimos en orden cronológico, no los
-          dos mejores. Sin decirlo, la frase parecía escoger los eventos por
-          alguna razón que la pantalla nunca explicaba. */}
-      <span className="text-muted">Tus dos últimas competencias:</span> en{' '}
-      <span className="font-semibold">{trend.latest.eventName}</span> quedaste por encima del{' '}
-      <span className="font-display font-bold tabular-nums">{now} %</span> de tu categoría
-      {/* Antes decía "92 puntos abajo de", y "puntos" ya significa otra cosa en
-          esta misma pantalla: en un evento de liga el puntaje son puntos de
-          verdad. Los dos porcentajes uno al lado del otro dicen lo mismo sin
-          inventar una unidad que compita con la que ya existe. */}
-      {now === before ? (
-        <>, lo mismo que en {trend.previous.eventName}.</>
-      ) : (
-        <>
-          , contra el <span className="font-display font-bold tabular-nums">{before} %</span> en{' '}
-          {trend.previous.eventName}.
-        </>
-      )}
-    </p>
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-[1fr_auto_auto] items-end gap-x-4 gap-y-1">
+        <span />
+        <span className="text-right text-sm font-semibold">{trend.latest.eventName}</span>
+        <span className="text-right text-sm text-muted">{trend.previous.eventName}</span>
+
+        <span />
+        <span className={`${eyebrowClass} text-right`}>Última</span>
+        <span className={`${eyebrowClass} text-right`}>Anterior</span>
+      </div>
+
+      <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-3 border-t border-cardborder pt-3">
+        <TrendRow
+          label="Arriba de tu categoría"
+          now={now}
+          before={before}
+          nowValue={`${now} %`}
+          beforeValue={`${before} %`}
+        />
+        {/* Solo si las dos son de la misma modalidad: tops de bloque contra
+            rutas de dificultad no se comparan. */}
+        {trend.comparable && (
+          <>
+            <TrendRow
+              label="Tops"
+              now={a.tops}
+              before={b.tops}
+              nowValue={`${a.tops} de ${a.problems}`}
+              beforeValue={`${b.tops} de ${b.problems}`}
+            />
+            <TrendRow
+              label="Intentos por top"
+              now={a.attemptsPerTop}
+              before={b.attemptsPerTop}
+              nowValue={rate(a)}
+              beforeValue={rate(b)}
+              lowerIsBetter
+            />
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -324,42 +405,65 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
   }
 
   const { career, best, trend } = profile;
+  const sinceLabel = career.since ? formatEventDate(career.since) : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-12">
       <TopographicMotif />
 
-      <span className={eyebrowClass}>Historial de competidor</span>
+      <header>
+        <span className={eyebrowClass}>Historial de competidor</span>
+        <h1 className="mt-1 font-display text-4xl font-bold">{profile.fullName}</h1>
+      </header>
 
-      {/* El nombre vive dentro de la tarjeta, no encima: así esto deja de ser
-          "una tarjeta más bajo el título" y pasa a ser el encabezado de la
-          página. El filete de oro la distingue; el fondo se queda en el hueso de
-          `cardClass` como las demás, porque un tinte de pine sobre el stone del
-          `body` quedaba casi del color de la página y se camuflaba. */}
+      {/* El filete de oro es lo que distingue esta tarjeta; el fondo se queda en
+          el hueso de `cardClass` como las demás, porque un tinte de pine sobre
+          el stone del `body` quedaba casi del color de la página y se
+          camuflaba. */}
       <section className={`${cardClass} relative overflow-hidden`}>
         <span className="absolute inset-x-0 top-0 h-1 bg-gold" aria-hidden />
-        <div className="mt-1 flex items-center gap-2.5">
-          <PeakIcon />
-          <h1 className="font-display text-4xl font-bold leading-none">{profile.fullName}</h1>
+        <div className="mt-1">
+          <SectionTitle>Trayectoria</SectionTitle>
         </div>
         {/* Las tres en pine, no una en oro: son tres hechos del mismo rango, y
             el oro sobre el hueso de la tarjeta queda en 1.8:1 y se pierde a esta
             talla — el mismo hallazgo que ya fijó el color de `StatTile`. */}
+        {/* Cada cifra dice de dónde sale. Es lo que hace que esta tarjeta
+            resalte por informar más y no por pesar más, y de paso contesta la
+            pregunta que cada número dejaba abierta: ¿desde cuándo?, ¿dónde? */}
         <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
           <Figure
             value={String(career.events)}
             label={career.events === 1 ? 'Competencia' : 'Competencias'}
+            // formatEventDate devuelve null si la fecha no se puede leer, y sin
+            // este segundo chequeo la tarjeta decía "desde null".
+            detail={sinceLabel ? `desde ${sinceLabel}` : undefined}
             tone="text-pine"
             large
           />
           {career.bestRank !== null && (
-            <Figure value={ordinal(career.bestRank)} label="Mejor puesto" tone="text-pine" large />
+            <Figure
+              value={ordinal(career.bestRank)}
+              label="Mejor puesto"
+              detail={career.bestRankEvent ?? undefined}
+              tone="text-pine"
+              large
+            />
           )}
           {/* Un cero grande en pantalla pesa más que la ausencia del dato. */}
           {career.podiums > 0 && (
             <Figure
               value={String(career.podiums)}
               label={career.podiums === 1 ? 'Podio' : 'Podios'}
+              // El último y no el primero: con varios podios, el que importa es
+              // el más reciente.
+              detail={
+                career.lastPodiumEvent
+                  ? career.podiums === 1
+                    ? career.lastPodiumEvent
+                    : `el último en ${career.lastPodiumEvent}`
+                  : undefined
+              }
               tone="text-pine"
               large
             />
@@ -378,16 +482,20 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
               <BestResult key={event.eventSlug} event={event} />
             ))}
           </ul>
-
-          <div className="border-t border-cardborder pt-5">
-            {trend ? (
-              <TrendLine trend={trend} />
-            ) : (
-              <p className="text-base text-muted">Con una segunda competencia aparece tu tendencia.</p>
-            )}
-          </div>
         </section>
       )}
+
+      {/* Sección propia y no un pie de "tus mejores resultados": son dos cosas
+          distintas. Arriba están los tres mejores de toda la carrera; esto son
+          los dos últimos en el calendario, le haya ido bien o mal. */}
+      <section className={`${cardClass} flex flex-col gap-5`}>
+        <SectionTitle>Últimas dos competencias</SectionTitle>
+        {trend ? (
+          <TrendTable trend={trend} />
+        ) : (
+          <p className="text-base text-muted">Con una segunda competencia hay con qué comparar.</p>
+        )}
+      </section>
 
       <section className="flex flex-col gap-4">
         <SectionTitle>Competencias</SectionTitle>

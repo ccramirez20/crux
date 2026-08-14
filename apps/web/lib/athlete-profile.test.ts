@@ -183,9 +183,100 @@ describe('buildAthleteProfile', () => {
       zones: 4,
       flashes: 2,
       maxHeight: null,
+      // Los dos tops fueron al primer intento.
+      attemptsPerTop: 1,
     });
     expect(profile.career.lead).toBeNull();
     expect(profile.career.podiums).toBe(2);
+    // El más antiguo de los dos: desde cuándo compite.
+    expect(profile.career.since).toBe('2026-03-01');
+  });
+
+  it('no marca comparables dos competencias de modalidades distintas', () => {
+    const cells = [cell({ problemId: 'p1', top: true, topAttempts: 2, zone: true, zoneAttempts: 1 })];
+    const profile = buildAthleteProfile(
+      'Ana Ríos',
+      [
+        registration({ eventSlug: 'uno', eventDate: '2026-03-01', discipline: 'boulder' }),
+        registration({ eventSlug: 'dos', eventDate: '2026-05-01', discipline: 'lead' }),
+      ],
+      new Map([
+        ['uno', payload([round({ rows: [row('reg-1', 1, cells), row('otra', 2)] })])],
+        ['dos', payload([round({ rows: [row('reg-1', 1, cells), row('otra', 2)] })])],
+      ]),
+    );
+
+    // Los tops de un boulder contra las rutas completadas de una de dificultad
+    // no son la misma cifra; ponerlas lado a lado inventaría una mejora.
+    expect(profile.trend?.comparable).toBe(false);
+  });
+
+  it('marca comparables dos competencias de la misma modalidad', () => {
+    const cells = [cell({ problemId: 'p1', top: true, topAttempts: 2, zone: true, zoneAttempts: 1 })];
+    const profile = buildAthleteProfile(
+      'Ana Ríos',
+      [
+        registration({ eventSlug: 'uno', eventDate: '2026-03-01' }),
+        registration({ eventSlug: 'dos', eventDate: '2026-05-01' }),
+      ],
+      new Map([
+        ['uno', payload([round({ rows: [row('reg-1', 2, cells), row('otra', 1)] })])],
+        ['dos', payload([round({ rows: [row('reg-1', 1, cells), row('otra', 2)] })])],
+      ]),
+    );
+
+    expect(profile.trend?.comparable).toBe(true);
+    // `latest` es el más reciente por fecha, no el primero de la lista.
+    expect(profile.trend?.latest.eventSlug).toBe('dos');
+    expect(profile.trend?.previous.eventSlug).toBe('uno');
+  });
+
+  it('promedia intentos solo entre los bloques que sí topó', () => {
+    const profile = buildAthleteProfile(
+      'Ana Ríos',
+      [registration()],
+      new Map([
+        [
+          'copa',
+          payload([
+            round({
+              rows: [
+                row('reg-1', 1, [
+                  cell({ problemId: 'p1', top: true, topAttempts: 1, zone: true, zoneAttempts: 1 }),
+                  cell({ problemId: 'p2', top: true, topAttempts: 5, zone: true, zoneAttempts: 1 }),
+                  // Sin top: no aporta al promedio. Contarlo como cero intentos
+                  // abarataría la cifra justo con el bloque que no pudo hacer.
+                  cell({ problemId: 'p3', zone: true, zoneAttempts: 3 }),
+                ]),
+                row('otra', 2),
+              ],
+            }),
+          ]),
+        ],
+      ]),
+    );
+
+    expect(profile.career.boulder?.attemptsPerTop).toBe(3);
+  });
+
+  it('deja el promedio en null sin ningún top, en vez de en cero', () => {
+    const profile = buildAthleteProfile(
+      'Ana Ríos',
+      [registration()],
+      new Map([
+        [
+          'copa',
+          payload([
+            round({
+              rows: [row('reg-1', 1, [cell({ problemId: 'p1', zone: true, zoneAttempts: 2 })]), row('otra', 2)],
+            }),
+          ]),
+        ],
+      ]),
+    );
+
+    // Cero sería "topó sin intentar"; null es "no hay nada que promediar".
+    expect(profile.career.boulder?.attemptsPerTop).toBeNull();
   });
 
   it('saca la altura máxima en dificultad y no inventa un cero', () => {
