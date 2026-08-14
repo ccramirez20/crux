@@ -5,6 +5,7 @@ import { createEvent } from './actions';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 import { DISCIPLINE_LABEL, labelFor } from '@/lib/labels';
 import { generateCode } from '@/lib/codes';
+import { slugify } from '@/lib/slug';
 
 const DISCIPLINES = ['boulder', 'lead'] as const;
 type Discipline = (typeof DISCIPLINES)[number];
@@ -33,14 +34,6 @@ const DEFAULT_SCORING_FORMAT: Record<Discipline, ScoringFormat> = {
   lead: 'max_height',
 };
 
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
-
 // The full IANA list is ~400 entries and turns a one-second decision into
 // scrolling. Colombia has a single zone and is the only market in stage 1;
 // the rest of the list stays reachable behind "Otra zona horaria".
@@ -67,8 +60,6 @@ export function CreateEventForm({
   const [orgLocation, setOrgLocation] = useState('');
 
   const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
   const [discipline, setDiscipline] = useState<Discipline>('boulder');
   const [scoringFormat, setScoringFormat] = useState<ScoringFormat>(
     DEFAULT_SCORING_FORMAT.boulder,
@@ -81,12 +72,9 @@ export function CreateEventForm({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleNameChange(value: string) {
-    setName(value);
-    if (!slugTouched) {
-      setSlug(slugify(value));
-    }
-  }
+  // La misma función que usa el servidor al guardar, para que lo que se ve
+  // escribiendo el nombre sea exactamente el enlace que va a quedar.
+  const slug = slugify(name);
 
   function handleDisciplineChange(value: Discipline) {
     setDiscipline(value);
@@ -105,7 +93,6 @@ export function CreateEventForm({
       name,
       discipline,
       scoringFormat,
-      slug,
       judgeCode,
       timezone,
       date: date || undefined,
@@ -194,33 +181,29 @@ export function CreateEventForm({
           type="text"
           placeholder="Copa Páramo 2026"
           value={name}
-          onChange={(event) => handleNameChange(event.target.value)}
+          onChange={(event) => setName(event.target.value)}
           required
           className={fieldClass}
         />
       </div>
 
+      {/* Vista previa, no campo. Antes se podía escribir y eso dejaba armar
+          enlaces rotos o que no tenían nada que ver con el evento; y como el
+          enlace termina impreso en los QR de la pared, un error ahí no se
+          arregla el día del evento. Ahora sale del nombre y no se toca. */}
       <div className="flex flex-col gap-1">
-        <label htmlFor="event-slug" className="text-sm font-medium text-bark">
-          Enlace público
-        </label>
-        <div className="flex items-center gap-1 text-sm text-muted">
-          <span className="shrink-0">/inscripcion/</span>
-          <input
-            id="event-slug"
-            type="text"
-            value={slug}
-            onChange={(event) => {
-              setSlugTouched(true);
-              setSlug(event.target.value);
-            }}
-            required
-            pattern="[a-z0-9-]+"
-            className={`${fieldClass} min-w-0 flex-1 py-2`}
-          />
-        </div>
+        <span className="text-sm font-medium text-bark">Enlace público</span>
+        <p className="rounded-lg border border-cardborder bg-stone/60 px-4 py-3 text-sm text-muted">
+          /inscripcion/
+          {slug ? (
+            <span className="font-display font-semibold text-ink">{slug}</span>
+          ) : (
+            <span className="italic">se arma con el nombre</span>
+          )}
+        </p>
         <p className="text-xs text-muted">
-          Se arma solo con el nombre. Solo minúsculas, números y guiones.
+          Sale del nombre del evento y no se edita: va impreso en los QR, así que tiene que
+          quedar fijo. Si quieres otro enlace, cambia el nombre.
         </p>
       </div>
 
