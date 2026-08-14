@@ -232,6 +232,7 @@ export function AttemptCapture({
         <AttemptForm
           key={selected.id}
           discipline={discipline}
+          problemId={problemId}
           registration={selected}
           initial={selectedLatest?.values ?? null}
           alreadyJudged={selectedLatest !== null}

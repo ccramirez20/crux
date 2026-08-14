@@ -159,7 +159,13 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
           cache: 'no-store',
         });
         if (response.ok) {
-          setData((await response.json()) as LeaderboardPayload);
+          const next = (await response.json()) as LeaderboardPayload;
+          // Nunca retroceder. La respuesta se sirve con
+          // `stale-while-revalidate=30`, así que dos refrescos seguidos pueden
+          // caer en copias de distinta edad y el reloj "En vivo" se devolvía
+          // unos segundos delante de toda la sala. Una foto más vieja que la
+          // que ya está en pantalla no aporta nada, tenga los datos que tenga.
+          setData((prev) => (next.updatedAt > prev.updatedAt ? next : prev));
         }
       } catch {
         // Wifi at a gym drops. Keep the last standings on screen and try again

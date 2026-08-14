@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { parseHeight } from '@/lib/height';
+import { clearTally, readTally, writeTally } from '@/lib/attempt-tally';
 import { fieldClass } from '@/lib/ui';
 import type { JudgeRegistration } from './capture-app';
 
@@ -87,6 +88,7 @@ function AttemptStepper({
 
 export function AttemptForm({
   discipline,
+  problemId,
   registration,
   initial,
   alreadyJudged,
@@ -94,6 +96,7 @@ export function AttemptForm({
   onClose,
 }: {
   discipline: string;
+  problemId: string;
   registration: JudgeRegistration;
   initial: AttemptValues | null;
   alreadyJudged: boolean;
@@ -110,8 +113,30 @@ export function AttemptForm({
   );
   const [height, setHeight] = useState(initial?.height != null ? String(initial.height) : '');
   const [error, setError] = useState<string | null>(null);
+  // Se lee del almacenamiento en el primer render y no en un efecto: el juez
+  // abre la ficha para tocar +1, y un contador que aparece en cero y salta al
+  // valor bueno un instante después es un contador en el que no se confía.
+  const [tally, setTally] = useState(() => readTally(problemId, registration.id));
 
   const isBoulder = discipline === 'boulder';
+
+  function bump() {
+    const next = tally + 1;
+    setTally(next);
+    writeTally(problemId, registration.id, next);
+  }
+
+  /**
+   * Al marcar Top o Zona, la casilla se llena con lo que lleva el contador.
+   *
+   * Solo si está vacía: si el juez ya escribió un número a mano, o está
+   * corrigiendo una captura anterior, el contador no se lo pisa.
+   */
+  function fillFromTally(current: string, set: (value: string) => void) {
+    if (current === '' && tally > 0) {
+      set(String(tally));
+    }
+  }
 
   function validationError(): string | null {
     if (isBoulder) {
@@ -151,6 +176,10 @@ export function AttemptForm({
       zoneAttempts: zoneAttempts ? Number(zoneAttempts) : null,
       height: height ? parseHeight(height) : null,
     });
+    // El contador muere con la captura: ese bloque ya quedó resuelto para esta
+    // persona, y dejarlo vivo haría que una corrección posterior arrancara con
+    // un número que ya se usó.
+    clearTally(problemId, registration.id);
   }
 
   return (
@@ -186,12 +215,43 @@ export function AttemptForm({
 
       {isBoulder ? (
         <>
+          {/* La rayita de la hoja. Se toca cada vez que se tira, incluida la
+              buena, y al marcar Top o Zona el número ya está puesto. No sale
+              del celular: mientras no logre nada no hay hecho que guardar. */}
+          <div className="flex items-center gap-3 rounded-lg border border-cardborder bg-stone/50 p-3">
+            <div className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-bark">Intentos que lleva</span>
+              <span className="block text-xs text-muted">Toca cada vez que se tira</span>
+            </div>
+            <span className="font-display text-3xl font-bold tabular-nums">{tally}</span>
+            <button
+              type="button"
+              onClick={bump}
+              className="h-12 shrink-0 rounded-lg bg-pine px-5 font-display text-lg font-bold text-stone"
+            >
+              +1
+            </button>
+            {tally > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTally(0);
+                  clearTally(problemId, registration.id);
+                }}
+                className="shrink-0 text-xs font-medium text-muted underline"
+              >
+                Reiniciar
+              </button>
+            )}
+          </div>
+
           <AchievementToggle
             label="Top"
             active={top}
             onToggle={() => {
               setTop(!top);
               if (top) setTopAttempts('');
+              else fillFromTally(topAttempts, setTopAttempts);
             }}
           />
           {top && (
@@ -204,6 +264,7 @@ export function AttemptForm({
             onToggle={() => {
               setZone(!zone);
               if (zone) setZoneAttempts('');
+              else fillFromTally(zoneAttempts, setZoneAttempts);
             }}
           />
           {zone && (
