@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { eyebrowClass, fieldClass } from '@/lib/ui';
-import { numberCategory, setBibNumber } from './actions';
+import { moveRegistration, numberCategory, removeRegistration, setBibNumber } from './actions';
 
 export interface RosterEntry {
   registrationId: string;
@@ -15,6 +15,19 @@ export interface RosterCategory {
   entries: RosterEntry[];
 }
 
+/**
+ * Todas las categorías del evento, tengan inscritos o no.
+ *
+ * Va aparte de `RosterCategory` porque el listado se agrupa por las que sí
+ * tienen gente, y a la que uno mueve a alguien es justo la que está vacía: el
+ * caso típico es que se inscribió en Intermedio cuando iba a Avanzado, y en
+ * Avanzado todavía no hay nadie.
+ */
+export interface CategoryOption {
+  id: string;
+  name: string;
+}
+
 /** Desde dónde empieza a numerar una categoría que no tiene ningún dorsal. */
 const DEFAULT_START = 101;
 
@@ -22,11 +35,54 @@ const DEFAULT_START = 101;
 // salir del campo y no con un botón: son veinte filas y un botón por fila es
 // veinte clics de más para algo que el organizador hace de corrido, mirando una
 // lista en papel.
-function Row({ eventId, entry }: { eventId: string; entry: RosterEntry }) {
+function Row({
+  eventId,
+  entry,
+  categoryId,
+  categories,
+}: {
+  eventId: string;
+  entry: RosterEntry;
+  categoryId: string;
+  categories: CategoryOption[];
+}) {
   const [value, setValue] = useState(entry.bibNumber ?? '');
   const [saved, setSaved] = useState<string | null>(entry.bibNumber ?? '');
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  function move(next: string) {
+    if (next === categoryId) {
+      return;
+    }
+    startTransition(async () => {
+      const result = await moveRegistration({
+        eventId,
+        registrationId: entry.registrationId,
+        categoryId: next,
+      });
+      setError(result.ok ? null : result.error);
+    });
+  }
+
+  // Dos pasos y no un `confirm()`: quitar a alguien no lo puede deshacer el
+  // organizador —no hay forma de inscribir a mano, la persona tendría que
+  // volver a entrar por el enlace— y un diálogo del navegador bloquea la
+  // pestaña entera para preguntar algo que cabe en el propio botón.
+  function remove() {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    startTransition(async () => {
+      const result = await removeRegistration({ eventId, registrationId: entry.registrationId });
+      if (!result.ok) {
+        setError(result.error);
+        setConfirming(false);
+      }
+    });
+  }
 
   function commit() {
     const next = value.trim();
@@ -76,6 +132,36 @@ function Row({ eventId, entry }: { eventId: string; entry: RosterEntry }) {
         )}
       </span>
       {isPending && <span className="shrink-0 text-xs text-muted">Guardando…</span>}
+
+      {/* Solo se ofrece mover si hay a dónde: con una sola categoría el
+          desplegable no tendría más opción que la actual. */}
+      {categories.length > 1 && (
+        <select
+          aria-label={`Categoría de ${entry.athleteFullName}`}
+          value={categoryId}
+          disabled={isPending}
+          onChange={(event) => move(event.target.value)}
+          className={`${fieldClass} shrink-0 max-w-40 px-2 py-1.5 text-xs`}
+        >
+          {categories.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <button
+        type="button"
+        onClick={remove}
+        onBlur={() => setConfirming(false)}
+        disabled={isPending}
+        className={`shrink-0 text-xs font-medium underline decoration-dotted underline-offset-4 ${
+          confirming ? 'text-red-700' : 'text-muted hover:text-bark'
+        }`}
+      >
+        {confirming ? '¿Seguro?' : 'Quitar'}
+      </button>
     </li>
   );
 }
@@ -83,9 +169,11 @@ function Row({ eventId, entry }: { eventId: string; entry: RosterEntry }) {
 export function Roster({
   eventId,
   categories,
+  allCategories,
 }: {
   eventId: string;
   categories: RosterCategory[];
+  allCategories: CategoryOption[];
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
@@ -184,6 +272,8 @@ export function Roster({
                         key={`${entry.registrationId}:${entry.bibNumber ?? ''}`}
                         eventId={eventId}
                         entry={entry}
+                        categoryId={category.id}
+                        categories={allCategories}
                       />
                     ))}
                   </ul>

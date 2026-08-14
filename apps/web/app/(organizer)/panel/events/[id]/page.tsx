@@ -96,6 +96,13 @@ export default async function EventDetailPage({
     .where(eq(registrations.eventId, eventId))
     .orderBy(categories.name, registrations.createdAt);
 
+  // Todas las del evento, no solo las que tienen inscritos: son los destinos a
+  // los que el organizador puede mover a alguien, y la categoría correcta suele
+  // ser precisamente la que está vacía.
+  const allCategories = [...new Map(treeRows.map((r) => [r.categoryId, r.categoryName])).entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
   const rosterCategories: RosterCategory[] = [];
   for (const row of rosterRows) {
     let category = rosterCategories.find((c) => c.id === row.categoryId);
@@ -224,7 +231,7 @@ export default async function EventDetailPage({
       </div>
 
       <div className="w-full max-w-2xl">
-        <Roster eventId={event.id} categories={rosterCategories} />
+        <Roster eventId={event.id} categories={rosterCategories} allCategories={allCategories} />
       </div>
 
       <div className="w-full max-w-2xl">
