@@ -43,6 +43,20 @@ repite lo que ya dice el panel es una cosa más que se desincroniza.
    variables de entorno y la migración quedaron bien, no solo que el proceso
    arrancó. Borrar el evento de prueba al terminar.
 
+   Si el smoke test incluyó crear una cuenta con una invitación, la cuenta y
+   el código quemado se limpian con:
+
+   ```powershell
+   $env:DATABASE_URL = "postgres://...-pooler.../..."
+   pnpm limpiar:prueba correo@de-prueba              # solo muestra qué borraría
+   pnpm limpiar:prueba correo@de-prueba --confirmar
+   ```
+
+   El script **no** lee `packages/db/.env` a propósito: si `DATABASE_URL` no
+   está puesta en la sesión se niega a correr, en vez de escoger una base por
+   su cuenta como hacen los demás comandos. Y se detiene si la cuenta tiene
+   organizaciones o eventos, porque entonces no es de prueba.
+
 ## Variables de entorno
 
 | Variable | Para qué | Si falta |

@@ -12,6 +12,7 @@
     "db:migrate": "pnpm --filter @crux/db exec drizzle-kit migrate",
     "db:studio": "pnpm --filter @crux/db exec drizzle-kit studio",
     "seed:event": "pnpm --filter @crux/db exec node src/seed-event.mjs",
+    "limpiar:prueba": "pnpm --filter @crux/db exec node src/limpiar-prueba.mjs",
     "clean:cache": "node scripts/clean-cache.mjs",
     "format": "prettier --write ."
   },
