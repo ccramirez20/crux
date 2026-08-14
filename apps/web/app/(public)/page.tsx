@@ -277,8 +277,7 @@ export default function HomePage() {
           ¿Vas a organizar una competencia?
         </h2>
         <p className="max-w-[52ch] text-lg leading-relaxed text-muted">
-          Está hecho en Colombia, en español y en pesos, para las competencias que ya se corren
-          aquí.
+          Está hecho en Colombia y en español, para las competencias que ya se corren aquí.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/sign-up" className={primaryButtonClass}>

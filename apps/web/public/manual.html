@@ -54,6 +54,9 @@
          aparato donde más se abre esto. */
       .motivo { display: block; width: 100%; margin: 0.75rem 0 1.75rem; }
       .motivo path { vector-effect: non-scaling-stroke; stroke-width: 2.25; }
+      /* Las líneas van primero y la marca debajo, igual que en la portada y en
+         todas las pantallas de la app. */
+      .motivo-cabecera { margin-top: 0; margin-bottom: 1rem; }
 
       h1 {
         font-size: clamp(1.9rem, 7vw, 2.6rem);
@@ -200,12 +203,12 @@
   </head>
   <body>
     <div class="hoja">
-      <p class="marca">CRUX</p>
-      <svg class="motivo" viewBox="0 0 800 90" aria-hidden="true">
+      <svg class="motivo motivo-cabecera" viewBox="0 0 800 90" aria-hidden="true">
         <path d="M0,60 Q100,20 200,55 T400,50 T600,60 T800,45" fill="none" stroke="#B9C4AC" opacity="0.85" />
         <path d="M0,72 Q100,35 200,68 T400,64 T600,74 T800,58" fill="none" stroke="#2F4A3E" opacity="0.6" />
         <path d="M0,84 Q100,50 200,80 T400,78 T600,86 T800,72" fill="none" stroke="#E3A83B" opacity="0.75" />
       </svg>
+      <p class="marca">CRUX</p>
 
       <h1>Cómo organizar una competencia con <b class="marca-inline">Crux</b></h1>
       <p class="entrada">
@@ -261,7 +264,7 @@
 
       <h2>2. Crear el evento</h2>
       <p>
-        En <span class="ui">Tus eventos</span>, espicha el botón
+        En <span class="ui">Tus eventos</span>, presiona el botón
         <span class="ui">Crear evento</span>. Casi todos los campos se explican
         solos; estos cuatro son la excepción:
       </p>
@@ -270,7 +273,7 @@
         <dt>Fecha del evento</dt>
         <dd>
           Con esta fecha se calcula la edad de cada competidor para saber en
-          qué categoría entra. No es decorativa: si la pones mal, la gente ve
+          qué categoría entra. Si la pones mal, la gente ve
           categorías que no le corresponden.
         </dd>
 
@@ -301,20 +304,17 @@
         </dd>
       </dl>
 
-      <p>Después de crear el evento:</p>
-
-      <ul>
-        <li>
-          <strong>Sí se cambian</strong> desde
-          <span class="ui">Editar el evento</span>: el nombre, la fecha, la
-          fecha límite de inscripción, la zona horaria y el código de jueces.
-        </li>
-        <li>
-          <strong>No se cambian</strong>: el enlace público, la modalidad y la
-          forma de puntuar. Si alguno quedó mal y todavía no has puntuado a
-          nadie, borra el evento y créalo de nuevo.
-        </li>
-      </ul>
+      <h3>Qué se puede modificar después</h3>
+      <p>
+        <strong>Se pueden modificar.</strong> Desde
+        <span class="ui">Editar el evento</span> cambias el nombre, la fecha, la
+        fecha límite de inscripción, la zona horaria y el código de jueces.
+      </p>
+      <p>
+        <strong>No se pueden modificar.</strong> El enlace público, la modalidad
+        y la forma de puntuar quedan fijos. Si alguno quedó mal y todavía no has
+        puntuado a nadie, borra el evento y créalo de nuevo.
+      </p>
 
       <p>
         Ojo con una cosa: cambiarle el nombre a un evento ya creado
@@ -324,8 +324,9 @@
 
       <h2>3. Armar la competencia</h2>
       <p>
-        Dentro del evento, en <span class="ui">Estructura de la
-        competencia</span>, se arma de afuera hacia adentro, en este orden:
+        Abre el evento y entra a <span class="ui">Estructura de la
+        competencia</span>. Se arma de lo más general a lo más específico, en
+        este orden:
       </p>
 
       <ol class="paso">
@@ -423,10 +424,9 @@
 
       <div class="ojo">
         <p>
-          <b>Aviso importante: punto de no retorno.</b> Apenas un juez le
-          puntúa algo a alguien, esa inscripción ya no se puede mover ni quitar
-          — queda guardada en el sistema y el evento arranca a correr. Deja el
-          listado cuadrado antes de empezar.
+          <b>Aviso importante: punto de no retorno.</b> Apenas un juez puntúa un
+          bloque o una ruta de una persona, esa inscripción ya no se puede
+          modificar ni quitar. Deja el listado cuadrado antes de empezar.
         </p>
       </div>
 
@@ -541,10 +541,16 @@
         <ul>
           <li>
             <strong>El número de intentos es cuántos le tomó lograrlo</strong>,
-            no cuántas veces se tiró. Si topó en el tercer intento, son 3.
+            no cuántas veces se tiró en total. Si topó en el tercer intento, son
+            3.
             <br />
-            Y si no lo logró, no hay número que anotar: la casilla ni siquiera
-            aparece. El bloque queda como intentado y ya.
+            Si no lo logró, no hay número que anotar y la casilla ni siquiera
+            aparece: el bloque queda como intentado y ya. Así funciona el
+            puntaje en las cuatro formas: los intentos solo pesan sobre lo que
+            <em>sí</em> se consiguió. En puntos IFSC, por ejemplo, un top vale
+            25 y cada intento fallido antes de sacarlo descuenta 0.1 — pero un
+            bloque donde no se logró nada vale cero, se haya intentado una vez
+            o veinte.
           </li>
           <li>
             <strong>La altura se escribe con punto o con coma</strong>: tanto
@@ -564,10 +570,8 @@
       <dl>
         <dt>El QR no abre nada en el celular del juez</dt>
         <dd>
-          El QR se genera con la dirección desde la que tú tenías abierto el
-          panel. Si esa dirección no es la que ven los demás, el QR solo te
-          sirve a ti. Abre el panel desde el enlace normal de
-          <b class="marca-inline">Crux</b>, vuelve a generar el QR e imprímelo.
+          Vuelve a generarlo desde el panel y a imprimirlo. Si el nuevo tampoco
+          abre, escríbenos.
         </dd>
 
         <dt>«Ese código no corresponde a este evento»</dt>
