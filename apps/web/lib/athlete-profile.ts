@@ -59,12 +59,26 @@ export interface DisciplineTotals {
   flashes: number;
   /** Solo dificultad. null cuando ningún juez anotó altura. */
   maxHeight: number | null;
+  /**
+   * Intentos promedio por cada top logrado. Aquí **menos es mejor**, al revés
+   * que todas las demás cifras de esta interfaz — quien lo pinte tiene que
+   * invertir el sentido de la flecha. Solo cuenta los bloques que sí topó: los
+   * que no topó no tienen un "intentos hasta el top" que promediar. null sin
+   * tops, porque dividir por cero no es "cero intentos".
+   */
+  attemptsPerTop: number | null;
 }
 
 export interface CareerTotals {
   events: number;
+  /** Fecha del evento más antiguo: desde cuándo compite. */
+  since: string | null;
   bestRank: number | null;
+  /** Dónde consiguió ese mejor puesto. */
+  bestRankEvent: string | null;
   podiums: number;
+  /** El podio más reciente, no el primero: con varios, el último es la noticia. */
+  lastPodiumEvent: string | null;
   boulder: DisciplineTotals | null;
   lead: DisciplineTotals | null;
 }
@@ -74,6 +88,15 @@ export interface Trend {
   previous: AthleteEventResult;
   /** Diferencia de posición relativa. Negativo = le fue peor que la vez pasada. */
   delta: number;
+  /** Totales de cada uno por separado, para comparar qué cambió por debajo del puesto. */
+  latestTotals: DisciplineTotals;
+  previousTotals: DisciplineTotals;
+  /**
+   * false cuando las dos competencias son de modalidades distintas: los tops de
+   * un boulder y las rutas completadas de una de dificultad no se comparan, y
+   * ponerlos lado a lado inventaría una mejora que nadie tuvo.
+   */
+  comparable: boolean;
 }
 
 export interface AthleteProfile {
@@ -131,12 +154,17 @@ function totalsFor(results: AthleteEventResult[]): DisciplineTotals | null {
   }
   const cells = results.flatMap((r) => r.cells);
   const heights = cells.map((c) => c.height).filter((h): h is number => h !== null);
+  const topped = cells.filter((c) => c.top);
+  // Un top sin número de intentos se cuenta como uno: es lo mismo que asume
+  // `flashes` una línea más abajo, y contarlo como cero abarataría el promedio.
+  const attempts = topped.reduce((sum, c) => sum + (c.topAttempts ?? 1), 0);
   return {
     problems: cells.length,
-    tops: cells.filter((c) => c.top).length,
+    tops: topped.length,
     zones: cells.filter((c) => c.zone).length,
     flashes: cells.filter((c) => c.top && (c.topAttempts ?? 1) === 1).length,
     maxHeight: heights.length > 0 ? Math.max(...heights) : null,
+    attemptsPerTop: topped.length > 0 ? attempts / topped.length : null,
   };
 }
 
@@ -181,19 +209,35 @@ export function buildAthleteProfile(
   const latest = standings.at(-1);
   const previous = standings.at(-2);
 
+  const bestRank = ranked.length > 0 ? Math.min(...ranked.map((r) => r.rank!)) : null;
+  // `events` ya viene de más reciente a más antiguo, así que el primer podio de
+  // esa lista es el último que consiguió y el último evento es el más viejo.
+  const podiums = ranked.filter((r) => r.rank! <= 3);
+  const lastPodium = events.find((r) => r.rank !== null && r.rank <= 3);
+
   return {
     fullName,
     career: {
       events: results.length,
-      bestRank: ranked.length > 0 ? Math.min(...ranked.map((r) => r.rank!)) : null,
-      podiums: ranked.filter((r) => r.rank! <= 3).length,
+      since: events.at(-1)?.eventDate ?? null,
+      bestRank,
+      bestRankEvent: bestRank === null ? null : (ranked.find((r) => r.rank === bestRank)?.eventName ?? null),
+      podiums: podiums.length,
+      lastPodiumEvent: lastPodium?.eventName ?? null,
       boulder: totalsFor(results.filter((r) => r.discipline === 'boulder')),
       lead: totalsFor(results.filter((r) => r.discipline !== 'boulder')),
     },
     best,
     trend:
       latest && previous
-        ? { latest, previous, delta: latest.standing! - previous.standing! }
+        ? {
+            latest,
+            previous,
+            delta: latest.standing! - previous.standing!,
+            latestTotals: totalsFor([latest])!,
+            previousTotals: totalsFor([previous])!,
+            comparable: latest.discipline === previous.discipline,
+          }
         : null,
     events,
   };
