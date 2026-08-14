@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { HEADLINE_LINES } from '@/lib/labels';
 
 // Sin fuente propia a propósito: cargarla obligaría a bajar el archivo en cada
 // build. Lo que hace reconocible la tarjeta es la paleta y las curvas, no la
@@ -34,8 +35,13 @@ export default function OpengraphImage() {
           CRUX
         </div>
 
-        <div style={{ display: 'flex', fontSize: 58, fontWeight: 700, lineHeight: 1.1, maxWidth: 1000 }}>
-          Toda la sala mirando la misma tabla, al mismo tiempo.
+        {/* Una frase por línea, igual que en la portada: aquí siempre cabe. */}
+        <div style={{ display: 'flex', flexDirection: 'column', fontSize: 58, fontWeight: 700, lineHeight: 1.1 }}>
+          {HEADLINE_LINES.map((line) => (
+            <div key={line} style={{ display: 'flex' }}>
+              {line}
+            </div>
+          ))}
         </div>
 
         <div style={{ display: 'flex', fontSize: 28, color: MUTED }}>
