@@ -207,6 +207,10 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
       <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-7">
         <header className="flex flex-col gap-4">
           <TopographicMotif />
+          {/* La marca, bajo las líneas y sobre el nombre del evento, igual que
+              en el resto de pantallas. Esta es la que se proyecta a toda la
+              sala y la que más gente ve, y era la única sin nombrarnos. */}
+          <span className="font-display text-lg font-bold tracking-[0.2em] text-pine">CRUX</span>
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <h1 className="font-display text-6xl font-bold leading-none">{data.event.name}</h1>
