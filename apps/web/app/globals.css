@@ -44,8 +44,15 @@
      y dejaba de leerse como oro — quedaba a medio camino del bronce, a ΔE 26.5.
      Bajando solo la L y estirando el croma hasta el borde del gamut a esa
      luminosidad, el tono se queda en 78° (el bronce está en 56°) y conserva
-     0.127 de croma contra los 0.139 del original, con ΔE 36 al bronce. */
-  --color-gold-ink: #ac7800;
+     0.131 de croma contra los 0.139 del original.
+
+     El oro está apoyado justo en 3.00:1 contra la página, sin margen, porque
+     por encima de eso deja de leerse como oro brillante y no hay a dónde subir:
+     sobre fondo claro el original mide 1.8:1 y no existe un amarillo más claro
+     que pase. Donde se usa hoy —dentro de tarjetas— trabaja con 3.37:1. Si
+     alguna vez hace falta el oro brillante de verdad, la salida no es aclarar
+     este sino ponerlo sobre fondo oscuro: sobre pine da 4.58:1. */
+  --color-gold-ink: #b37d00;
   --color-silver-ink: #74858e;
 
   --font-display: var(--font-space-grotesk), sans-serif;
