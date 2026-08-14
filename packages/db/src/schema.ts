@@ -151,3 +151,21 @@ export const attempts = pgTable('attempts', {
     .notNull()
     .defaultNow(),
 });
+
+// Invitación de un solo uso para crear cuenta de organizador. Reemplaza el
+// secreto único y reutilizable que vivía en ORGANIZER_ACCESS_CODE: ahí, quien
+// consiguiera la cadena podía abrir cuentas indefinidamente. Aquí el código
+// muere al usarse, y `usedBy` deja el rastro de con cuál invitación entró cada
+// organizador.
+export const inviteCodes = pgTable('invite_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: text('code').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => user.id),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  usedBy: text('used_by').references(() => user.id),
+});

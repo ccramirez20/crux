@@ -107,8 +107,8 @@ export default function SignUpPage() {
             className={fieldClass}
           />
           <p className="text-xs text-muted">
-            Te lo comparte quien administra la plataforma: por ahora el registro es solo para
-            organizadores invitados.
+            Te lo comparte quien administra la plataforma. Sirve una sola vez: si ya lo usaste,
+            pide otro.
           </p>
         </div>
         {error && (

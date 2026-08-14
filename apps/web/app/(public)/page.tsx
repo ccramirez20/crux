@@ -3,6 +3,11 @@ import Link from 'next/link';
 import { StandingsMotif } from '@/components/standings-motif';
 import { eyebrowClass, primaryButtonClass, secondaryButtonClass } from '@/lib/ui';
 
+// Local a la portada, no el `eyebrowClass` compartido: aquí encabezan una
+// sección entera y a 11px se perdían. Mismo peso y tracking que el rótulo de
+// la tabla pública, una talla más grande.
+const sectionEyebrowClass = 'text-sm font-semibold uppercase tracking-[0.14em] text-muted';
+
 export const metadata: Metadata = {
   title: 'Crux — Competencias de escalada',
   description:
@@ -130,7 +135,7 @@ export default function HomePage() {
 
       <section className="flex flex-col gap-7">
         <div className="flex flex-col gap-3">
-          <span className={eyebrowClass}>La pantalla del evento</span>
+          <span className={sectionEyebrowClass}>La pantalla del evento</span>
           <h2 className="max-w-[20ch] font-display text-3xl font-bold leading-tight md:text-4xl">
             La tabla no es una hoja de cálculo proyectada.
           </h2>
@@ -233,7 +238,7 @@ export default function HomePage() {
 
       <section className="grid gap-10 md:grid-cols-2">
         <div className="flex flex-col gap-3">
-          <span className={eyebrowClass}>Si organizas</span>
+          <span className={sectionEyebrowClass}>Si organizas</span>
           <h3 className="font-display text-2xl font-bold leading-snug">
             Gimnasio, club o liga
           </h3>
@@ -243,7 +248,7 @@ export default function HomePage() {
           </p>
         </div>
         <div className="flex flex-col gap-3">
-          <span className={eyebrowClass}>Si compites</span>
+          <span className={sectionEyebrowClass}>Si compites</span>
           <h3 className="font-display text-2xl font-bold leading-snug">No necesitas cuenta</h3>
           <p className="leading-relaxed text-muted">
             Te inscribes por el enlace que te pasa quien organiza, y ves los resultados desde el

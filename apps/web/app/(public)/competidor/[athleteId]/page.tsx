@@ -28,16 +28,55 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Una cifra grande con su rótulo. Es el bloque del que se arman las tiras. */
-function Figure({ value, label, unit, tone }: { value: string; label: string; unit?: string; tone?: string }) {
+/**
+ * Una cifra grande con su rótulo. Es el bloque del que se arman las tiras.
+ *
+ * `large` es la talla de `StatTile` en la tabla pública, reservada para la
+ * tarjeta de trayectoria: es el dato que la pantalla viene a dar, y a la talla
+ * normal competía de igual a igual con los totales de abajo.
+ */
+function Figure({
+  value,
+  label,
+  unit,
+  tone,
+  large,
+}: {
+  value: string;
+  label: string;
+  unit?: string;
+  tone?: string;
+  large?: boolean;
+}) {
+  const size = large ? 'text-[3.25rem] leading-none tracking-tight' : 'text-4xl';
   return (
     <div className="min-w-24">
-      <span className={`font-display text-4xl font-bold tabular-nums ${tone ?? ''}`}>
+      <span className={`font-display ${size} font-bold tabular-nums ${tone ?? ''}`}>
         {value}
         {unit && <span className="ml-1 font-body text-lg font-normal text-muted">{unit}</span>}
       </span>
-      <span className="mt-0.5 block text-sm text-muted">{label}</span>
+      <span className={`${large ? 'mt-2' : 'mt-0.5'} block text-sm text-muted`}>{label}</span>
     </div>
+  );
+}
+
+/**
+ * Pico con un punto en la cima. Mismo idioma de líneas finas que
+ * `topographic-motif.tsx`, en 20px: un trazo y el punto en oro.
+ */
+function PeakIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true">
+      <path
+        d="M2 19 L9 9 L12.5 13.5 L17 6.5 L22 19"
+        fill="none"
+        stroke="#2F4A3E"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="17" cy="6.5" r="1.7" fill="#E3A83B" />
+    </svg>
   );
 }
 
@@ -313,13 +352,39 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
         <h1 className="mt-1 font-display text-4xl font-bold">{profile.fullName}</h1>
       </header>
 
-      <section className={`${cardClass} flex flex-wrap gap-x-10 gap-y-5`}>
-        <Figure value={String(career.events)} label={career.events === 1 ? 'Competencia' : 'Competencias'} />
-        {career.bestRank !== null && <Figure value={ordinal(career.bestRank)} label="Mejor puesto" />}
-        {/* Un cero grande en pantalla pesa más que la ausencia del dato. */}
-        {career.podiums > 0 && (
-          <Figure value={String(career.podiums)} label={career.podiums === 1 ? 'Podio' : 'Podios'} tone="text-gold" />
-        )}
+      {/* La tarjeta destacada de la página: filete de oro arriba y fondo con un
+          tinte de pine para que no se lea como una más de la lista. Grid y no
+          flex-wrap — con tres cifras, `flex-wrap` las amontonaba a la izquierda
+          y dejaba medio ancho vacío. */}
+      <section className={`${cardClass} relative overflow-hidden border-pine/30 bg-pine/[0.04]`}>
+        <span className="absolute inset-x-0 top-0 h-1 bg-gold" aria-hidden />
+        <div className="mt-1 flex items-center gap-2">
+          <PeakIcon />
+          <span className={eyebrowClass}>Trayectoria</span>
+        </div>
+        {/* Las tres en pine, no una en oro: son tres hechos del mismo rango, y
+            el oro sobre el hueso de la tarjeta queda en 1.8:1 y se pierde a esta
+            talla — el mismo hallazgo que ya fijó el color de `StatTile`. */}
+        <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
+          <Figure
+            value={String(career.events)}
+            label={career.events === 1 ? 'Competencia' : 'Competencias'}
+            tone="text-pine"
+            large
+          />
+          {career.bestRank !== null && (
+            <Figure value={ordinal(career.bestRank)} label="Mejor puesto" tone="text-pine" large />
+          )}
+          {/* Un cero grande en pantalla pesa más que la ausencia del dato. */}
+          {career.podiums > 0 && (
+            <Figure
+              value={String(career.podiums)}
+              label={career.podiums === 1 ? 'Podio' : 'Podios'}
+              tone="text-pine"
+              large
+            />
+          )}
+        </div>
       </section>
 
       {career.boulder && <BoulderTotals totals={career.boulder} />}

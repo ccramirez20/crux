@@ -50,7 +50,21 @@ repite lo que ya dice el panel es una cosa más que se desincroniza.
 | `DATABASE_URL` | Postgres (Neon) | La aplicación levanta y todo falla contra la base; `/api/health` da 503 |
 | `BETTER_AUTH_SECRET` | Firma de sesiones | **Better Auth lanza excepción y no arranca.** En producción rechaza el secreto por defecto a propósito |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | Orígenes válidos para autenticación | **Nadie puede entrar.** En producción `trustedOrigins()` devuelve *solo* esta lista, así que vacía significa que todo intento de sign-in es "Invalid origin" |
-| `ORGANIZER_ACCESS_CODE` | Código de invitación para crear cuentas | Nadie puede registrarse. Falla cerrado a propósito (`apps/web/lib/auth.ts`) |
+| `ADMIN_EMAIL` | Correo de la cuenta que emite invitaciones | Nadie ve `/panel/invites` (devuelve 404), así que nadie puede emitir códigos y nadie nuevo puede registrarse. Falla cerrado a propósito (`apps/web/lib/admin.ts`) |
+
+## Invitaciones de organizador
+
+El registro está cerrado: para crear una cuenta hace falta un código de un solo
+uso. Los emite quien tenga el correo de `ADMIN_EMAIL`, desde `/panel/invites`
+(la ruta devuelve 404 para cualquier otra cuenta). Un código sirve una vez: al
+consumirse queda marcado con quién lo usó, y reintentarlo da "Código de acceso
+inválido."
+
+Esto reemplazó a `ORGANIZER_ACCESS_CODE`, que era un único secreto reutilizable:
+quien lo consiguiera podía abrir cuentas indefinidamente. **Al desplegar este
+cambio hay que borrar `ORGANIZER_ACCESS_CODE` de Vercel, agregar `ADMIN_EMAIL`
+con el correo de la cuenta ya creada, y correr la migración `0005` contra la
+base de producción** — sin la tabla `invite_codes` el registro falla entero.
 
 `BETTER_AUTH_SECRET` se genera con `openssl rand -base64 32`. Better Auth
 advierte por debajo de 32 caracteres y por baja entropía; no lo escribas a mano.

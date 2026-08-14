@@ -5,6 +5,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { z } from 'zod';
 import { account, session, user, verification } from '@crux/db';
 import { getDb } from './db';
+import { claimInvite, recordInviteUser } from './invites';
 
 const signUpBodySchema = z.object({
   accessCode: z.string().optional(),
@@ -54,12 +55,30 @@ function createAuth() {
           // that surfaces as a 500 instead of the intended 400.
           const parsed = signUpBodySchema.safeParse(ctx.body);
           const accessCode = parsed.success ? parsed.data.accessCode : undefined;
-          // Fail closed: if the env var is ever unset, `undefined !== undefined`
-          // would otherwise let sign-up through ungated.
-          if (!process.env.ORGANIZER_ACCESS_CODE || accessCode !== process.env.ORGANIZER_ACCESS_CODE) {
+          // Fail closed: no code, no lookup. An empty string would otherwise
+          // reach the query and match a row someone managed to insert blank.
+          const claimed = accessCode ? await claimInvite(getDb(), accessCode) : [];
+          if (claimed.length === 0) {
+            // Mismo mensaje para código inexistente y código ya usado: separarlos
+            // le diría a quien prueba códigos cuáles existen.
             throw new APIError('BAD_REQUEST', {
               message: 'Código de acceso inválido.',
             });
+          }
+        }
+      }),
+      // ponytail: el consumo ocurre en el hook `before`, así que un sign-up que
+      // falle después (correo repetido, por ejemplo) quema la invitación sin
+      // dejar cuenta. Al volumen de esto —CR invitando organizadores uno por
+      // uno— generar otra es gratis. Si algún día se invita en lote, el arreglo
+      // es mover el consumo entero aquí, con el id del usuario ya creado.
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === '/sign-up/email') {
+          const parsed = signUpBodySchema.safeParse(ctx.body);
+          const accessCode = parsed.success ? parsed.data.accessCode : undefined;
+          const newUser = ctx.context.newSession?.user;
+          if (accessCode && newUser) {
+            await recordInviteUser(getDb(), accessCode, newUser.id);
           }
         }
       }),

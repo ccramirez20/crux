@@ -215,12 +215,21 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                 {date ? ` · ${date}` : ''}
               </p>
             </div>
-            <p
-              className="flex items-center gap-2.5 font-display text-lg font-semibold text-pine"
-              suppressHydrationWarning
-            >
+            <p className="flex items-center gap-2.5 font-display text-lg font-semibold text-pine">
               <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
-              En vivo · {new Date(data.updatedAt).toLocaleTimeString('es-CO')}
+              {/* Dos cosas, las dos necesarias para que el reloj no mienta.
+                  `timeZone`: sin él, el render de servidor cae en UTC y tras un
+                  refresh duro la hora sale 5h adelante (el servidor de Vercel no
+                  está en Bogotá). `hour12: false`: con a. m./p. m., el ICU de
+                  Node y el de Chrome usan distinto carácter de espacio antes del
+                  rótulo, y la hidratación falla por un texto que a la vista es
+                  idéntico — eso era lo que silenciaba el `suppressHydrationWarning`
+                  que vivía aquí. Sin rótulo no hay espacio que discrepar. */}
+              En vivo ·{' '}
+              {new Date(data.updatedAt).toLocaleTimeString('es-CO', {
+                timeZone: data.event.timezone,
+                hour12: false,
+              })}
             </p>
           </div>
         </header>
