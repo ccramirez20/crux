@@ -13,6 +13,19 @@ export const DISCIPLINE_LABEL: Record<string, string> = {
   lead: 'Lead / Dificultad',
 };
 
+// El titular de la portada. Vive aquí porque sale en tres sitios —el h1, el
+// `openGraph.description` y la tarjeta que se dibuja al compartir el enlace— y
+// que los tres digan cosas distintas es el defecto que se cuela solo.
+// "Pegue" es la palabra que se usa en el gimnasio; escribirla es la señal de
+// que esto lo hizo alguien que escala, no un proveedor de software.
+// Se guarda partido en frases, no como una cadena: son tres golpes y la
+// portada necesita poder darle una línea a cada uno. Calibrar un `max-width`
+// en `ch` para conseguir el mismo corte depende de las métricas de la fuente y
+// se rompe al cambiarla.
+export const HEADLINE_LINES = ['Todos los bloques.', 'Todos los pegues.', 'Una sola tabla.'];
+
+export const HEADLINE = HEADLINE_LINES.join(' ');
+
 export const ROUND_TYPE_LABEL: Record<string, string> = {
   qualification: 'Clasificatoria',
   semifinal: 'Semifinal',

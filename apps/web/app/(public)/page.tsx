@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { StandingsMotif } from '@/components/standings-motif';
 import { eyebrowClass, primaryButtonClass, secondaryButtonClass } from '@/lib/ui';
+import { HEADLINE, HEADLINE_LINES } from '@/lib/labels';
 
 // Local a la portada, no el `eyebrowClass` compartido: aquí encabezan una
 // sección entera y a 11px se perdían. Mismo peso y tracking que el rótulo de
@@ -14,8 +15,7 @@ export const metadata: Metadata = {
     'Inscripción por enlace, jueces que capturan desde el teléfono aunque se caiga el wifi, y una tabla pública que se actualiza sola. En español y en pesos.',
   openGraph: {
     title: 'Crux — Competencias de escalada',
-    description:
-      'Toda la sala mirando la misma tabla, al mismo tiempo. En español y en pesos.',
+    description: `${HEADLINE} En español y en pesos.`,
     locale: 'es_CO',
     type: 'website',
   },
@@ -111,8 +111,16 @@ export default function HomePage() {
         <span className="font-display text-lg font-bold tracking-[0.2em] text-pine">CRUX</span>
 
         <div className="flex flex-col gap-6">
-          <h1 className="max-w-[16ch] font-display text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl">
-            Toda la sala mirando la misma tabla, al mismo tiempo.
+          {/* Una frase por línea de ancho md para arriba, donde cabe: el
+              titular son tres golpes y partir uno por la mitad los deshace. En
+              teléfono los tramos vuelven a ser inline y envuelven donde puedan,
+              que es lo correcto a 48px — mejor envolver que encoger la letra. */}
+          <h1 className="max-w-[16ch] font-display text-5xl font-bold leading-[1.05] tracking-tight md:max-w-none md:text-7xl">
+            {HEADLINE_LINES.map((line) => (
+              <span key={line} className="md:block">
+                {line}{' '}
+              </span>
+            ))}
           </h1>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted md:text-xl">
             Crux corre competencias de escalada de principio a fin: inscripción por enlace, jueces

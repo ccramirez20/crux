@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDb } from '@crux/db';
-import { claimInvite, recordInviteUser } from './invites';
+import { claimInvite, deleteUnusedInvite, recordInviteUser } from './invites';
 
 // postgres.js conecta perezosamente: construir el query y pedirle el SQL nunca
 // abre un socket, así que esto corre sin base de datos.
@@ -19,6 +19,17 @@ describe('claimInvite', () => {
     // Cero filas devueltas es la señal de "código inválido o ya usado"; sin el
     // returning no hay forma de saberlo.
     expect(claimInvite(db, 'ABCD2345').toSQL().sql).toMatch(/returning/i);
+  });
+});
+
+describe('deleteUnusedInvite', () => {
+  it('no puede borrar una invitación ya canjeada', () => {
+    const { sql, params } = deleteUnusedInvite(db, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee').toSQL();
+    // Sin el `used_at is null` en el WHERE, descartar un código se llevaría por
+    // delante el rastro de quién entró con él — que es justo para lo que existe
+    // la tabla.
+    expect(sql).toMatch(/delete.*where.*"id" = \$\d.*and.*"used_at" is null/is);
+    expect(params).toContain('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
   });
 });
 
