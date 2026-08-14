@@ -19,3 +19,8 @@ overrides:
   postcss: ">=8.5.23"
   sharp: ">=0.35.0"
   esbuild: ">=0.25.0"
+  # GHSA-2v37-7h3g-55p8: por debajo de 3.3.18 un generador propio con size 0 se
+  # cuelga en un bucle. Entra por postcss, o sea solo en el build, y nada aquí
+  # lo llama con un generador propio — pero es un pin de una línea y deja el
+  # `pnpm audit` en cero, que es lo que uno quiere poder mirar de un vistazo.
+  nanoid: ">=3.3.18"
