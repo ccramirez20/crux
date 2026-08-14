@@ -34,12 +34,18 @@
      leyéndose como oro y plata.
 
      Calibrados contra --color-stone, que es el fondo más oscuro de los dos, así
-     que funcionan igual sobre la página y sobre una tarjeta: 3.21:1 y 3.60:1
+     que funcionan igual sobre la página y sobre una tarjeta: 3.2:1 y 3.6:1
      respectivamente. No se bajó más a propósito — llevarlos a 4.5:1 acerca el
-     oro al bronce hasta ΔE 19.6, y esos dos son justo los que distinguen un
-     primer puesto de un tercero. Así quedan en ΔE 26.5, muy por encima del piso
-     de 15 con que se validó el resto de la paleta. */
-  --color-gold-ink: #a67b2b;
+     oro al bronce, y esos dos son justo los que distinguen un primer puesto de
+     un tercero.
+
+     El oro se oscureció en OKLCH y no escalando el RGB. Escalarlo baja la
+     luminosidad y el croma a la vez: la primera versión perdió un 22 % de croma
+     y dejaba de leerse como oro — quedaba a medio camino del bronce, a ΔE 26.5.
+     Bajando solo la L y estirando el croma hasta el borde del gamut a esa
+     luminosidad, el tono se queda en 78° (el bronce está en 56°) y conserva
+     0.127 de croma contra los 0.139 del original, con ΔE 36 al bronce. */
+  --color-gold-ink: #ac7800;
   --color-silver-ink: #74858e;
 
   --font-display: var(--font-space-grotesk), sans-serif;
