@@ -275,7 +275,10 @@ function BoulderTotals({ totals }: { totals: DisciplineTotals }) {
   return (
     <section className={`${cardClass} flex flex-col gap-5`}>
       <span className={eyebrowClass}>Boulder / Bloque</span>
-      <div className="flex flex-wrap gap-x-10 gap-y-5">
+      {/* Grid y no flex-wrap: con gaps fijos las cuatro cifras se empaquetaban a
+          la izquierda y dejaban el resto del ancho vacío. Dos columnas en
+          teléfono, cuatro cuando hay ancho. */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
         <Figure value={String(totals.problems)} label="Bloques intentados" />
         <Figure value={String(totals.tops)} label="Tops" />
         <Figure value={String(totals.zones)} label="Zonas (incluye tops)" />
@@ -301,7 +304,9 @@ function LeadTotals({ totals }: { totals: DisciplineTotals }) {
   return (
     <section className={`${cardClass} flex flex-col gap-5`}>
       <span className={eyebrowClass}>Lead / Dificultad</span>
-      <div className="flex flex-wrap gap-x-10 gap-y-5">
+      {/* Mismo grid que Boulder. Son dos o tres cifras según haya altura
+          máxima, así que tres columnas en vez de cuatro. */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-3">
         <Figure value={String(totals.problems)} label="Rutas intentadas" />
         <Figure value={String(totals.tops)} label="Rutas completadas" />
         {totals.maxHeight !== null && (
@@ -352,11 +357,11 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
         <h1 className="mt-1 font-display text-4xl font-bold">{profile.fullName}</h1>
       </header>
 
-      {/* La tarjeta destacada de la página: filete de oro arriba y fondo con un
-          tinte de pine para que no se lea como una más de la lista. Grid y no
-          flex-wrap — con tres cifras, `flex-wrap` las amontonaba a la izquierda
-          y dejaba medio ancho vacío. */}
-      <section className={`${cardClass} relative overflow-hidden border-pine/30 bg-pine/[0.04]`}>
+      {/* La tarjeta destacada de la página. El filete de oro es lo que la
+          distingue; el fondo se queda en el hueso de `cardClass` como las demás.
+          Un tinte de pine encima del stone del `body` quedaba casi del color de
+          la página y la tarjeta se camuflaba en vez de resaltar. */}
+      <section className={`${cardClass} relative overflow-hidden`}>
         <span className="absolute inset-x-0 top-0 h-1 bg-gold" aria-hidden />
         <div className="mt-1 flex items-center gap-2">
           <PeakIcon />
