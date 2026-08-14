@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Crux · Cómo correr una competencia</title>
+    <title>Crux · Cómo organizar una competencia</title>
     <!--
       Un archivo, sin red. Se manda por WhatsApp y se abre en el gimnasio
       aunque no haya señal, que es justo el día que se necesita. Por eso las
@@ -48,7 +48,12 @@
         font-size: 0.95rem;
         color: var(--pine);
       }
-      .motivo { display: block; width: 100%; margin: 0.75rem 0 1.5rem; }
+      /* `non-scaling-stroke` mantiene el grosor en píxeles de pantalla. Sin
+         eso, en un celular el viewBox de 800 se encoge a la mitad y el trazo
+         quedaba por debajo de un píxel: la marca casi no se veía justo en el
+         aparato donde más se abre esto. */
+      .motivo { display: block; width: 100%; margin: 0.75rem 0 1.75rem; }
+      .motivo path { vector-effect: non-scaling-stroke; stroke-width: 2.25; }
 
       h1 {
         font-size: clamp(1.9rem, 7vw, 2.6rem);
@@ -69,6 +74,22 @@
         margin: 1.75rem 0 0.4rem;
       }
       .entrada { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+
+      /* La duración no es parte de la explicación, es un dato sobre el propio
+         documento. Va separada y en pequeño para que no se lea como si fuera
+         el cuarto paso de la frase de arriba. */
+      .duracion {
+        color: var(--muted);
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-top: 1px solid var(--cardborder);
+        padding-top: 0.75rem;
+        margin: 1.25rem 0 0;
+      }
+
+      /* La marca, cada vez que se nombra en el texto. */
+      .marca-inline { color: var(--pine); font-weight: 700; }
 
       p, li { margin: 0.6rem 0; }
       ul, ol { padding-left: 1.25rem; }
@@ -181,69 +202,68 @@
     <div class="hoja">
       <p class="marca">CRUX</p>
       <svg class="motivo" viewBox="0 0 800 90" aria-hidden="true">
-        <path d="M0,60 Q100,20 200,55 T400,50 T600,60 T800,45" fill="none" stroke="#B9C4AC" stroke-width="1.5" opacity="0.7" />
-        <path d="M0,72 Q100,35 200,68 T400,64 T600,74 T800,58" fill="none" stroke="#2F4A3E" stroke-width="1.5" opacity="0.5" />
-        <path d="M0,84 Q100,50 200,80 T400,78 T600,86 T800,72" fill="none" stroke="#E3A83B" stroke-width="1.5" opacity="0.6" />
+        <path d="M0,60 Q100,20 200,55 T400,50 T600,60 T800,45" fill="none" stroke="#B9C4AC" opacity="0.85" />
+        <path d="M0,72 Q100,35 200,68 T400,64 T600,74 T800,58" fill="none" stroke="#2F4A3E" opacity="0.6" />
+        <path d="M0,84 Q100,50 200,80 T400,78 T600,86 T800,72" fill="none" stroke="#E3A83B" opacity="0.75" />
       </svg>
 
-      <h1>Cómo correr una competencia con Crux</h1>
+      <h1>Cómo organizar una competencia con <b class="marca-inline">Crux</b></h1>
       <p class="entrada">
         Esto es todo lo que toca hacer, en el orden en que pasa: armas el
         evento unos días antes, abres inscripciones, y el día de la competencia
-        pones a tus jueces a capturar desde el celular mientras la sala mira la
-        tabla. Se lee en diez minutos.
+        tus jueces puntúan desde el celular mientras el público mira la tabla.
       </p>
+      <p class="duracion">Lectura de diez minutos.</p>
 
       <div class="tarjeta">
         <h3 style="margin-top: 0.75rem">Lo que necesitas</h3>
         <ul>
           <li>Una <strong>cuenta de organizador</strong>. Se crea con un código de acceso que te damos nosotros.</li>
-          <li>Un <strong>celular por juez</strong>, con la cámara para escanear los QR. No hay que instalar nada.</li>
-          <li>Una <strong>pantalla o proyector</strong> para la tabla de resultados.</li>
+          <li>Un <strong>celular por juez</strong> para escanear los QR. No hay que instalar nada.</li>
+          <li>Una <strong>pantalla</strong> para proyectar la tabla de resultados.</li>
           <li>Una <strong>impresora</strong>, para imprimir los QR y pegarlos en cada bloque el día de la competencia.</li>
         </ul>
       </div>
 
       <div class="ojo">
         <p style="font-size: 1.05rem">
-          <b>Los competidores no necesitan cuenta.</b> Ni cuenta, ni app, ni
-          instalar nada. Se inscriben desde un enlace que tú les pasas, y el
-          día del evento miran la tabla desde el navegador del celular. Es lo
-          primero que te van a preguntar, y la respuesta es esa.
+          <b>Los competidores no necesitan cuenta ni instalar nada.</b> Se
+          inscriben desde un enlace que tú les pasas, y el día del evento miran
+          la tabla de resultados desde el navegador de su celular.
         </p>
       </div>
 
       <h2>1. Crear tu cuenta</h2>
       <p>
-        Entra a <code>/sign-up</code>. Te pide nombre, correo, una contraseña
-        de mínimo 8 caracteres y un <span class="ui">Código de acceso</span>.
+        Entra a <code>https://crux-web-pi.vercel.app/sign-up</code>. Te pide
+        nombre, correo, una contraseña de mínimo 8 caracteres y un
+        <span class="ui">Código de acceso</span>.
       </p>
       <p>
         Ese código lo damos nosotros: por ahora las cuentas de organizador son
-        solo por invitación. Si no lo tienes, pídelo antes de sentarte a armar
-        el evento.
+        solo por invitación. Si no lo tienes, pídelo antes de armar el evento.
       </p>
       <p>
         <b>Sirve una sola vez.</b> Es tuyo, no lo reenvíes: en cuanto lo usas
-        queda gastado, y quien lo reciba después no va a poder entrar con él.
-        Si necesitas una segunda cuenta para el gimnasio, pide otro código.
+        se consume, y si alguien más lo intenta usar no va a poder entrar con
+        él.
       </p>
 
       <div class="ojo">
         <p>
-          <b>Todavía no hay «olvidé mi contraseña».</b> Si la pierdes, hoy la
-          única forma de recuperar la cuenta es escribirnos para que la
-          restablezcamos a mano. Guarda la contraseña en un sitio seguro:
-          entras al panel una vez cada varios meses, y siempre justo antes de
-          un evento.
+          <b>Todavía no hay «olvidé mi contraseña».</b> Si la pierdes, la única
+          forma de recuperar la cuenta es escribirnos a
+          <a href="mailto:crux.competencias@gmail.com">crux.competencias@gmail.com</a>
+          para que la restablezcamos internamente. Guarda la contraseña en un
+          sitio seguro.
         </p>
       </div>
 
       <h2>2. Crear el evento</h2>
       <p>
-        En <span class="ui">Tus eventos</span>, botón
-        <span class="ui">Crear evento</span>. Casi todos los campos se
-        explican solos; estos cuatro no:
+        En <span class="ui">Tus eventos</span>, espicha el botón
+        <span class="ui">Crear evento</span>. Casi todos los campos se explican
+        solos; estos cuatro son la excepción:
       </p>
 
       <dl>
@@ -257,9 +277,7 @@
         <dt>Enlace público</dt>
         <dd>
           Sale solo del nombre del evento: escribes «Copa Páramo 2026» y abajo
-          te va apareciendo <code>copa-paramo-2026</code>. No se edita, a
-          propósito — ese texto queda impreso en cada QR de la pared, así que
-          tiene que ser fijo y no puede quedar mal escrito. Si quieres otro
+          te va apareciendo <code>copa-paramo-2026</code>. Si quieres otro
           enlace, cámbiale el nombre al evento.
         </dd>
 
@@ -268,39 +286,46 @@
           Cuatro formatos, y <strong>no se puede cambiar después de crear el
           evento</strong>. En boulder: puntos IFSC de bloque, el conteo clásico
           de tops y zonas, o puntos por bloque estilo liga local. En dificultad:
-          altura máxima. Si tu liga tiene su propia forma de contar, escríbenos
+          altura máxima. Si tu liga tiene su propia forma de puntuar, escríbenos
           antes de crear el evento.
         </dd>
 
         <dt>Código para los jueces</dt>
         <dd>
-          Ocho letras y números que Crux genera solo (el botón
-          <span class="ui">Otro</span> te da otro). Quien escanee el QR de un
-          bloque tiene que escribirlo antes de poder registrar nada.
+          Ocho letras y números que <b class="marca-inline">Crux</b> genera solo
+          (el botón <span class="ui">Otro</span> genera uno nuevo). Quien
+          escanee el QR de un bloque tiene que escribir el código antes de poder
+          puntuar.
           <strong>Dáselo solo a tus jueces.</strong> Es lo único que separa a
           un juez de cualquiera que pase y escanee el código de la pared.
         </dd>
       </dl>
 
-      <p>
-        El nombre, la fecha, la fecha límite de inscripción, la zona horaria y
-        el código de jueces se cambian después desde
-        <span class="ui">Editar el evento</span>. El enlace público, la
-        modalidad y la forma de puntuar no se tocan: si alguno quedó mal y
-        todavía no has capturado ningún intento, borra el evento y créalo de
-        nuevo.
-      </p>
+      <p>Después de crear el evento:</p>
+
+      <ul>
+        <li>
+          <strong>Sí se cambian</strong> desde
+          <span class="ui">Editar el evento</span>: el nombre, la fecha, la
+          fecha límite de inscripción, la zona horaria y el código de jueces.
+        </li>
+        <li>
+          <strong>No se cambian</strong>: el enlace público, la modalidad y la
+          forma de puntuar. Si alguno quedó mal y todavía no has puntuado a
+          nadie, borra el evento y créalo de nuevo.
+        </li>
+      </ul>
+
       <p>
         Ojo con una cosa: cambiarle el nombre a un evento ya creado
         <strong>no</strong> le cambia el enlace. El enlace se congela al
-        crearlo, justamente porque ya lo compartiste o lo imprimiste.
+        crearlo.
       </p>
 
       <h2>3. Armar la competencia</h2>
       <p>
         Dentro del evento, en <span class="ui">Estructura de la
-        competencia</span>, se arma de afuera hacia adentro. En este orden, sin
-        saltarse ninguno:
+        competencia</span>, se arma de afuera hacia adentro, en este orden:
       </p>
 
       <ol class="paso">
@@ -329,21 +354,20 @@
           <b>Si escogiste puntos por bloque estilo liga:</b> a cada bloque le
           pones cuántos puntos da su top y, si quieres, cuántos da su zona. Un
           bloque sin puntos de zona es un bloque donde llegar a la zona no suma
-          nada — se puede hacer, pero avísale a la gente. La tabla pública
-          muestra los dos números bajo cada bloque para que nadie tenga que
-          adivinar.
+          nada. En la tabla pública de <em>ese</em> evento los dos números
+          aparecen bajo cada bloque, para que nadie tenga que adivinarlos. En
+          los demás formatos no salen, porque ahí los bloques no tienen puntos
+          propios.
         </p>
         <p>
           Si te equivocaste, el botón <b>Editar</b> de cada bloque corrige el
-          número, el nombre y los puntos. Cambiar los puntos no borra ningún
-          intento: la tabla se recalcula sola, así que si el evento ya empezó,
-          los puestos se pueden mover al guardar.
+          número, el nombre y los puntos.
         </p>
       </div>
 
       <h3>Imprimir los QR</h3>
       <p>
-        En cada bloque, botón <span class="ui">QR para juzgar</span>. Imprímelo
+        En cada bloque está el botón <span class="ui">QR para juzgar</span>. Imprímelo
         y pégalo junto al bloque, en la pared. El juez lo escanea y entra
         directo a puntuar ese bloque, sin buscar nada en un menú.
       </p>
@@ -391,39 +415,38 @@
         <span class="ui">¿Seguro?</span> antes de hacerlo).
       </p>
       <p>
-        Es lo que vas a usar cuando alguien se meta en Intermedio yendo a
-        Avanzado. El competidor <b>no puede corregirlo solo</b>: no tiene
-        cuenta, así que te va a escribir o te va a buscar en el mostrador.
+        Es lo que vas a usar cuando alguien se inscriba en la categoría
+        Intermedio cuando en verdad iba para Avanzado. El competidor
+        <b>no puede corregirlo solo</b>: no tiene cuenta, así que te tendrá que
+        contactar.
       </p>
 
       <div class="ojo">
         <p>
-          <b>Solo antes de que un juez le anote algo.</b> Apenas esa persona
-          tiene un intento capturado, ya no se puede mover ni quitar. Cada
-          intento queda amarrado a la persona y al bloque que escaló, y los
-          bloques son de una categoría: si la mueves, sus intentos quedan
-          apuntando a bloques que ya no son los suyos y la tabla muestra
-          cualquier cosa. Deja el listado cuadrado antes de arrancar.
+          <b>Aviso importante: punto de no retorno.</b> Apenas un juez le
+          puntúa algo a alguien, esa inscripción ya no se puede mover ni quitar
+          — queda guardada en el sistema y el evento arranca a correr. Deja el
+          listado cuadrado antes de empezar.
         </p>
       </div>
 
       <h2>5. El día del evento</h2>
       <ol class="paso">
         <li>
-          <strong>Proyecta la tabla.</strong> En el evento, tarjeta
-          <span class="ui">Tabla de resultados</span>. Se actualiza sola cada
-          pocos segundos y no pide cuenta: cualquiera en la sala la puede abrir
-          en su celular.
+          <strong>Proyecta la tabla.</strong> Copia el enlace de la tarjeta
+          <span class="ui">Tabla de resultados</span> del evento y ábrelo en el
+          computador conectado a la pantalla. Se actualiza sola cada pocos
+          segundos y no pide cuenta: cualquiera en la sala la puede abrir
+          también en su celular.
         </li>
         <li>
-          <strong>Reparte el código a los jueces.</strong> De viva voz o por
-          mensaje. No lo pegues en la pared junto al QR.
+          <strong>Reparte el código a los jueces.</strong> No lo pegues en la
+          pared junto al QR.
         </li>
         <li>
           <strong>Revisa los dorsales.</strong> En
-          <span class="ui">Inscritos</span>, que no quede nadie sin número si
-          vas a usarlos. Ahí también aparece quién llegó a inscribirse a última
-          hora.
+          <span class="ui">Inscritos</span> puedes verificar que no quede nadie
+          sin número, si se van a usar en la competencia.
         </li>
         <li>
           <strong>Manda a cada juez la sección de abajo</strong> de este
@@ -501,7 +524,8 @@
         </p>
         <p>
           Abajo de la pantalla siempre hay un contador:
-          <span class="ui">3 intentos por enviar</span> mientras falte algo,
+          <span class="ui">N intentos por enviar</span> —con el número que
+          falte en ese momento— mientras quede algo pendiente, y
           <span class="ui">Todo enviado</span> cuando ya subió todo.
           <strong>No cierres la página hasta que diga «Todo enviado».</strong>
         </p>
@@ -513,15 +537,18 @@
           que cuenta es el último. No tienes que avisarle a nadie.
         </p>
 
-        <h3>Dos cosas que confunden</h3>
+        <h3>Aclaraciones</h3>
         <ul>
           <li>
-            <strong>Los intentos son cuántos le costó lograrlo</strong>, no
-            cuántas veces se tiró. Si topó en el tercer intento, son 3.
+            <strong>El número de intentos es cuántos le tomó lograrlo</strong>,
+            no cuántas veces se tiró. Si topó en el tercer intento, son 3.
+            <br />
+            Y si no lo logró, no hay número que anotar: la casilla ni siquiera
+            aparece. El bloque queda como intentado y ya.
           </li>
           <li>
-            <strong>La altura se escribe con coma</strong>, como la dice todo el
-            mundo: <code>18,5</code>. Con punto también sirve.
+            <strong>La altura se escribe con punto o con coma</strong>: tanto
+            <code>18,5</code> como <code>18.5</code> funcionan.
           </li>
         </ul>
 
@@ -537,11 +564,10 @@
       <dl>
         <dt>El QR no abre nada en el celular del juez</dt>
         <dd>
-          El QR guarda la dirección con la que <em>tú</em> tenías abierto el
-          panel cuando lo generaste. Si lo generaste desde
-          <code>localhost</code>, ese QR solo funciona en tu computador.
-          Vuelve a abrir el panel desde la dirección que usan los demás y
-          genera el QR otra vez.
+          El QR se genera con la dirección desde la que tú tenías abierto el
+          panel. Si esa dirección no es la que ven los demás, el QR solo te
+          sirve a ti. Abre el panel desde el enlace normal de
+          <b class="marca-inline">Crux</b>, vuelve a generar el QR e imprímelo.
         </dd>
 
         <dt>«Ese código no corresponde a este evento»</dt>
@@ -553,7 +579,7 @@
 
         <dt>«Demasiados intentos seguidos»</dt>
         <dd>
-          Cinco códigos malos seguidos y ese celular queda bloqueado unos
+          Cinco códigos erróneos seguidos y ese celular queda bloqueado unos
           minutos. Es a propósito. Espera cinco minutos y vuelve a intentar,
           con el código correcto a la mano.
         </dd>
@@ -562,7 +588,7 @@
         <dd>
           Está en el panel del evento, siempre visible. Si se filtró, en
           <span class="ui">Editar el evento</span> lo cambias por otro. Los
-          celulars que ya estaban juzgando lo van a pedir de nuevo, y los
+          celulares que ya estaban juzgando lo van a pedir de nuevo, y los
           intentos que tengan sin enviar esperan ahí hasta que lo escriban: no
           se pierde ninguno.
         </dd>
@@ -581,22 +607,39 @@
 
       <h2>7. Después del evento</h2>
       <p>
-        La tabla queda pública en su enlace: puedes compartirla el mismo día o
-        la semana siguiente y sigue ahí. Desde cada fila se abre el historial
-        del competidor, que acumula lo que ha hecho en todos los eventos donde
-        se inscribió con el mismo documento.
+        Cuando termina la competencia no hay que cerrar nada ni exportar nada.
+        Todo se queda donde está y sigue funcionando.
       </p>
-      <p>
-        Los intentos no se borran nunca. Si alguien reclama un puesto tres
-        semanas después, el registro de qué juez capturó qué, y a qué hora,
-        sigue completo.
-      </p>
+
+      <div class="tarjeta">
+        <h3 style="margin-top: 0.75rem">La tabla no se vence</h3>
+        <p>
+          Queda pública en su mismo enlace. Puedes compartirla el mismo día o
+          la semana siguiente y sigue ahí, con los resultados finales.
+        </p>
+
+        <h3>Cada competidor acumula historial</h3>
+        <p>
+          Desde cada fila de la tabla se abre el historial de esa persona, con
+          todo lo que ha hecho en los eventos donde se inscribió con el mismo
+          documento. Es lo que hace que la segunda fecha de una liga valga más
+          que la primera.
+        </p>
+
+        <h3>Los intentos quedan guardados</h3>
+        <p>
+          No se borran solos. Si alguien reclama un puesto tres semanas
+          después, sigue registrado qué juez anotó qué y a qué hora.
+        </p>
+      </div>
 
       <footer>
         <p>
-          Crux · plataforma de competencias de escalada.<br />
-          ¿Algo no cuadra con lo que ves en pantalla? Escríbenos: este manual se
-          corrige.
+          <b class="marca-inline">Crux</b> · plataforma de competencias de
+          escalada.<br />
+          ¿Algo no cuadra con lo que ves en pantalla? Escríbenos a
+          <a href="mailto:crux.competencias@gmail.com">crux.competencias@gmail.com</a>:
+          este manual se actualiza.
         </p>
       </footer>
     </div>

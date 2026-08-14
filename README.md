@@ -107,7 +107,8 @@ inscritos y una sesión entera de intentos para que las gráficas digan algo.
 
 Despliegue (Vercel + Neon), variables de entorno e invitaciones de organizador:
 [`docs/despliegue.md`](docs/despliegue.md). Manual de uso para organizadores y
-jueces: [`docs/manual.html`](docs/manual.html).
+jueces: [`apps/web/public/manual.html`](apps/web/public/manual.html), servido en
+`/manual.html`.
 
 ## Estado
 

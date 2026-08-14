@@ -45,7 +45,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ display: 'flex', fontSize: 28, color: MUTED }}>
-          Competencias de escalada, en español y en pesos.
+          Competencias de escalada.
         </div>
 
         {/* Las mismas curvas de la portada, con el mismo adelantamiento: la
