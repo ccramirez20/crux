@@ -165,6 +165,12 @@ const updateEventInputSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable(),
+  // Null es "sin fecha límite": el enlace no se cierra solo. Es lo que tienen
+  // los eventos creados antes de que la columna existiera.
+  registrationDeadline: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
 });
 type UpdateEventInput = z.infer<typeof updateEventInputSchema>;
 

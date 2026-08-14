@@ -48,6 +48,12 @@ describe('events', () => {
   it('requires an ownerId referencing the auth user table', () => {
     expect(events.ownerId.notNull).toBe(true);
   });
+
+  // Nullable a propósito: sin fecha límite el enlace no se cierra, que es como
+  // quedaron los eventos creados antes de que la columna existiera.
+  it('leaves the registration deadline optional', () => {
+    expect(events.registrationDeadline.notNull).toBe(false);
+  });
 });
 
 describe('categories', () => {
@@ -65,12 +71,15 @@ describe('registrations', () => {
     expect(registrations.categoryId.notNull).toBe(true);
   });
 
-  it('enforces one registration per athlete per category', () => {
+  // Por evento y no por categoría: con la restricción por categoría, la misma
+  // persona podía inscribirse en Masculino Intermedio y volver a entrar al
+  // enlace para inscribirse también en Avanzado. Las dos pasaban.
+  it('enforces one registration per athlete per event', () => {
     const { uniqueConstraints } = getTableConfig(registrations);
     const columnSets = uniqueConstraints.map((uc) =>
       uc.columns.map((c) => c.name).sort().join(','),
     );
-    expect(columnSets).toContain('athlete_id,category_id');
+    expect(columnSets).toContain('athlete_id,event_id');
   });
 });
 

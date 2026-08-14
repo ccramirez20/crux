@@ -18,18 +18,21 @@ export function EventForm({
   eventId,
   name: initialName,
   date: initialDate,
+  registrationDeadline: initialDeadline,
   timezone: initialTimezone,
   judgeCode: initialJudgeCode,
 }: {
   eventId: string;
   name: string;
   date: string | null;
+  registrationDeadline: string | null;
   timezone: string;
   judgeCode: string | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(initialName);
   const [date, setDate] = useState(initialDate ?? '');
+  const [deadline, setDeadline] = useState(initialDeadline ?? '');
   const [timezone, setTimezone] = useState(initialTimezone);
   const [judgeCode, setJudgeCode] = useState(initialJudgeCode ?? generateCode());
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +52,7 @@ export function EventForm({
       eventId,
       name,
       date: date === '' ? null : date,
+      registrationDeadline: deadline === '' ? null : deadline,
       timezone,
       judgeCode,
     });
@@ -104,6 +108,24 @@ export function EventForm({
         <p className="text-xs text-muted">
           Con esta fecha se calcula la edad de cada competidor. Cambiarla ahora no vuelve a
           revisar a quien ya se inscribió: su categoría se decidió con la fecha que había ese día.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="event-deadline" className={labelClass}>
+          Inscripciones hasta
+        </label>
+        <input
+          id="event-deadline"
+          type="date"
+          value={deadline}
+          onChange={(event) => setDeadline(event.target.value)}
+          className={fieldClass}
+        />
+        <p className="text-xs text-muted">
+          Último día que el enlace acepta inscripciones, contando el día entero en la zona
+          horaria del evento. Déjalo vacío y no se cierra nunca. Si alguien llega tarde y quieres
+          dejarlo entrar, corre la fecha y el enlace vuelve a abrir.
         </p>
       </div>
 

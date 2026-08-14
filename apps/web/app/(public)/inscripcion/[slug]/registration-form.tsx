@@ -80,6 +80,13 @@ export function RegistrationForm({
           El día del evento te asignan un dorsal y con ese número los jueces registran tus
           intentos. No necesitas crear cuenta ni instalar nada.
         </p>
+        {/* Se dice aquí y no solo cuando alguien falla al reintentar: quien se
+            equivocó de categoría lo nota justo al leer en cuál quedó, y sin
+            este aviso vuelve al enlace a intentar corregirlo por su cuenta —
+            cosa que no puede hacer, porque no hay cuenta de atleta. */}
+        <p className="text-sm text-bark">
+          ¿Te equivocaste de categoría? Avísale a quien organiza: solo ellos pueden cambiarte.
+        </p>
       </div>
     );
   }

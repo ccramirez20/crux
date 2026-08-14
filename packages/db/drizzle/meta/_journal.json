@@ -43,6 +43,13 @@
       "when": 1786711372262,
       "tag": "0005_brainy_earthquake",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786729699308,
+      "tag": "0006_flashy_doorman",
+      "breakpoints": true
     }
   ]
 }
