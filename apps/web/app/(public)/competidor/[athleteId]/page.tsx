@@ -217,7 +217,9 @@ function TrendTable({ trend }: { trend: Trend }) {
   );
 }
 
-const PODIUM_TONE = ['text-gold', 'text-silver', 'text-bronze'];
+// Las variantes de texto, no las de relleno: aquí el color son cifras, y el oro
+// y la plata de los rellenos no llegan al contraste mínimo como letras.
+const PODIUM_TONE = ['text-gold-ink', 'text-silver-ink', 'text-bronze'];
 
 /**
  * Oro, plata o bronce para el 1.º, 2.º y 3.º; pine para el resto.
