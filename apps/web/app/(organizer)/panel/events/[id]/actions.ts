@@ -3,10 +3,22 @@
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { GENDERS, ROUND_TYPES, type RoundType } from '@crux/core';
-import { and, categories, eq, events, problems, registrations, rounds } from '@crux/db';
+import { GENDERS, ROUND_TYPES, isEligible, parseDateOnly, type RoundType } from '@crux/core';
+import {
+  and,
+  athletes,
+  attempts,
+  categories,
+  count,
+  eq,
+  events,
+  problems,
+  registrations,
+  rounds,
+} from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
+import { isUniqueViolation } from '@/lib/db-errors';
 import { leagueBlockNeedsPoints } from '@/lib/problem-points';
 
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -326,6 +338,153 @@ export async function numberCategory(input: NumberCategoryInput): Promise<Action
     next += 1;
   }
 
+  revalidatePath(`/panel/events/${eventId}`);
+  return { ok: true };
+}
+
+// Una inscripción se puede mover o quitar **solo mientras ningún juez haya
+// capturado nada suyo**. No es una precaución: un intento apunta a la
+// inscripción y a un bloque a la vez, y ese bloque cuelga de una ronda que
+// pertenece a una categoría. Moverla con intentos encima los dejaría señalando
+// bloques de la categoría vieja, y la tabla pública leería mal. Quitarla los
+// dejaría huérfanos. Esa es también la regla del repo: el intento es el hecho y
+// no se edita.
+//
+// Sirve justo cuando hace falta — estos errores se corrigen antes de que
+// empiece a escalar nadie, que es cuando todavía no hay intentos.
+async function attemptCount(db: ReturnType<typeof getDb>, registrationId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: count(attempts.id) })
+    .from(attempts)
+    .where(eq(attempts.registrationId, registrationId));
+  return row?.total ?? 0;
+}
+
+/** La inscripción, su evento y el dueño, en un viaje. null si no existe. */
+async function registrationOwner(db: ReturnType<typeof getDb>, eventId: string, registrationId: string) {
+  const [row] = await db
+    .select({ ownerId: events.ownerId, athleteId: registrations.athleteId, eventDate: events.date })
+    .from(registrations)
+    .innerJoin(events, eq(registrations.eventId, events.id))
+    .where(and(eq(registrations.id, registrationId), eq(registrations.eventId, eventId)));
+  return row;
+}
+
+const registrationRefSchema = z.object({
+  eventId: z.string().uuid(),
+  registrationId: z.string().uuid(),
+});
+
+const moveRegistrationInputSchema = registrationRefSchema.extend({
+  categoryId: z.string().uuid(),
+});
+type MoveRegistrationInput = z.infer<typeof moveRegistrationInputSchema>;
+
+/**
+ * Cambia a un inscrito de categoría dentro del mismo evento.
+ *
+ * La inscripción pública ya filtra por edad y género, así que el error que esto
+ * arregla es entre categorías que la persona **sí** puede escoger: meterse en
+ * Avanzado cuando iba a Intermedio. Por eso vuelve a pasar por `isEligible` en
+ * vez de confiar en que cualquier categoría del evento sirve.
+ */
+export async function moveRegistration(input: MoveRegistrationInput): Promise<ActionResult> {
+  const parsed = moveRegistrationInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Datos inválidos.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+  }
+
+  const { eventId, registrationId, categoryId } = parsed.data;
+  const db = getDb();
+  const row = await registrationOwner(db, eventId, registrationId);
+  if (!row || row.ownerId !== session.user.id) {
+    return { ok: false, error: 'Esa inscripción no existe o no te pertenece.' };
+  }
+
+  if ((await attemptCount(db, registrationId)) > 0) {
+    return {
+      ok: false,
+      error: 'Ya tiene intentos capturados: cambiarlo de categoría dejaría esos intentos sin sentido.',
+    };
+  }
+
+  const [target] = await db
+    .select({
+      id: categories.id,
+      eventId: categories.eventId,
+      gender: categories.gender,
+      minAge: categories.minAge,
+      maxAge: categories.maxAge,
+    })
+    .from(categories)
+    .where(eq(categories.id, categoryId));
+  if (!target || target.eventId !== eventId) {
+    return { ok: false, error: 'Esa categoría no existe para este evento.' };
+  }
+
+  const [athlete] = await db
+    .select({ birthDate: athletes.birthDate, gender: athletes.gender })
+    .from(athletes)
+    .where(eq(athletes.id, row.athleteId));
+  // Sin fecha o sin género no hay con qué comprobar elegibilidad. Se deja pasar
+  // en vez de bloquear: son datos que el organizador puede haber cargado a
+  // medias, y aquí ya está decidiendo a mano.
+  if (athlete?.birthDate && athlete.gender) {
+    const referenceDate = row.eventDate ? parseDateOnly(row.eventDate) : undefined;
+    if (!isEligible(target, parseDateOnly(athlete.birthDate), athlete.gender, referenceDate)) {
+      return { ok: false, error: 'Esa categoría no corresponde a su edad o género.' };
+    }
+  }
+
+  try {
+    await db.update(registrations).set({ categoryId }).where(eq(registrations.id, registrationId));
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return { ok: false, error: 'Ya está inscrito en esa categoría.' };
+    }
+    throw error;
+  }
+
+  revalidatePath(`/panel/events/${eventId}`);
+  return { ok: true };
+}
+
+type RemoveRegistrationInput = z.infer<typeof registrationRefSchema>;
+
+/** Quita a alguien del listado. Solo antes de que un juez le capture algo. */
+export async function removeRegistration(input: RemoveRegistrationInput): Promise<ActionResult> {
+  const parsed = registrationRefSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Datos inválidos.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+  }
+
+  const { eventId, registrationId } = parsed.data;
+  const db = getDb();
+  const row = await registrationOwner(db, eventId, registrationId);
+  if (!row || row.ownerId !== session.user.id) {
+    return { ok: false, error: 'Esa inscripción no existe o no te pertenece.' };
+  }
+
+  if ((await attemptCount(db, registrationId)) > 0) {
+    return {
+      ok: false,
+      error: 'Ya tiene intentos capturados: quitarlo borraría el registro de un juez.',
+    };
+  }
+
+  // El atleta se queda: existe por documento y puede estar inscrito en otros
+  // eventos. Lo que se quita es su inscripción a este.
+  await db.delete(registrations).where(eq(registrations.id, registrationId));
   revalidatePath(`/panel/events/${eventId}`);
   return { ok: true };
 }
