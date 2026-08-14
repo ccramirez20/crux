@@ -447,14 +447,12 @@ export async function moveRegistration(input: MoveRegistrationInput): Promise<Ac
     }
   }
 
-  try {
-    await db.update(registrations).set({ categoryId }).where(eq(registrations.id, registrationId));
-  } catch (error) {
-    if (isUniqueViolation(error)) {
-      return { ok: false, error: 'Ya está inscrito en esa categoría.' };
-    }
-    throw error;
-  }
+  // Sin try/catch de unicidad: la restricción es por (atleta, evento), y mover
+  // solo cambia la categoría de una fila que ya existe — el atleta y el evento
+  // siguen siendo los mismos, así que no hay con qué chocar. Un error de base
+  // aquí es inesperado y debe subir, no convertirse en un mensaje amable que
+  // esconda el problema real.
+  await db.update(registrations).set({ categoryId }).where(eq(registrations.id, registrationId));
 
   revalidatePath(`/panel/events/${eventId}`);
   return { ok: true };
