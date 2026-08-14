@@ -137,12 +137,12 @@ function TrendRow({
   return (
     <>
       <span className="self-center text-sm text-muted">{label}</span>
-      <span className="flex items-baseline justify-end gap-1.5 font-display text-2xl font-bold tabular-nums">
+      <span className="flex items-baseline justify-center gap-1.5 font-display text-2xl font-bold tabular-nums">
         {nowValue}
         {better && <span className="text-base text-pine" aria-label="mejor que la anterior">▲</span>}
         {worse && <span className="text-base text-bronze" aria-label="peor que la anterior">▼</span>}
       </span>
-      <span className="self-center text-right font-display text-lg tabular-nums text-muted">
+      <span className="self-center text-center font-display text-lg tabular-nums text-muted">
         {beforeValue}
       </span>
     </>
@@ -168,18 +168,22 @@ function TrendTable({ trend }: { trend: Trend }) {
   const rate = (t: typeof a) => (t.attemptsPerTop === null ? '—' : t.attemptsPerTop.toFixed(1));
 
   return (
+    // Tres columnas iguales y cifras centradas bajo su encabezado. Con la
+    // columna del rótulo en `1fr` se quedaba con todo el ancho sobrante y
+    // empujaba los números contra el borde derecho, dejando un hueco en medio
+    // que parecía que faltaba algo por llegar.
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-[1fr_auto_auto] items-end gap-x-4 gap-y-1">
+      <div className="grid grid-cols-3 items-end gap-x-4 gap-y-1">
         <span />
-        <span className="text-right text-sm font-semibold">{trend.latest.eventName}</span>
-        <span className="text-right text-sm text-muted">{trend.previous.eventName}</span>
+        <span className="text-center text-sm font-semibold">{trend.latest.eventName}</span>
+        <span className="text-center text-sm text-muted">{trend.previous.eventName}</span>
 
         <span />
-        <span className={`${eyebrowClass} text-right`}>Última</span>
-        <span className={`${eyebrowClass} text-right`}>Anterior</span>
+        <span className={`${eyebrowClass} text-center`}>Última</span>
+        <span className={`${eyebrowClass} text-center`}>Anterior</span>
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-3 border-t border-cardborder pt-3">
+      <div className="grid grid-cols-3 gap-x-4 gap-y-3 border-t border-cardborder pt-3">
         <TrendRow
           label="Arriba de tu categoría"
           now={now}
@@ -216,6 +220,17 @@ function TrendTable({ trend }: { trend: Trend }) {
 const PODIUM_TONE = ['text-gold', 'text-silver', 'text-bronze'];
 
 /**
+ * Oro, plata o bronce para el 1.º, 2.º y 3.º; pine para el resto.
+ *
+ * Con el `?? ` de por medio la búsqueda es total: fuera del podio el índice no
+ * existe y devuelve el color normal, en vez de meter un `undefined` dentro de
+ * una lista de clases.
+ */
+function podiumTone(rank: number): string {
+  return PODIUM_TONE[rank - 1] ?? 'text-pine';
+}
+
+/**
  * Dónde quedó dentro del campo, dibujado. Es lo que hace comparables dos
  * competencias de tamaño distinto, y en barra se ve de una: un 4.º de 12 llena
  * más que un 8.º de 14 aunque el segundo número sea más grande.
@@ -245,9 +260,7 @@ function BestResult({ event }: { event: AthleteEventResult }) {
     <li className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-baseline gap-x-3">
         <span
-          className={`font-display text-3xl font-bold tabular-nums ${
-            event.rank! <= 3 ? PODIUM_TONE[event.rank! - 1] : ''
-          }`}
+          className={`font-display text-3xl font-bold tabular-nums ${podiumTone(event.rank!)}`}
         >
           {ordinal(event.rank!)}
         </span>
@@ -441,12 +454,16 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
             tone="text-pine"
             large
           />
+          {/* Oro, plata o bronce cuando el mejor puesto es de podio: se ve de una
+              si llegó al cajón, sin leer la cifra. Misma tripleta que ya usan
+              "tus mejores resultados" abajo, así que las dos secciones dicen lo
+              mismo con el mismo color. Fuera del podio se queda en pine. */}
           {career.bestRank !== null && (
             <Figure
               value={ordinal(career.bestRank)}
               label="Mejor puesto"
               detail={career.bestRankEvent ?? undefined}
-              tone="text-pine"
+              tone={podiumTone(career.bestRank)}
               large
             />
           )}
