@@ -1,8 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { GENDERS, isEligible, parseDateOnly } from '@crux/core';
-import { athletes, categories, eq, events, registrations } from '@crux/db';
+import { GENDERS, isEligible, isRegistrationOpen, parseDateOnly } from '@crux/core';
+import { and, athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
 
@@ -35,12 +35,22 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
       minAge: categories.minAge,
       maxAge: categories.maxAge,
       eventDate: events.date,
+      timezone: events.timezone,
+      registrationDeadline: events.registrationDeadline,
     })
     .from(categories)
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(eq(categories.id, categoryId));
   if (!category || category.eventId !== eventId) {
     return { ok: false, error: 'Esa categoría no existe para este evento.' };
+  }
+
+  // Se vuelve a mirar aquí y no solo al pintar la página: entre que alguien
+  // abrió el formulario y le dio a enviar puede haber pasado la medianoche, y
+  // la página es pública, así que el envío puede llegar sin haber pasado por
+  // ella.
+  if (!isRegistrationOpen(category.registrationDeadline, category.timezone)) {
+    return { ok: false, error: 'Las inscripciones para este evento ya se cerraron.' };
   }
 
   const referenceDate = category.eventDate ? parseDateOnly(category.eventDate) : undefined;
@@ -105,7 +115,21 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
     await db.insert(registrations).values({ athleteId, eventId, categoryId });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { ok: false, error: 'Ya estás inscrito en esta categoría.' };
+      // Se dice en qué categoría quedó y qué hacer, porque el caso real no es
+      // alguien insistiendo: es alguien que dudó, se inscribió en la categoría
+      // que no era y vuelve a entrar creyendo que puede corregirlo solo. No
+      // puede — no hay cuenta de atleta — así que la salida es avisarle al
+      // organizador, que sí tiene cómo moverlo.
+      const [previa] = await db
+        .select({ categoryName: categories.name })
+        .from(registrations)
+        .innerJoin(categories, eq(registrations.categoryId, categories.id))
+        .where(and(eq(registrations.athleteId, athleteId), eq(registrations.eventId, eventId)));
+      const donde = previa ? ` en ${previa.categoryName}` : '';
+      return {
+        ok: false,
+        error: `Ya estás inscrito en este evento${donde}. Si te equivocaste de categoría, pídele el cambio a quien organiza.`,
+      };
     }
     throw error;
   }

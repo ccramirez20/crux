@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { isRegistrationOpen } from '@crux/core';
 import { categories, eq, events } from '@crux/db';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
@@ -19,6 +20,8 @@ export default async function InscripcionPage({
       name: events.name,
       date: events.date,
       discipline: events.discipline,
+      timezone: events.timezone,
+      registrationDeadline: events.registrationDeadline,
     })
     .from(events)
     .where(eq(events.slug, slug));
@@ -51,7 +54,17 @@ export default async function InscripcionPage({
           {formatEventDate(event.date) ? ` · ${formatEventDate(event.date)}` : ''}
         </p>
       </div>
-      {eventCategories.length === 0 ? (
+      {!isRegistrationOpen(event.registrationDeadline, event.timezone) ? (
+        // Se dice la fecha, no solo que cerró: quien llega tarde necesita saber
+        // si se le pasó por un día o por un mes, y a quién acudir.
+        <p className="max-w-sm rounded-lg border border-cardborder bg-card px-4 py-5 text-center text-sm text-muted">
+          Las inscripciones se cerraron
+          {formatEventDate(event.registrationDeadline)
+            ? ` el ${formatEventDate(event.registrationDeadline)}`
+            : ''}
+          . Si necesitas entrar, habla con quien organiza.
+        </p>
+      ) : eventCategories.length === 0 ? (
         <p className="max-w-sm rounded-lg border border-cardborder bg-card px-4 py-5 text-center text-sm text-muted">
           Las inscripciones todavía no están abiertas: quien organiza aún no ha creado las
           categorías. Vuelve a intentarlo más tarde.

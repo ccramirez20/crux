@@ -54,6 +54,10 @@ export const events = pgTable('events', {
   judgeCode: text('judge_code'),
   timezone: text('timezone').notNull(),
   date: date('date'),
+  // Último día que acepta inscripciones, en la zona del evento. Null = abierto
+  // hasta que el organizador ponga una fecha, que es como quedaron los eventos
+  // creados antes de que esta columna existiera.
+  registrationDeadline: date('registration_deadline'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -120,7 +124,14 @@ export const registrations = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [unique().on(table.athleteId, table.categoryId)],
+  // Una inscripción por atleta y evento, no por categoría. Con la restricción
+  // por categoría, la misma persona podía inscribirse en Masculino Intermedio y
+  // volver a entrar al enlace para inscribirse también en Avanzado: las dos
+  // pasaban y salía dos veces en el listado. Por evento es más fuerte y absorbe
+  // a la anterior — dos filas en la misma categoría también son dos en el mismo
+  // evento. Va en la base y no solo en el código porque dos envíos simultáneos
+  // se cuelan por cualquier comprobación previa.
+  (table) => [unique().on(table.athleteId, table.eventId)],
 );
 
 // The newest attempt for a (registrationId, problemId) pair — i.e. the one a

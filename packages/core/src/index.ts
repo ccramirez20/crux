@@ -43,6 +43,7 @@ export interface Attempt {
 }
 
 export { isEligible, parseDateOnly } from './eligibility';
+export { isRegistrationOpen, todayIn } from './registration-window';
 export type { EligibilityCategory } from './eligibility';
 
 export { ok, err } from './result';

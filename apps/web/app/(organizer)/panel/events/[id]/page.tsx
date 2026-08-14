@@ -44,6 +44,7 @@ export default async function EventDetailPage({
       scoringFormat: events.scoringFormat,
       discipline: events.discipline,
       date: events.date,
+      registrationDeadline: events.registrationDeadline,
       slug: events.slug,
       judgeCode: events.judgeCode,
       timezone: events.timezone,
@@ -192,6 +193,7 @@ export default async function EventDetailPage({
           eventId={event.id}
           name={event.name}
           date={event.date}
+          registrationDeadline={event.registrationDeadline}
           timezone={event.timezone}
           judgeCode={event.judgeCode}
         />
