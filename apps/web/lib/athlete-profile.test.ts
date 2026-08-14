@@ -65,7 +65,14 @@ function round(overrides: Partial<LeaderboardRound> = {}): LeaderboardRound {
 /** Un evento con una categoría y las rondas que se le pasen. */
 function payload(rounds: LeaderboardRound[], category: Partial<LeaderboardCategory> = {}): LeaderboardPayload {
   return {
-    event: { name: 'Copa', slug: 'copa', discipline: 'boulder', scoringFormat: 'classic_tops_zones', date: null },
+    event: {
+      name: 'Copa',
+      slug: 'copa',
+      discipline: 'boulder',
+      scoringFormat: 'classic_tops_zones',
+      date: null,
+      timezone: 'America/Bogota',
+    },
     categories: [{ id: 'cat-1', name: 'Open Femenina', rounds, ...category }],
     updatedAt: '2026-08-12T00:00:00Z',
   };

@@ -17,6 +17,7 @@ export interface LeaderboardEventInfo {
   discipline: string;
   scoringFormat: string;
   date: string | null;
+  timezone: string;
 }
 
 export interface TreeRow {
@@ -350,6 +351,7 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
       discipline: events.discipline,
       scoringFormat: events.scoringFormat,
       date: events.date,
+      timezone: events.timezone,
     })
     .from(events)
     .where(eq(events.slug, slug));
@@ -420,6 +422,7 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
       discipline: event.discipline,
       scoringFormat: event.scoringFormat,
       date: event.date,
+      timezone: event.timezone,
     },
     treeRows,
     eventRegistrations,
