@@ -235,7 +235,7 @@ function ProjectedTable({
           nivel del encabezado, en grande y calladas. Solo aparece cuando de
           verdad sobra espacio, así que en una clasificatoria de veinticinco no
           existe. */}
-      <PanelFill free={scale.free} round={round} unit={unit.singular} isPodiumRound={isPodiumRound} now={now} />
+      <PanelFill free={scale.free} round={round} unit={unit.singular} now={now} />
     </div>
   );
 }
@@ -251,8 +251,9 @@ function ProjectedTable({
  *
  * La salida no es estirar —deformaría las curvas— sino separar los carriles
  * hasta que la proporción de la gráfica se acerque a la de su caja. Se apunta al
- * 90% y el carril tiene tope de 170: llenar el 100% con cuatro finalistas deja
- * las líneas a media pantalla una de otra, que se ve estirado, no lleno.
+ * 90% y el carril tiene tope de 96: con cuatro finalistas, llenar el panel deja
+ * las líneas a media pantalla una de otra y la gráfica se ve estirada. Mejor que
+ * mida lo que mide, y que debajo vaya el podio.
  */
 const BUMP_VIEWBOX_WIDTH = 1250;
 const BUMP_PAD = 78 + 82;
@@ -273,7 +274,7 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
       }
       const targetHeight = BUMP_VIEWBOX_WIDTH * (element.clientHeight / element.clientWidth) * 0.9;
       const ideal = (targetHeight - BUMP_PAD) / (rows - 1);
-      const chosen = Math.round(Math.max(22, Math.min(170, ideal)));
+      const chosen = Math.round(Math.max(22, Math.min(96, ideal)));
       setLane(chosen);
       const drawn = BUMP_PAD + (rows - 1) * chosen;
       setLeftover(element.clientHeight - (element.clientWidth * drawn) / BUMP_VIEWBOX_WIDTH);
@@ -308,7 +309,8 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
  * Nada de esto aparece si no cabe entero, así que una clasificatoria de
  * veinticinco no ve ninguno y la tabla se queda con toda la tarjeta.
  */
-const FILL = { podium: 190, pulse: 92, motif: 76 };
+/** Lo que ocupa cada pieza, medido contra lo que ocupa de verdad en pantalla. */
+const FILL = { capturesHeader: 34, capture: 44, podium: 190, motif: 76 };
 
 function Podium({ round }: { round: LeaderboardRound }) {
   const three = round.rows.slice(0, 3);
@@ -358,68 +360,90 @@ function sinceLabel(iso: string, now: number): string {
   return `hace ${Math.round(seconds / 3600)} h`;
 }
 
-function Pulse({ round, unit, now }: { round: LeaderboardRound; unit: string; now: number }) {
-  const last = round.lastAttempt;
-  if (!last) {
+/**
+ * Lo último que capturó un juez, hasta tres.
+ *
+ * Es lo que hace que una pared se sienta viva entre refrescos: alguien acaba de
+ * escalar y la sala lo ve sin buscar su fila. Cuántas se muestran lo decide el
+ * alto que sobre — con una final de cuatro caben las tres, con una
+ * clasificatoria llena no cabe ninguna y no pasa nada.
+ */
+function RecentCaptures({
+  captures,
+  unit,
+  now,
+}: {
+  captures: LeaderboardRound['lastAttempts'];
+  unit: string;
+  now: number;
+}) {
+  if (captures.length === 0) {
     return null;
   }
-  const what = last.top
-    ? `hizo TOP en ${unit === 'ruta' ? 'la' : 'el'} ${unit.slice(0, 1).toUpperCase()}${last.problemNumber}`
-    : last.zone
-      ? `llegó a la zona en ${unit === 'ruta' ? 'la' : 'el'} ${unit.slice(0, 1).toUpperCase()}${last.problemNumber}`
-      : `intentó ${unit === 'ruta' ? 'la' : 'el'} ${unit.slice(0, 1).toUpperCase()}${last.problemNumber}`;
-  const goes = last.attempts ? ` · ${last.attempts} ${last.attempts === 1 ? 'intento' : 'intentos'}` : '';
+  const article = unit === 'ruta' ? 'la' : 'el';
+  const mark = (n: number) => `${unit.slice(0, 1).toUpperCase()}${n}`;
   return (
-    <div className="rounded-xl border border-cardborder bg-stone/50 px-5 py-3">
+    <div className="flex flex-col gap-2">
       <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
         <span className="h-2 w-2 animate-pulse rounded-full bg-gold" aria-hidden />
-        Última captura · {sinceLabel(last.capturedAt, now)}
+        {captures.length === 1 ? 'Última captura' : 'Últimas capturas'}
       </span>
-      <span className="mt-1 block font-display text-xl font-semibold leading-tight text-ink">
-        {last.athleteName} {what}
-        <span className="text-muted">{goes}</span>
-      </span>
+      <ul className="flex flex-col gap-1.5">
+        {captures.map((capture) => {
+          const what = capture.top
+            ? `hizo TOP en ${article} ${mark(capture.problemNumber)}`
+            : capture.zone
+              ? `llegó a la zona en ${article} ${mark(capture.problemNumber)}`
+              : `intentó ${article} ${mark(capture.problemNumber)}`;
+          const goes = capture.attempts
+            ? ` · ${capture.attempts} ${capture.attempts === 1 ? 'intento' : 'intentos'}`
+            : '';
+          return (
+            <li
+              key={`${capture.athleteName}-${capture.capturedAt}`}
+              className="flex items-baseline justify-between gap-4 rounded-lg bg-stone/50 px-4 py-2"
+            >
+              <span className="min-w-0 truncate font-display text-lg font-semibold leading-tight text-ink">
+                {capture.athleteName} {what}
+                <span className="font-normal text-muted">{goes}</span>
+              </span>
+              <span className="shrink-0 text-sm text-muted">{sinceLabel(capture.capturedAt, now)}</span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
 
+/**
+ * Debajo de la tabla van las últimas capturas, y nada más.
+ *
+ * Una sola cosa y no tres: apilar podio, captura y olas dejaba la tarjeta
+ * cargada, y las olas eran justo lo único que no decía nada. El podio se mudó
+ * al panel de la gráfica, que es donde de verdad sobra sitio.
+ */
 function PanelFill({
   free,
   round,
   unit,
-  isPodiumRound,
   now,
 }: {
   free: number;
   round: LeaderboardRound;
   unit: string;
-  isPodiumRound: boolean;
   now: number;
 }) {
-  let left = free;
-  const pieces: React.ReactNode[] = [];
-  if (isPodiumRound && left >= FILL.podium && round.rows.length >= 3) {
-    pieces.push(<Podium key="podium" round={round} />);
-    left -= FILL.podium;
-  }
-  if (round.lastAttempt && left >= FILL.pulse) {
-    pieces.push(<Pulse key="pulse" round={round} unit={unit} now={now} />);
-    left -= FILL.pulse;
-  }
-  // Las olas solo si no entró nada más. Con el podio y la última captura
-  // encima, la tarjeta ya tiene tres cosas y se siente cargada — y las olas son
-  // justamente lo único de las tres que no dice nada.
-  if (pieces.length === 0 && left >= FILL.motif) {
-    pieces.push(
-      <div key="motif" className="pointer-events-none px-6 opacity-45" aria-hidden="true">
-        <TopographicMotif />
-      </div>,
-    );
-  }
-  if (pieces.length === 0) {
+  const room = Math.floor((free - FILL.capturesHeader) / FILL.capture);
+  const howMany = Math.max(0, Math.min(room, round.lastAttempts.length));
+  if (howMany === 0) {
     return null;
   }
-  return <div className="mt-6 flex flex-col justify-end gap-4">{pieces}</div>;
+  return (
+    <div className="mt-6">
+      <RecentCaptures captures={round.lastAttempts.slice(0, howMany)} unit={unit} now={now} />
+    </div>
+  );
 }
 
 /** Las tres cifras de la ronda en una tira y no en tres tarjetas: en una fila de
@@ -654,11 +678,19 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                       {...(bumpLane === undefined ? {} : { laneOverride: bumpLane })}
                       {...inert}
                     />
-                    {bumpLeftover > 130 && (
+                    {/* Lo que sobra debajo de la gráfica: el podio si esto es
+                        una final —es el momento del día y aquí tiene sitio
+                        propio— y si no, las olas. La gráfica no se estira para
+                        taparlo: con cuatro finalistas, estirada se ve peor. */}
+                    {isPodiumRound && bumpLeftover >= FILL.podium && round.rows.length >= 3 ? (
+                      <div className="mt-6">
+                        <Podium round={round} />
+                      </div>
+                    ) : bumpLeftover >= FILL.motif ? (
                       <div className="pointer-events-none mt-6 px-10 opacity-45" aria-hidden="true">
                         <TopographicMotif />
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
                 {activeSlide === 'detail' && (

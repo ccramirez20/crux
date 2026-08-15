@@ -118,7 +118,7 @@ export interface ProblemStats {
 }
 
 /**
- * La última captura que entró a la ronda.
+ * Las últimas capturas que entraron a la ronda.
  *
  * No cambia ningún puntaje —eso ya lo dice la tabla— pero es lo único que hace
  * que una pared proyectada se sienta viva entre actualizaciones: alguien acaba
@@ -144,7 +144,7 @@ export interface LeaderboardRound {
   error: string | null;
   timeline: TimelinePoint[];
   problemStats: ProblemStats[];
-  lastAttempt: LastAttempt | null;
+  lastAttempts: LastAttempt[];
 }
 
 /**
@@ -333,7 +333,7 @@ export function buildLeaderboard(
         problems: round.problems,
         timeline: [],
         problemStats: [],
-        lastAttempt: null,
+        lastAttempts: [],
       };
 
       if (!format.success) {
@@ -406,17 +406,34 @@ export function buildLeaderboard(
 
       const roundAttempts = fieldAttempts.filter((a) => problemIds.includes(a.problemId));
 
-      // La más reciente por reloj del juez, no por orden de llegada: la cola
-      // del teléfono sincroniza en lote cuando vuelve el wifi, así que el
-      // último en insertarse suele ser de hace media hora.
-      const latest = roundAttempts.reduce<(typeof roundAttempts)[number] | null>(
-        (best, attempt) => (best === null || attempt.capturedAt > best.capturedAt ? attempt : best),
-        null,
-      );
-      const latestRow = latest
-        ? roundField.find((r) => r.id === latest.registrationId)
-        : undefined;
-      const latestProblem = latest ? round.problems.find((p) => p.id === latest.problemId) : undefined;
+      // Las tres más recientes por **reloj del juez**, no por orden de llegada:
+      // la cola del teléfono sincroniza en lote cuando vuelve el wifi, así que
+      // la última fila insertada suele ser de hace media hora. Tres porque es
+      // lo máximo que la pantalla llega a mostrar; cuántas se ven las decide el
+      // espacio que haya.
+      const recent = [...roundAttempts]
+        .sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : a.capturedAt > b.capturedAt ? -1 : 0))
+        .slice(0, 3)
+        .flatMap((attempt) => {
+          const row = roundField.find((r) => r.id === attempt.registrationId);
+          const problem = round.problems.find((p) => p.id === attempt.problemId);
+          if (!row || !problem) {
+            return [];
+          }
+          return [
+            {
+              athleteName: row.athleteFullName,
+              problemNumber: problem.number,
+              top: attempt.top,
+              zone: attempt.zone,
+              attempts: attempt.top ? attempt.topAttempts : attempt.zone ? attempt.zoneAttempts : null,
+              capturedAt:
+                attempt.capturedAt instanceof Date
+                  ? attempt.capturedAt.toISOString()
+                  : String(attempt.capturedAt),
+            },
+          ];
+        });
 
       return {
         ...base,
@@ -424,20 +441,7 @@ export function buildLeaderboard(
         error: null,
         timeline: buildTimeline(format.data, roundAttempts, round.problems, config),
         problemStats,
-        lastAttempt:
-          latest && latestRow && latestProblem
-            ? {
-                athleteName: latestRow.athleteFullName,
-                problemNumber: latestProblem.number,
-                top: latest.top,
-                zone: latest.zone,
-                attempts: latest.top ? latest.topAttempts : latest.zone ? latest.zoneAttempts : null,
-                capturedAt:
-                  latest.capturedAt instanceof Date
-                    ? latest.capturedAt.toISOString()
-                    : String(latest.capturedAt),
-              }
-            : null,
+        lastAttempts: recent,
       };
     }
 
