@@ -1,8 +1,11 @@
 # Tesis — crux
 
-El deporte amateur colombiano se administra con WhatsApp, un formulario de Google
-y una persona gritando puntajes el dia del evento. Se entra por escalada porque
-ahi hay conocimiento de dominio real y credibilidad inmediata; el mismo motor de
+Una competencia deportiva en Colombia se administra con WhatsApp, un formulario
+de Google y una persona gritando puntajes el dia del evento — el gimnasio y el
+evento federado por igual. Se entra por escalada porque ahi hay conocimiento de
+dominio real y credibilidad inmediata; se entra por el gimnasio y la liga local
+porque ahi no hace falta el permiso de nadie, pero el destino es el evento
+oficial: la FCED es el cliente que valida todo lo demas. El mismo motor de
 competencias sirve despues a cualquier deporte con formato de liga o torneo.
 
 ## Modelo de negocio
