@@ -69,8 +69,10 @@ repite lo que ya dice el panel es una cosa más que se desincroniza.
 ## Invitaciones de organizador
 
 El registro está cerrado: para crear una cuenta hace falta un código de un solo
-uso. Hoy `ADMIN_EMAIL` es `crux.competencias@gmail.com`, que es también el
-correo con el que se entra al panel. Los emite quien tenga ese correo, desde `/panel/invites`
+uso. `ADMIN_EMAIL` es también el correo con el que se entra al panel, así que
+**no se escribe en el repositorio**: se consulta en las variables de entorno de
+Vercel. El que aparece publicado en la portada y en el manual es otro,
+`contacto@cruxcompetencias.com`. Los emite quien tenga ese correo, desde `/panel/invites`
 (la ruta devuelve 404 para cualquier otra cuenta). Un código sirve una vez: al
 consumirse queda marcado con quién lo usó, y reintentarlo da "Código de acceso
 inválido."
@@ -93,6 +95,42 @@ alcance el servidor por IP de LAN.
 `VERCEL_URL`. Vale la pena ponerla igual, apuntando al dominio de producción,
 porque `VERCEL_URL` cambia en cada *preview* y así producción queda fija.
 
+## Dominio y correo
+
+`cruxcompetencias.com`, registrado en Cloudflare y servido por Vercel. Se
+descartaron los cortos —`crux.co`, `crux.com.co`, `crux.gg`— porque están todos
+aparcados en revendedores, o sea precio de negociación y no de registro. El
+nombre largo además dice **competencias** y no *escalada*, que es lo que hay que
+poder decir el día que el motor sirva a otro deporte.
+
+**Los registros DNS van en gris, «DNS only», no en naranja.** Cloudflare insiste
+con un aviso en que hay que activar el proxy para sus funciones de seguridad y
+caché; aquí no. Vercel ya es el CDN y ya absorbe el pico de la tabla pública, y
+el proxy de Cloudflare por delante mete una **tercera** ventana de caché encima
+de las dos que ya se midieron en `app/api/resultados/[slug]/route.ts` — el atraso
+de la pantalla proyectada es exactamente la suma de esas ventanas. Además
+complica la emisión del certificado, que Vercel valida por HTTP.
+
+`contacto@cruxcompetencias.com` es la dirección de cara al cliente, y la sirve
+**Cloudflare Email Routing**: solo recibe y reenvía a un buzón que ya existe,
+gratis, sin servidor de correo y sin registros MX que mantener a mano. Para
+*enviar* desde ella haría falta un proveedor con SMTP (Zoho gratis, Google
+Workspace pago), y hoy no hace falta: la aplicación no manda un solo correo.
+
+**El administrador se queda en un buzón fuera de este dominio, a propósito.**
+`ADMIN_EMAIL` no es solo una etiqueta: es también el usuario con el que se entra
+al panel, así que es media credencial. Estando en otro dominio, quien lea la
+portada, el manual o el repositorio no tiene por dónde empezar a adivinarlo — ni
+siquiera `admin@` del dominio obvio existe. Por lo mismo la dirección no se
+escribe aquí: se mira en Vercel.
+
+Si algún día conviene moverlo, no cuesta nada: el `account` de Better Auth
+guarda en `account_id` el **id** del usuario y no su correo (comprobado contra
+la base) y `requireEmailVerification` está en `false`, así que un `update` sobre
+`user.email` deja intactas la contraseña, la sesión y los eventos que ya posee.
+Cambiar `ADMIN_EMAIL` en Vercel va **después** del `update`: entre los dos pasos
+nadie es administrador y `/panel/invites` responde 404, que es como debe fallar.
+
 ## Cosas que muerden
 
 **Usa la cadena de conexión *pooled* de Neon** (la que lleva `-pooler` en el
@@ -114,7 +152,7 @@ vuelven a generar desde el panel abierto en la URL de producción.
 
 ## Lo que no está montado
 
-Recuperación de contraseña y el correo de contacto de la portada. Los dos
-esperan a que se compre un dominio; el razonamiento está en
-`docs/01-etapas.md`. Mientras tanto, una cuenta sin acceso se recupera a mano
-en la base.
+Recuperación de contraseña. Ya no la bloquea el dominio —eso se resolvió— sino
+que Email Routing solo recibe: mandar un enlace de restablecimiento pide un
+proveedor con SMTP. Mientras tanto, una cuenta sin acceso se recupera a mano en
+la base, y el manual dice exactamente eso y a qué dirección escribir.
