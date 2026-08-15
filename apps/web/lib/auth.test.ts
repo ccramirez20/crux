@@ -1,11 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { trustedOrigins } from './auth';
+import { authBaseURL, trustedOrigins } from './auth';
 
 function withOrigin(origin: string): Request {
   return new Request('http://localhost:3000/api/auth/sign-in/email', {
     headers: { origin },
   });
 }
+
+describe('authBaseURL', () => {
+  // Una ruta en BETTER_AUTH_URL se vuelve el basePath de Better Auth y deja
+  // toda la API de autenticación en 404 con cuerpo vacío. Producción,
+  // 2026-08-15.
+  it('se queda con el origen y descarta cualquier ruta', () => {
+    expect(authBaseURL('https://cruxcompetencias.com')).toBe('https://cruxcompetencias.com');
+    expect(authBaseURL('https://cruxcompetencias.com/')).toBe('https://cruxcompetencias.com');
+    expect(authBaseURL('https://cruxcompetencias.com/panel')).toBe('https://cruxcompetencias.com');
+    expect(authBaseURL('https://cruxcompetencias.com/api/auth')).toBe('https://cruxcompetencias.com');
+  });
+
+  it('ignora lo que no es una URL, para caer en la deducción por VERCEL_URL', () => {
+    expect(authBaseURL('cruxcompetencias.com')).toBeUndefined();
+    expect(authBaseURL('  ')).toBeUndefined();
+    expect(authBaseURL(undefined)).toBeUndefined();
+  });
+});
 
 describe('trustedOrigins', () => {
   afterEach(() => {
