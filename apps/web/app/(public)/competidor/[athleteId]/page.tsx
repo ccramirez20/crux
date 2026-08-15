@@ -104,7 +104,7 @@ function aboveField(standing: number): number {
   return Math.round(standing * 100);
 }
 
-/** "1 topado" y no "1 topados": la cifra puede ser uno y se lee en pantalla. */
+/** "1 top" y no "1 tops": la cifra puede ser uno y se lee en pantalla. */
 function plural(count: number, one: string, many: string): string {
   return count === 1 ? one : many;
 }
@@ -360,7 +360,7 @@ function BoulderTotals({ totals }: { totals: DisciplineTotals }) {
       <ConversionBar
         segments={[
           {
-            label: plural(totals.tops, 'topado', 'topados'),
+            label: plural(totals.tops, 'top', 'tops'),
             count: totals.tops,
             fill: 'bg-gold',
             swatch: 'bg-gold',
