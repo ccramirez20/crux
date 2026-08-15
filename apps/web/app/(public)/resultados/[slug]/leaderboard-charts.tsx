@@ -196,14 +196,17 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
   // y dicen algo que las otras dos no: cuánto se escaló en total.
   if (out.length < 3 && !isHeight) {
     const posibles = round.rows.length * round.problems.length;
+    const plural = round.problems.length === 1 ? unit : `${unit}s`;
     out.push({
       key: 'tops',
       label: 'Tops de la ronda',
-      what: `De todo lo que se podía escalar, cuánto se topó`,
-      value: String(totalTops),
-      detail: `de ${posibles} posibles · ${round.rows.length} en la ronda por ${round.problems.length} ${
-        round.problems.length === 1 ? unit : `${unit}s`
-      }`,
+      what: 'De todo lo que se podía escalar, cuánto se topó',
+      // La cifra es la fracción, no el numerador suelto: "6" pedía leer el
+      // renglón de abajo para saber sobre cuánto, y ese renglón decía "4 en la
+      // ronda por 4 bloques", que es una multiplicación que nadie tiene por qué
+      // hacer de pie en un gimnasio.
+      value: `${totalTops}/${posibles}`,
+      detail: `${round.rows.length} en la ronda · ${round.problems.length} ${plural} cada uno`,
     });
   }
   return out;

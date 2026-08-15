@@ -406,14 +406,14 @@ export function buildLeaderboard(
 
       const roundAttempts = fieldAttempts.filter((a) => problemIds.includes(a.problemId));
 
-      // Las tres más recientes por **reloj del juez**, no por orden de llegada:
+      // Las cinco más recientes por **reloj del juez**, no por orden de llegada:
       // la cola del teléfono sincroniza en lote cuando vuelve el wifi, así que
       // la última fila insertada suele ser de hace media hora. Tres porque es
       // lo máximo que la pantalla llega a mostrar; cuántas se ven las decide el
       // espacio que haya.
       const recent = [...roundAttempts]
         .sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : a.capturedAt > b.capturedAt ? -1 : 0))
-        .slice(0, 3)
+        .slice(0, 5)
         .flatMap((attempt) => {
           const row = roundField.find((r) => r.id === attempt.registrationId);
           const problem = round.problems.find((p) => p.id === attempt.problemId);

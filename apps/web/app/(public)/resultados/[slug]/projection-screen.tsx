@@ -319,28 +319,27 @@ function Podium({ round }: { round: LeaderboardRound }) {
   }
   // Plata, oro, bronce — en ese orden, que es como se para un podio. La altura
   // de cada cajón dice el puesto sin necesidad de leer el número.
+  // Degradado y no color plano: al lado de las curvas de nivel y de las líneas
+  // de la gráfica, tres rectángulos macizos se leen como un cuerpo extraño. El
+  // tono baja hacia el pie de cada cajón, que es como cae la luz en un podio de
+  // verdad.
   const order = [
-    { row: three[1]!, height: 'h-20', tone: 'bg-silver', rank: 2 },
-    { row: three[0]!, height: 'h-28', tone: 'bg-gold', rank: 1 },
-    { row: three[2]!, height: 'h-14', tone: 'bg-bronze', rank: 3 },
+    { row: three[1]!, height: 'h-24', from: '#A6B7C0', to: '#7B8F9B', rank: 2, ink: 'text-white' },
+    { row: three[0]!, height: 'h-36', from: '#EFC069', to: '#D89A2A', rank: 1, ink: 'text-ink' },
+    { row: three[2]!, height: 'h-16', from: '#9A6740', to: '#6B4224', rank: 3, ink: 'text-white' },
   ];
   return (
     <div className="mx-auto flex w-full max-w-[34rem] items-end justify-center gap-3">
-      {order.map(({ row, height, tone, rank }) => (
+      {order.map(({ row, height, from, to, rank, ink }) => (
         <div key={row.registrationId} className="flex min-w-0 flex-1 flex-col items-center gap-2">
           <span className="text-balance text-center font-display text-base font-semibold leading-tight text-ink">
             {row.athleteName}
           </span>
           <div
-            className={`flex w-full items-start justify-center rounded-t-lg pt-2 ${height} ${tone}`}
+            className={`flex w-full items-start justify-center rounded-t-xl pt-3 ${height}`}
+            style={{ background: `linear-gradient(180deg, ${from} 0%, ${to} 100%)` }}
           >
-            <span
-              className={`font-display text-3xl font-bold leading-none ${
-                rank === 1 ? 'text-ink' : 'text-white'
-              }`}
-            >
-              {rank}
-            </span>
+            <span className={`font-display text-4xl font-bold leading-none ${ink}`}>{rank}</span>
           </div>
         </div>
       ))}
@@ -683,7 +682,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                         propio— y si no, las olas. La gráfica no se estira para
                         taparlo: con cuatro finalistas, estirada se ve peor. */}
                     {isPodiumRound && bumpLeftover >= FILL.podium && round.rows.length >= 3 ? (
-                      <div className="mt-6">
+                      <div className="mt-12">
                         <Podium round={round} />
                       </div>
                     ) : bumpLeftover >= FILL.motif ? (
@@ -698,15 +697,15 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   // en una columna flex los hijos se encogen por debajo de su
                   // contenido, y sin recortar cada uno, el muro se metía encima
                   // del título de los intentos.
-                  <div className="flex min-h-0 flex-1 flex-col justify-center gap-8 overflow-hidden">
-                    <div className="min-h-0 shrink overflow-hidden">
+                  <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden pt-2">
+                    <div className="min-h-0 flex-1 overflow-hidden">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                         Qué tan duros estaban · del más duro al más fácil
                       </p>
                       <Wall round={round} unit={unit.singular} isHeight={isHeight} dense />
                     </div>
                     {hasAttemptsPerTop && (
-                      <div className="min-h-0 shrink overflow-hidden">
+                      <div className="min-h-0 flex-1 overflow-hidden">
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                           Intentos por cada top · menos es mejor
                         </p>
