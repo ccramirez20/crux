@@ -67,11 +67,25 @@ body {
 /* La portada dibuja sus curvas al cargar: arrancan juntas a la izquierda —todo
    el mundo empatado— y se separan cruzándose, que es lo que hace la tabla
    durante una ronda. Es la única animación del sitio; el resto se queda quieto. */
+/* Las líneas se vuelven a trazar cada siete segundos.
+ *
+ * El dibujo sigue durando 1.6s: es el 23% de la vuelta, y el resto del ciclo
+ * las líneas se quedan quietas y completas. Por eso los tiempos van en
+ * porcentajes y no en una animación de 1.6s con `forwards` — el reposo es
+ * parte de la animación, no un final.
+ *
+ * Siete segundos y no dos: esto es la firma de la portada, no un cartel
+ * parpadeando. Tiene que alcanzar a leerse como una tabla que se rehace, y
+ * quien esté leyendo el texto de al lado no puede tener algo moviéndose en el
+ * rabillo del ojo todo el tiempo. */
 @keyframes crux-draw {
-  from {
+  0% {
     stroke-dashoffset: 1000;
   }
-  to {
+  23% {
+    stroke-dashoffset: 0;
+  }
+  100% {
     stroke-dashoffset: 0;
   }
 }
@@ -79,7 +93,7 @@ body {
 .crux-draw {
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
-  animation: crux-draw 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation: crux-draw 7s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
