@@ -117,6 +117,23 @@ export interface ProblemStats {
   field: number;
 }
 
+/**
+ * La última captura que entró a la ronda.
+ *
+ * No cambia ningún puntaje —eso ya lo dice la tabla— pero es lo único que hace
+ * que una pared proyectada se sienta viva entre actualizaciones: alguien acaba
+ * de escalar y la sala lo ve. Va por ronda porque es lo que se proyecta.
+ */
+export interface LastAttempt {
+  athleteName: string;
+  problemNumber: number;
+  top: boolean;
+  zone: boolean;
+  /** Los intentos que le costó lo que logró, o los que lleva si no logró nada. */
+  attempts: number | null;
+  capturedAt: string;
+}
+
 export interface LeaderboardRound {
   id: string;
   type: string;
@@ -127,6 +144,7 @@ export interface LeaderboardRound {
   error: string | null;
   timeline: TimelinePoint[];
   problemStats: ProblemStats[];
+  lastAttempt: LastAttempt | null;
 }
 
 /**
@@ -315,6 +333,7 @@ export function buildLeaderboard(
         problems: round.problems,
         timeline: [],
         problemStats: [],
+        lastAttempt: null,
       };
 
       if (!format.success) {
@@ -387,12 +406,38 @@ export function buildLeaderboard(
 
       const roundAttempts = fieldAttempts.filter((a) => problemIds.includes(a.problemId));
 
+      // La más reciente por reloj del juez, no por orden de llegada: la cola
+      // del teléfono sincroniza en lote cuando vuelve el wifi, así que el
+      // último en insertarse suele ser de hace media hora.
+      const latest = roundAttempts.reduce<(typeof roundAttempts)[number] | null>(
+        (best, attempt) => (best === null || attempt.capturedAt > best.capturedAt ? attempt : best),
+        null,
+      );
+      const latestRow = latest
+        ? roundField.find((r) => r.id === latest.registrationId)
+        : undefined;
+      const latestProblem = latest ? round.problems.find((p) => p.id === latest.problemId) : undefined;
+
       return {
         ...base,
         rows,
         error: null,
         timeline: buildTimeline(format.data, roundAttempts, round.problems, config),
         problemStats,
+        lastAttempt:
+          latest && latestRow && latestProblem
+            ? {
+                athleteName: latestRow.athleteFullName,
+                problemNumber: latestProblem.number,
+                top: latest.top,
+                zone: latest.zone,
+                attempts: latest.top ? latest.topAttempts : latest.zone ? latest.zoneAttempts : null,
+                capturedAt:
+                  latest.capturedAt instanceof Date
+                    ? latest.capturedAt.toISOString()
+                    : String(latest.capturedAt),
+              }
+            : null,
       };
     }
 

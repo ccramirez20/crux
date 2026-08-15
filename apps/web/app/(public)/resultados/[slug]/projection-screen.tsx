@@ -99,12 +99,30 @@ function useRowTier(box: React.RefObject<HTMLElement | null>, rows: number) {
       }
     };
     measure();
+    // Y otra vez pasado el pintado: en el primer render la caja puede medir
+    // cero, y con eso el hueco daba cero y el panel se quedaba sin nada que
+    // ponerle. El observador no lo salva: la caja no cambia de tamaño después,
+    // lo que cambia es que por fin existe.
+    const frame = requestAnimationFrame(measure);
     const observer = new ResizeObserver(measure);
     if (box.current) {
       observer.observe(box.current);
     }
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [box, rows]);
+
+  // El hueco se vuelve a medir cuando cambia el tramo: se midió con el tamaño
+  // de arranque, y al asentarse la tabla encoge o crece.
+  useEffect(() => {
+    const element = box.current;
+    const table = element?.querySelector('table');
+    if (element && table) {
+      setFree(element.clientHeight - table.scrollHeight);
+    }
+  }, [box, perRow]);
 
   // Antes de medir se usa un tramo aproximado por cantidad de filas: así el
   // primer pintado ya sale cerca y no se ve el salto de un tamaño a otro.
@@ -121,12 +139,14 @@ function ProjectedTable({
   isHeight,
   isPodiumRound,
   groups,
+  now,
 }: {
   round: LeaderboardRound;
   unit: { singular: string; plural: string };
   isHeight: boolean;
   isPodiumRound: boolean;
   groups: string[][];
+  now: number;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const scale = useRowTier(box, round.rows.length);
@@ -215,11 +235,7 @@ function ProjectedTable({
           nivel del encabezado, en grande y calladas. Solo aparece cuando de
           verdad sobra espacio, así que en una clasificatoria de veinticinco no
           existe. */}
-      {scale.free > 150 && (
-        <div className="pointer-events-none mt-10 px-6 opacity-45" aria-hidden="true">
-          <TopographicMotif />
-        </div>
-      )}
+      <PanelFill free={scale.free} round={round} unit={unit.singular} isPodiumRound={isPodiumRound} now={now} />
     </div>
   );
 }
@@ -265,6 +281,136 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
   return lane;
 }
 
+/**
+ * Qué va en el alto que le sobra a la tabla.
+ *
+ * Sobra porque la tabla está limitada por el **ancho** —con cuatro bloques y
+ * cuatro columnas de puntaje ya toca los bordes de su tarjeta— así que ese
+ * hueco no se arregla agrandando filas: se llena. Y sobra justo cuando hay
+ * poca gente, que es cuando se está corriendo una final.
+ *
+ * Se llena en orden de lo que más le dice a la sala, mientras quepa:
+ *
+ * 1. **El podio.** Solo en una final, porque solo ahí existe. Son los mismos
+ *    tres nombres de la tabla, dibujados como lo que son.
+ * 2. **La última captura.** Hace que la pared se sienta viva entre
+ *    actualizaciones; sirve en cualquier ronda.
+ * 3. **Las curvas de la marca**, que cierran lo que quede.
+ *
+ * Nada de esto aparece si no cabe entero, así que una clasificatoria de
+ * veinticinco no ve ninguno y la tabla se queda con toda la tarjeta.
+ */
+const FILL = { podium: 190, pulse: 92, motif: 76 };
+
+function Podium({ round }: { round: LeaderboardRound }) {
+  const three = round.rows.slice(0, 3);
+  if (three.length < 3) {
+    return null;
+  }
+  // Plata, oro, bronce — en ese orden, que es como se para un podio. La altura
+  // de cada cajón dice el puesto sin necesidad de leer el número.
+  const order = [
+    { row: three[1]!, height: 'h-20', tone: 'bg-silver', rank: 2 },
+    { row: three[0]!, height: 'h-28', tone: 'bg-gold', rank: 1 },
+    { row: three[2]!, height: 'h-14', tone: 'bg-bronze', rank: 3 },
+  ];
+  return (
+    <div className="mx-auto flex w-full max-w-[34rem] items-end justify-center gap-3">
+      {order.map(({ row, height, tone, rank }) => (
+        <div key={row.registrationId} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+          <span className="text-balance text-center font-display text-base font-semibold leading-tight text-ink">
+            {row.athleteName}
+          </span>
+          <div
+            className={`flex w-full items-start justify-center rounded-t-lg pt-2 ${height} ${tone}`}
+          >
+            <span
+              className={`font-display text-3xl font-bold leading-none ${
+                rank === 1 ? 'text-ink' : 'text-white'
+              }`}
+            >
+              {rank}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** "hace 40 s" — del reloj del juez, que es cuando de verdad pasó. */
+function sinceLabel(iso: string, now: number): string {
+  const seconds = Math.round((now - new Date(iso).getTime()) / 1000);
+  if (seconds < 45) {
+    return 'ahora mismo';
+  }
+  if (seconds < 3600) {
+    return `hace ${Math.round(seconds / 60)} min`;
+  }
+  return `hace ${Math.round(seconds / 3600)} h`;
+}
+
+function Pulse({ round, unit, now }: { round: LeaderboardRound; unit: string; now: number }) {
+  const last = round.lastAttempt;
+  if (!last) {
+    return null;
+  }
+  const what = last.top
+    ? `hizo TOP en ${unit === 'ruta' ? 'la' : 'el'} ${unit.slice(0, 1).toUpperCase()}${last.problemNumber}`
+    : last.zone
+      ? `llegó a la zona en ${unit === 'ruta' ? 'la' : 'el'} ${unit.slice(0, 1).toUpperCase()}${last.problemNumber}`
+      : `intentó ${unit === 'ruta' ? 'la' : 'el'} ${unit.slice(0, 1).toUpperCase()}${last.problemNumber}`;
+  const goes = last.attempts ? ` · ${last.attempts} ${last.attempts === 1 ? 'intento' : 'intentos'}` : '';
+  return (
+    <div className="rounded-xl border border-cardborder bg-stone/50 px-5 py-3">
+      <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-gold" aria-hidden />
+        Última captura · {sinceLabel(last.capturedAt, now)}
+      </span>
+      <span className="mt-1 block font-display text-xl font-semibold leading-tight text-ink">
+        {last.athleteName} {what}
+        <span className="text-muted">{goes}</span>
+      </span>
+    </div>
+  );
+}
+
+function PanelFill({
+  free,
+  round,
+  unit,
+  isPodiumRound,
+  now,
+}: {
+  free: number;
+  round: LeaderboardRound;
+  unit: string;
+  isPodiumRound: boolean;
+  now: number;
+}) {
+  let left = free;
+  const pieces: React.ReactNode[] = [];
+  if (isPodiumRound && left >= FILL.podium && round.rows.length >= 3) {
+    pieces.push(<Podium key="podium" round={round} />);
+    left -= FILL.podium;
+  }
+  if (round.lastAttempt && left >= FILL.pulse) {
+    pieces.push(<Pulse key="pulse" round={round} unit={unit} now={now} />);
+    left -= FILL.pulse;
+  }
+  if (left >= FILL.motif) {
+    pieces.push(
+      <div key="motif" className="pointer-events-none px-6 opacity-45" aria-hidden="true">
+        <TopographicMotif />
+      </div>,
+    );
+  }
+  if (pieces.length === 0) {
+    return null;
+  }
+  return <div className="mt-6 flex flex-col justify-end gap-4">{pieces}</div>;
+}
+
 /** Las tres cifras de la ronda en una tira y no en tres tarjetas: en una fila de
  *  1900 px de ancho, tres tarjetas se estiran y quedan casi vacías. */
 function HighlightStrip({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
@@ -304,6 +450,9 @@ function projectableRound(category: LeaderboardCategory): LeaderboardRound | nul
 
 export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayload; slug: string }) {
   const data = useLeaderboard(slug, initial);
+  // El reloj de "hace 40 s" cuelga del sondeo: cada respuesta nueva vuelve a
+  // pintar, así que no hace falta un temporizador aparte.
+  const now = Date.parse(data.updatedAt);
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [rotating, setRotating] = useState(false);
   const [slide, setSlide] = useState(0);
@@ -421,6 +570,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                 isHeight={isHeight}
                 isPodiumRound={isPodiumRound}
                 groups={groups}
+                now={now}
               />
             </section>
 
