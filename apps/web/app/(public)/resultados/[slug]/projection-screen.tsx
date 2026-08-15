@@ -753,7 +753,12 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                     {/* Con dos gráficas ya hay bastante que leer: lo que sobre
                         lo cierran las curvas y nada más. La medida es la del
                         otro turno, que comparte panel y tamaño. */}
-                    {bumpLeftover >= 150 && (
+                    {/* El mismo umbral que el otro turno: si sobran los 76 px
+                        que miden las curvas, cierran el panel; si no, no
+                        aparecen. Dos reglas distintas para el mismo panel
+                        hacían que en una semifinal salieran en un turno y en el
+                        otro no. */}
+                    {bumpLeftover >= FILL.motif && (
                       <div className="pointer-events-none mt-auto px-10 opacity-45" aria-hidden="true">
                         <TopographicMotif />
                       </div>
