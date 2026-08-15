@@ -66,6 +66,51 @@ export async function createCategory(input: CreateCategoryInput): Promise<Action
   return { ok: true };
 }
 
+const setRoundAdvancesInputSchema = z.object({
+  eventId: z.string().uuid(),
+  roundId: z.string().uuid(),
+  // Null es "pasan todos", que es lo correcto en la última ronda y en un evento
+  // de una sola. Cero sería una ronda siguiente vacía, y eso no se pide por
+  // error: se deja fuera.
+  advances: z.number().int().positive().nullable(),
+});
+type SetRoundAdvancesInput = z.infer<typeof setRoundAdvancesInputSchema>;
+
+/**
+ * Cuántos pasan de esta ronda a la siguiente.
+ *
+ * Se puede cambiar durante el evento: el cupo suele estar en la convocatoria,
+ * pero también se decide al ver cuánta gente llegó. Cambiarlo no toca ningún
+ * intento — la ronda siguiente se vuelve a armar sola con el corte nuevo.
+ */
+export async function setRoundAdvances(input: SetRoundAdvancesInput): Promise<ActionResult> {
+  const parsed = setRoundAdvancesInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Cupo inválido.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+  }
+
+  const { eventId, roundId, advances } = parsed.data;
+  const db = getDb();
+  const [row] = await db
+    .select({ ownerId: events.ownerId })
+    .from(rounds)
+    .innerJoin(categories, eq(rounds.categoryId, categories.id))
+    .innerJoin(events, eq(categories.eventId, events.id))
+    .where(and(eq(rounds.id, roundId), eq(categories.eventId, eventId)));
+  if (!row || row.ownerId !== session.user.id) {
+    return { ok: false, error: 'Esa ronda no existe o no te pertenece.' };
+  }
+
+  await db.update(rounds).set({ advances }).where(eq(rounds.id, roundId));
+  revalidatePath(`/panel/events/${eventId}`);
+  return { ok: true };
+}
+
 const createRoundInputSchema = z.object({
   eventId: z.string().uuid(),
   categoryId: z.string().uuid(),
