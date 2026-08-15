@@ -144,6 +144,27 @@ nadie es administrador y `/panel/invites` responde 404, que es como debe fallar.
 
 ## Cosas que muerden
 
+**`BETTER_AUTH_URL` va sin ruta: esquema y dominio, nada más.** Better Auth
+deduce su `basePath` de la ruta que traiga esa variable, así que cualquier cosa
+distinta de `/api/auth` —basta pegar la dirección de una pantalla cualquiera—
+deja **toda** la API de autenticación respondiendo 404 con el cuerpo vacío.
+Nadie entra, y la pantalla solo dice *No se pudo iniciar sesión.*, que es el
+mensaje de respaldo genérico: no hay nada que apunte a la variable.
+
+Pasó el 2026-08-15 al estrenar el dominio. Cómo se reconoce, porque desde fuera
+parece un problema de origen y no lo es:
+
+```bash
+curl -s -D - https://cruxcompetencias.com/api/auth/ok
+# 200 → la autenticación está sana
+# 404 con X-Matched-Path: /api/auth/[...all] → la ruta sí se alcanza y el 404
+#   lo devuelve Better Auth: es esta variable
+```
+
+`lib/auth.ts` ya se queda solo con el origen (`authBaseURL`), así que la trampa
+está cerrada en el código; esto queda escrito porque el síntoma no se parece en
+nada a la causa.
+
 **Usa la cadena de conexión *pooled* de Neon** (la que lleva `-pooler` en el
 host). Cada función serverless abre su propia conexión y Neon corta al llegar
 al límite; la cadena directa se agota con poco tráfico. En un evento la tabla

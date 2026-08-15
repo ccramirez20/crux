@@ -27,6 +27,33 @@ function configuredTrustedOrigins(): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Solo el origen de `BETTER_AUTH_URL`, nunca su ruta.
+ *
+ * Better Auth deduce su `basePath` de la ruta que traiga `baseURL`. Si esa ruta
+ * no es exactamente `/api/auth` —basta con que alguien pegue la dirección de
+ * una pantalla cualquiera— deja de reconocer *todos* sus propios endpoints y
+ * responde 404 con el cuerpo vacío. Sin mensaje que traducir, la pantalla de
+ * entrar solo dice "No se pudo iniciar sesión.", que es el respaldo del
+ * respaldo, y no hay nada que apunte a la variable de entorno.
+ *
+ * Pasó en producción el 2026-08-15 y costó reproducirlo con un build de
+ * producción en local. Quedarse con el origen cierra la trampa: la variable
+ * sigue sirviendo para fijar el dominio, y la ruta ya no puede romper nada.
+ *
+ * Un valor que ni siquiera es URL se ignora, que es como se comportaba antes de
+ * existir la variable: Better Auth deduce la base de `VERCEL_URL`.
+ */
+export function authBaseURL(raw = process.env.BETTER_AUTH_URL): string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+}
+
 export function trustedOrigins(request?: Request): string[] {
   const allowed = configuredTrustedOrigins();
   if (!request || process.env.NODE_ENV === 'production') {
@@ -38,6 +65,7 @@ export function trustedOrigins(request?: Request): string[] {
 
 function createAuth() {
   return betterAuth({
+    baseURL: authBaseURL(),
     database: drizzleAdapter(getDb(), {
       provider: 'pg',
       schema: { user, session, account, verification },
