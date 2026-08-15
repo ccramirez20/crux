@@ -290,7 +290,7 @@ export function AttemptForm({
           )}
 
           {!top && !zone && (
-            <p className="text-xs text-muted">Sin top ni zona: se registra como intento sin logro.</p>
+            <p className="text-xs text-muted">Sin top ni zona: queda registrado como intentado.</p>
           )}
         </>
       ) : (
