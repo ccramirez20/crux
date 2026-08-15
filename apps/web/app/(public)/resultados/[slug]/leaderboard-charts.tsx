@@ -195,18 +195,18 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
   // cifras estiradas en el ancho de tres. Los tops de la ronda existen siempre
   // y dicen algo que las otras dos no: cuánto se escaló en total.
   if (out.length < 3 && !isHeight) {
+    // Un porcentaje y no una fracción: "6/16" obliga a preguntarse de dónde
+    // sale el 16, y la respuesta —cada quien podía topar cada bloque— es una
+    // multiplicación que nadie hace de pie en un gimnasio. El porcentaje se
+    // entiende sin cuentas y el renglón de abajo explica el denominador en
+    // palabras, por si alguien se lo pregunta.
     const posibles = round.rows.length * round.problems.length;
-    const plural = round.problems.length === 1 ? unit : `${unit}s`;
     out.push({
       key: 'tops',
-      label: 'Tops de la ronda',
-      what: 'De todo lo que se podía escalar, cuánto se topó',
-      // La cifra es la fracción, no el numerador suelto: "6" pedía leer el
-      // renglón de abajo para saber sobre cuánto, y ese renglón decía "4 en la
-      // ronda por 4 bloques", que es una multiplicación que nadie tiene por qué
-      // hacer de pie en un gimnasio.
-      value: `${totalTops}/${posibles}`,
-      detail: `${round.rows.length} en la ronda · ${round.problems.length} ${plural} cada uno`,
+      label: 'Cuánto se topó',
+      what: 'De todos los tops que se podían hacer, cuántos se hicieron',
+      value: posibles > 0 ? `${Math.round((totalTops / posibles) * 100)}%` : '—',
+      detail: `${totalTops} tops de los ${posibles} que se podían hacer`,
     });
   }
   return out;
