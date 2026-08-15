@@ -201,12 +201,20 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
     // entiende sin cuentas y el renglón de abajo explica el denominador en
     // palabras, por si alguien se lo pregunta.
     const posibles = round.rows.length * round.problems.length;
+    const plural = round.problems.length === 1 ? unit : `${unit}s`;
+    const conTop = stats.filter((stat) => stat.tops > 0).length;
     out.push({
       key: 'tops',
-      label: 'Cuánto se topó',
-      what: 'De todos los tops que se podían hacer, cuántos se hicieron',
+      // "Cuánto se topó" no: el verbo suena raro escrito. El sustantivo es el
+      // que se usa en el gimnasio y es el que está en toda la pantalla.
+      label: 'Tops logrados',
+      what: 'De todos los tops que se podían hacer, cuántos se lograron',
       value: posibles > 0 ? `${Math.round((totalTops / posibles) * 100)}%` : '—',
-      detail: `${totalTops} tops de los ${posibles} que se podían hacer`,
+      // En cuántos bloques cayó **algún** top es otra cosa que el porcentaje no
+      // dice: un 38% puede ser mucha gente topando dos bloques fáciles o poca
+      // gente repartida por todos. Con las dos cifras juntas se sabe cuál de
+      // las dos ronda fue.
+      detail: `${totalTops} de ${posibles} posibles · hubo top en ${conTop} de ${round.problems.length} ${plural}`,
     });
   }
   return out;
