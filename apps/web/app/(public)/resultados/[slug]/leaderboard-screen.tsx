@@ -95,6 +95,108 @@ function BlockBadge({ cell, isHeight }: { cell: LeaderboardRow['cells'][number] 
   return <span className={`${base} bg-stone text-muted`}>—</span>;
 }
 
+/**
+ * La misma fila, para un teléfono. Medido a 390 px: la tabla mide 1247 px de
+ * ancho y la caja que la contiene 308, así que de once columnas se ven dos y
+ * media — puesto y un nombre cortado. Congelar el puntaje salva la cifra, pero
+ * no arregla que la tabla esté dimensionada para una pared: nombres de 30 px,
+ * insignias de 48, cuatro columnas de puntaje de 96.
+ *
+ * No es menos información, es la misma en vertical: puesto, nombre, la cifra
+ * que manda, los {unit.plural} uno por uno, y el desempate en una línea de
+ * texto en vez de tres columnas que no caben. Se toca igual que la fila para
+ * abrir el detalle y para resaltarla en las gráficas.
+ */
+function ResultCard({
+  row,
+  round,
+  headers,
+  unit,
+  isHeight,
+  open,
+  dimmed,
+  onToggle,
+}: {
+  row: LeaderboardRow;
+  round: LeaderboardRound;
+  headers: string[];
+  unit: { singular: string; plural: string };
+  isHeight: boolean;
+  open: boolean;
+  dimmed: boolean;
+  onToggle: () => void;
+}) {
+  const leading = row.result.rank === 1;
+  const values = scoreCells(row.result);
+
+  return (
+    // El detalle vive fuera del <button> a propósito: trae el enlace al
+    // historial, y un <a> dentro de un <button> es marcado inválido. Es la
+    // misma razón por la que en la tabla el detalle es un <tr> aparte.
+    <li
+      className={`overflow-hidden rounded-xl border-2 transition ${
+        leading ? 'border-gold bg-gold/10' : 'border-cardborder bg-card'
+      } ${dimmed ? 'opacity-60' : ''}`}
+    >
+      <button type="button" onClick={onToggle} className="w-full px-3 py-3 text-left">
+        <div className="flex items-center gap-3">
+          {/* `min-w` y no `w`: con dos dígitos el puesto ya roza el nombre, y
+              una categoría de tres cifras lo encimaría. Así crece solo. */}
+          <span className="min-w-11 shrink-0 text-center font-display text-4xl font-bold leading-none tabular-nums">
+            {row.result.tied ? '=' : ''}
+            {row.result.rank}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-display text-xl font-semibold">{row.athleteName}</span>
+            {row.bibNumber && (
+              <span className="text-sm text-muted tabular-nums">#{row.bibNumber}</span>
+            )}
+          </span>
+          <span className="shrink-0 text-right">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+              {headers[0]}
+            </span>
+            <span className="font-display text-3xl font-bold leading-none tabular-nums">
+              {values[0]}
+            </span>
+          </span>
+        </div>
+
+        {/* Grid y no `flex flex-wrap`: envolver empaqueta las insignias a la
+            izquierda y la última fila queda coja. Con columnas de ancho igual,
+            diez bloques se parten en dos filas parejas. */}
+        <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(3rem,1fr))] gap-1.5">
+          {round.problems.map((problem) => (
+            <span key={problem.id} className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                {unit.singular.slice(0, 1).toUpperCase()}
+                {problem.number}
+              </span>
+              <BlockBadge
+                cell={row.cells.find((c) => c.problemId === problem.id)}
+                isHeight={isHeight}
+              />
+            </span>
+          ))}
+        </div>
+
+        {/* El desempate completo, en una línea. En la tabla son tres columnas
+            de 96 px que en el teléfono no caben; aquí caben todas y no hay que
+            esconder ninguna. */}
+        {values.length > 1 && (
+          <p className="mt-2.5 text-xs text-muted">
+            {headers
+              .slice(1)
+              .map((header, index) => `${header} ${values[index + 1]}`)
+              .join(' · ')}
+          </p>
+        )}
+      </button>
+      {open && <RowDetail round={round} row={row} unit={unit.singular} isHeight={isHeight} />}
+    </li>
+  );
+}
+
 function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; row: LeaderboardRow; unit: string; isHeight: boolean }) {
   return (
     <ul className="flex flex-wrap items-center gap-3 px-6 pb-6 pt-5">
@@ -208,8 +310,19 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
   // sin necesitarlo.
   const scoreCellClass = 'w-24 px-3 text-center';
 
+  // La cifra por la que se abre esta tabla se queda pegada al borde derecho.
+  // Medido en producción a 390 px: la caja con scroll da 308 px y la tabla
+  // 1247, así que el puntaje nace fuera de pantalla y llegar a él cuesta perder
+  // de vista el nombre. Fondo propio porque una celda pegajosa transparente
+  // deja pasar los bloques por debajo, y filete en sombra y no en `border`:
+  // con `border-collapse` el borde de una celda pegajosa no viaja con ella.
+  const stickyScoreClass =
+    'sticky right-0 z-[1] bg-card shadow-[-10px_0_10px_-10px_rgba(36,31,25,0.25)]';
+
   return (
-    <main className="min-h-screen px-10 py-8">
+    // `px-10` a ambos lados se comía 80 de los 390 px de un teléfono: una
+    // cuarta parte de la pantalla en margen, justo donde falta ancho.
+    <main className="min-h-screen px-4 py-8 sm:px-10">
       <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-7">
         <header className="flex flex-col gap-4">
           <TopographicMotif />
@@ -291,9 +404,11 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
               <p className="text-2xl text-muted">Esta ronda todavía no tiene {unit.plural}.</p>
             ) : (
               // La tabla larga se desplaza dentro de su propia caja para que el
-              // encabezado pegajoso tenga contra qué pegarse. Solo en pantalla
-              // grande: en el teléfono lo que importa es correr a los lados.
-              <div className="overflow-x-auto rounded-2xl border border-cardborder bg-card lg:max-h-[80vh] lg:overflow-y-auto">
+              // encabezado pegajoso tenga contra qué pegarse. El scroll lateral
+              // arranca en `sm`: por debajo no hay tabla que correr, hay
+              // tarjetas, y un contenedor desplazable ahí solo serviría para
+              // atrapar el gesto de deslizar.
+              <div className="rounded-2xl border border-cardborder bg-card sm:overflow-x-auto lg:max-h-[80vh] lg:overflow-y-auto">
                 {/* The number inside a badge is how many goes it took, and
                     nothing on screen said so — someone reading this table for
                     the first time had no way to know. The legend teaches the
@@ -335,7 +450,23 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                     </span>
                   )}
                 </div>
-                <table className="w-full border-collapse text-left">
+                <ul className="flex flex-col gap-2 p-3 sm:hidden">
+                  {round.rows.map((row) => (
+                    <ResultCard
+                      key={row.registrationId}
+                      row={row}
+                      round={round}
+                      headers={headers}
+                      unit={unit}
+                      isHeight={isHeight}
+                      open={openRow === row.registrationId}
+                      dimmed={focused !== null && focused !== row.registrationId}
+                      onToggle={() => toggleRow(row.registrationId)}
+                    />
+                  ))}
+                </ul>
+
+                <table className="hidden w-full border-collapse text-left sm:table">
                   {/* Los títulos se quedan pegados arriba: en la fila 12 de la
                       tabla ya nadie recuerda cuál columna era cuál, y volver a
                       subir a mirar es justo lo que no se puede hacer con la
@@ -405,7 +536,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                           key={index}
                           className={`${scoreCellClass} py-4 text-sm font-semibold uppercase tracking-[0.14em] text-muted ${
                             groupStarts.has(index) ? 'border-l border-cardborder/60' : ''
-                          }`}
+                          } ${index === 0 ? stickyScoreClass : ''}`}
                         >
                           {header}
                         </th>
@@ -463,7 +594,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                                   groupStarts.has(index)
                                     ? 'border-l border-cardborder/60 font-display text-4xl font-bold'
                                     : 'font-display text-2xl text-muted'
-                                }`}
+                                } ${index === 0 ? stickyScoreClass : ''}`}
                               >
                                 {value}
                               </td>
@@ -484,8 +615,10 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
               </div>
             )}
 
+            {/* "Filas" solo existe de `sm` para arriba; en el teléfono son
+                tarjetas. La frase sirve para las dos. */}
             <p className="text-base text-muted">
-              Haz click en las filas para ver el detalle, {unit.singular} por {unit.singular}.
+              Abre cada resultado para ver el detalle, {unit.singular} por {unit.singular}.
             </p>
 
             {round && !round.error && (
