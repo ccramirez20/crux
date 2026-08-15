@@ -87,13 +87,17 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
       // dice: un 38% puede ser mucha gente topando dos bloques fáciles o poca
       // gente repartida por todos. Con las dos cifras juntas se sabe cuál de
       // las dos ronda fue.
-      // Con la ronda en cero, "0 de 16 posibles · hubo top en 0 de 4 bloques"
-      // es una forma retorcida de decir que todavía no ha caído ninguno. Y en
-      // los primeros minutos de una ronda eso es justo lo que se ve en pantalla.
+      // El renglón cambia con el momento del evento, que es lo que lo hace
+      // útil en una pared: al empezar no hay ninguno, luego dice en cuántos ya
+      // hay y en cuántos todavía no, y cuando todos tienen al menos uno lo
+      // dice. Sin ese cambio, la misma frase serviría para las tres cosas y no
+      // informaría de ninguna.
       detail:
         conTop === 0
-          ? `Todavía no cae ninguno · ${posibles} posibles en la ronda`
-          : `${totalTops} de ${posibles} posibles · hubo top en ${conTop} de ${round.problems.length} ${plural}`,
+          ? `Todavía no hay top en ninguno de los ${round.problems.length} ${plural} · ${posibles} posibles`
+          : conTop === round.problems.length
+            ? `${totalTops} tops · ya hubo top en los ${round.problems.length} ${plural}`
+            : `${totalTops} tops · hay top en ${conTop} de ${round.problems.length} ${plural}, en ${round.problems.length - conTop} todavía no`,
     });
   }
   return out;

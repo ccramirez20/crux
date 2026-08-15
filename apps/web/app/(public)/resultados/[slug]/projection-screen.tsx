@@ -251,7 +251,7 @@ function ProjectedTable({
  *
  * La salida no es estirar —deformaría las curvas— sino separar los carriles
  * hasta que la proporción de la gráfica se acerque a la de su caja. Se apunta al
- * 90% y el carril tiene tope de 96: con cuatro finalistas, llenar el panel deja
+ * 90% y el carril tiene tope de 145: con cuatro finalistas, llenar el panel deja
  * las líneas a media pantalla una de otra y la gráfica se ve estirada. Mejor que
  * mida lo que mide, y que debajo vaya el podio.
  */
@@ -274,7 +274,7 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
       }
       const targetHeight = BUMP_VIEWBOX_WIDTH * (element.clientHeight / element.clientWidth) * 0.9;
       const ideal = (targetHeight - BUMP_PAD) / (rows - 1);
-      const chosen = Math.round(Math.max(22, Math.min(96, ideal)));
+      const chosen = Math.round(Math.max(22, Math.min(145, ideal)));
       setLane(chosen);
       const drawn = BUMP_PAD + (rows - 1) * chosen;
       setLeftover(element.clientHeight - (element.clientWidth * drawn) / BUMP_VIEWBOX_WIDTH);
@@ -310,7 +310,7 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
  * veinticinco no ve ninguno y la tabla se queda con toda la tarjeta.
  */
 /** Lo que ocupa cada pieza, medido contra lo que ocupa de verdad en pantalla. */
-const FILL = { capturesHeader: 34, capture: 44, podium: 190, motif: 76 };
+const FILL = { capturesHeader: 34, capture: 44, podium: 250, motif: 76 };
 
 function Podium({ round }: { round: LeaderboardRound }) {
   const three = round.rows.slice(0, 3);
@@ -663,7 +663,8 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   nuevo y la animación de entrada vuelve a correr. */}
               <div key={activeSlide} className="crux-fade flex min-h-0 flex-1 flex-col overflow-hidden">
                 {activeSlide === 'bump' && (
-                  <div ref={bumpBox} className="flex min-h-0 flex-1 flex-col justify-center">
+                  <div ref={bumpBox} className="flex min-h-0 flex-1 flex-col">
+                    <div className="flex min-h-0 flex-1 items-center">
                     {/* `w-full max-h-full` y no `h-full`: con `h-full` el SVG se
                         ajusta al alto y deja franjas de aire a los lados —
                         pequeño en el centro de un panel ancho. Así usa todo el
@@ -677,12 +678,13 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                       {...(bumpLane === undefined ? {} : { laneOverride: bumpLane })}
                       {...inert}
                     />
+                    </div>
                     {/* Lo que sobra debajo de la gráfica: el podio si esto es
                         una final —es el momento del día y aquí tiene sitio
                         propio— y si no, las olas. La gráfica no se estira para
                         taparlo: con cuatro finalistas, estirada se ve peor. */}
                     {isPodiumRound && bumpLeftover >= FILL.podium && round.rows.length >= 3 ? (
-                      <div className="mt-12">
+                      <div className="mt-4 shrink-0 pb-2">
                         <Podium round={round} />
                       </div>
                     ) : bumpLeftover >= FILL.motif ? (
@@ -697,15 +699,15 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   // en una columna flex los hijos se encogen por debajo de su
                   // contenido, y sin recortar cada uno, el muro se metía encima
                   // del título de los intentos.
-                  <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden pt-2">
-                    <div className="min-h-0 flex-1 overflow-hidden">
+                  <div className="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden pt-6">
+                    <div className="min-h-0 shrink-0 overflow-hidden">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                         Qué tan duros estaban · del más duro al más fácil
                       </p>
                       <Wall round={round} unit={unit.singular} isHeight={isHeight} dense />
                     </div>
                     {hasAttemptsPerTop && (
-                      <div className="min-h-0 flex-1 overflow-hidden">
+                      <div className="min-h-0 shrink-0 overflow-hidden">
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                           Intentos por cada top · menos es mejor
                         </p>
@@ -713,6 +715,14 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                             lo que esta gráfica hace —comparar— ya se ve con los
                             cuatro primeros. */}
                         <AttemptsPerTop round={round} limit={4} fixedWidth={false} {...inert} />
+                      </div>
+                    )}
+                    {/* Con dos gráficas ya hay bastante que leer: lo que sobre
+                        lo cierran las curvas y nada más. La medida es la del
+                        otro turno, que comparte panel y tamaño. */}
+                    {bumpLeftover >= 150 && (
+                      <div className="pointer-events-none mt-auto px-10 opacity-45" aria-hidden="true">
+                        <TopographicMotif />
                       </div>
                     )}
                   </div>

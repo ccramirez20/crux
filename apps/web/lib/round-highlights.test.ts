@@ -63,10 +63,10 @@ describe('roundHighlights · tops logrados', () => {
     );
     const tops = items.find((i) => i.key === 'tops');
     expect(tops?.value).toBe('0%');
-    expect(tops?.detail).toBe('Todavía no cae ninguno · 4 posibles en la ronda');
+    expect(tops?.detail).toBe('Todavía no hay top en ninguno de los 2 bloques · 4 posibles');
   });
 
-  it('con tops reparte el porcentaje y en cuántos bloques cayó', () => {
+  it('con tops dice en cuántos hay y en cuántos todavía no', () => {
     const items = roundHighlights(
       round({
         rows: [row('a'), row('b')],
@@ -77,6 +77,20 @@ describe('roundHighlights · tops logrados', () => {
     );
     const tops = items.find((i) => i.key === 'tops');
     expect(tops?.value).toBe('50%');
-    expect(tops?.detail).toBe('2 de 4 posibles · hubo top en 1 de 2 bloques');
+    expect(tops?.detail).toBe('2 tops · hay top en 1 de 2 bloques, en 1 todavía no');
+  });
+
+  it('con todos los bloques topados lo dice, en vez de restar cero', () => {
+    const items = roundHighlights(
+      round({
+        rows: [row('a'), row('b')],
+        problemStats: [stat('p1', 1, 2), stat('p2', 2, 1)],
+      }),
+      'bloque',
+      false,
+    );
+    const tops = items.find((i) => i.key === 'tops');
+    expect(tops?.value).toBe('75%');
+    expect(tops?.detail).toBe('3 tops · ya hubo top en los 2 bloques');
   });
 });
