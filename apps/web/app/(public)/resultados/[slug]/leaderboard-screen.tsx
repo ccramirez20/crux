@@ -13,7 +13,8 @@ import {
   problemUnit,
 } from '@/lib/labels';
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
-import { LeaderboardCharts } from './leaderboard-charts';
+import { brandWordClass } from '@/lib/ui';
+import { LeaderboardCharts, hoverHandlers } from './leaderboard-charts';
 
 const REFRESH_MS = 5000;
 
@@ -34,6 +35,17 @@ const SCORE_HEADERS: Record<string, string[][]> = {
   max_height: [['Altura']],
 };
 
+// Los mismos números, rotulados para la tarjeta del teléfono. Ahí no existe el
+// grupo de columnas que en la tabla desambigua las dos "Intentos": una debajo
+// de la otra se leían como el mismo dato repetido, y nadie podía saber cuál era
+// de tops y cuál de zonas. Cada cifra dice a qué se refiere o no sirve.
+const CARD_LABELS: Record<string, string[]> = {
+  classic_tops_zones: ['Tops', 'Intentos a top', 'Zonas', 'Intentos a zona'],
+  ifsc_boulder: ['Puntaje'],
+  league_points: ['Puntaje'],
+  max_height: ['Altura'],
+};
+
 function scoreCells(result: RankedResult): string[] {
   switch (result.format) {
     case 'classic_tops_zones':
@@ -45,6 +57,39 @@ function scoreCells(result: RankedResult): string[] {
     case 'max_height':
       return [result.top ? 'TOP' : result.height > 0 ? `${result.height} m` : '—'];
   }
+}
+
+/**
+ * El 1-2-3 en oro, plata y bronce — pero solo donde el puesto ya es podio.
+ *
+ * El recuadro dorado del líder contesta la pregunta con la que entra toda la
+ * sala: quién va ganando. Esa pregunta vale en cualquier ronda y a cualquier
+ * hora, incluso con dos bloques capturados.
+ *
+ * La plata y el bronce dicen otra cosa —quién se subió al podio— y en una
+ * clasificatoria eso todavía no existe: ahí el segundo pasa a la siguiente
+ * ronda igual que el octavo, y pintarlo de plata anunciaría un resultado que no
+ * ha ocurrido. Por eso las tres medallas salen en la final, y en una categoría
+ * de una sola ronda, donde esa ronda *es* el resultado. En las demás sigue
+ * saliendo solo el líder, que es lo que hasta ahí se puede afirmar.
+ *
+ * Los tres colores son los mismos de las gráficas y ya estaban validados como
+ * tripleta contra la superficie de tarjeta.
+ */
+function podiumStyle(rank: number, isPodiumRound: boolean): { row: string; rail: string } | null {
+  if (rank === 1) {
+    return { row: 'bg-gold/10', rail: 'border-l-4 border-gold' };
+  }
+  if (!isPodiumRound) {
+    return null;
+  }
+  if (rank === 2) {
+    return { row: 'bg-silver/10', rail: 'border-l-4 border-silver' };
+  }
+  if (rank === 3) {
+    return { row: 'bg-bronze/10', rail: 'border-l-4 border-bronze' };
+  }
+  return null;
 }
 
 /** The most advanced round that has been judged — what the room wants to see when it walks in. */
@@ -110,23 +155,35 @@ function BlockBadge({ cell, isHeight }: { cell: LeaderboardRow['cells'][number] 
 function ResultCard({
   row,
   round,
-  headers,
+  labels,
   unit,
   isHeight,
+  isPodiumRound,
   open,
   dimmed,
   onToggle,
 }: {
   row: LeaderboardRow;
   round: LeaderboardRound;
-  headers: string[];
+  labels: string[];
   unit: { singular: string; plural: string };
   isHeight: boolean;
+  isPodiumRound: boolean;
   open: boolean;
   dimmed: boolean;
   onToggle: () => void;
 }) {
-  const leading = row.result.rank === 1;
+  const podium = podiumStyle(row.result.rank, isPodiumRound);
+  // El filete de la tarjeta usa el mismo color de la medalla que la fila de la
+  // tabla usa en su borde izquierdo.
+  const border =
+    row.result.rank === 1 && podium
+      ? 'border-gold'
+      : row.result.rank === 2 && podium
+        ? 'border-silver'
+        : row.result.rank === 3 && podium
+          ? 'border-bronze'
+          : 'border-cardborder';
   const values = scoreCells(row.result);
 
   return (
@@ -134,8 +191,8 @@ function ResultCard({
     // historial, y un <a> dentro de un <button> es marcado inválido. Es la
     // misma razón por la que en la tabla el detalle es un <tr> aparte.
     <li
-      className={`overflow-hidden rounded-xl border-2 transition ${
-        leading ? 'border-gold bg-gold/10' : 'border-cardborder bg-card'
+      className={`overflow-hidden rounded-xl border-2 transition ${border} ${
+        podium?.row ?? 'bg-card'
       } ${dimmed ? 'opacity-60' : ''}`}
     >
       <button type="button" onClick={onToggle} className="w-full px-3 py-3 text-left">
@@ -154,7 +211,7 @@ function ResultCard({
           </span>
           <span className="shrink-0 text-right">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-              {headers[0]}
+              {labels[0]}
             </span>
             <span className="font-display text-3xl font-bold leading-none tabular-nums">
               {values[0]}
@@ -180,16 +237,28 @@ function ResultCard({
           ))}
         </div>
 
-        {/* El desempate completo, en una línea. En la tabla son tres columnas
-            de 96 px que en el teléfono no caben; aquí caben todas y no hay que
-            esconder ninguna. */}
+        {/* El desempate, cada cifra con su rótulo encima — igual que la cifra
+            grande de arriba. En una sola línea de texto corrido ("Intentos 12 ·
+            Zonas 5 · Intentos 9") los dos "Intentos" se leían como el mismo
+            dato dos veces, y no había forma de saber cuál era de tops y cuál de
+            zonas. En la tabla eso lo resuelve la divisoria entre los grupos;
+            aquí, el rótulo entero. */}
         {values.length > 1 && (
-          <p className="mt-2.5 text-xs text-muted">
-            {headers
-              .slice(1)
-              .map((header, index) => `${header} ${values[index + 1]}`)
-              .join(' · ')}
-          </p>
+          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-cardborder/60 pt-2.5">
+            {labels.slice(1).map((label, index) => (
+              <span key={label} className="flex flex-col gap-0.5">
+                {/* Alto de dos renglones aunque el rótulo ocupe uno: "Zonas"
+                    cabe en una línea y "Intentos a top" no, y sin esto las tres
+                    cifras quedaban a tres alturas distintas. */}
+                <span className="min-h-[2.5em] text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-muted">
+                  {label}
+                </span>
+                <span className="font-display text-xl font-bold leading-none tabular-nums">
+                  {values[index + 1]}
+                </span>
+              </span>
+            ))}
+          </div>
         )}
       </button>
       {open && <RowDetail round={round} row={row} unit={unit.singular} isHeight={isHeight} />}
@@ -238,12 +307,17 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
   // gráfica de posiciones y su barra de intentos. Vive aquí y no dentro de una
   // gráfica porque lo comparten tres piezas hermanas.
   const [hovered, setHovered] = useState<string | null>(null);
-  // En el teléfono no hay hover. Tocar a una competidora —en la tabla o en
-  // cualquier gráfica— la deja fija y abre su detalle en la fila, que es un
-  // espacio propio y no un globo encima de la gráfica que se quería mirar.
-  const focused = hovered ?? openRow;
+  // Resaltar desde una gráfica es otra cosa que abrir el detalle, y por eso son
+  // dos estados. Antes tocar una línea abría la fila allá arriba en la tabla:
+  // la página crecía de golpe bajo el dedo y lo que estabas mirando se iba de
+  // pantalla. Ahora tocar una gráfica solo resalta, y el detalle se abre
+  // tocando la fila o la tarjeta, que es donde el detalle aparece.
+  const [selected, setSelected] = useState<string | null>(null);
+  const focused = hovered ?? selected ?? openRow;
   const toggleRow = (registrationId: string) =>
     setOpenRow((current) => (current === registrationId ? null : registrationId));
+  const toggleSelected = (registrationId: string) =>
+    setSelected((current) => (current === registrationId ? null : registrationId));
 
   // Decision #4: poll a cached response, no sockets. A hidden tab is a laptop
   // lid closed next to the projector — no reason to keep asking, but the
@@ -290,12 +364,17 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
   const category = data.categories.find((c) => c.id === categoryId) ?? data.categories[0];
   const round = category?.rounds.find((r) => r.id === roundId) ?? category?.rounds.find((r) => r.id === defaultRound(category));
 
+  // Una final es podio; una categoría de una sola ronda también, porque esa
+  // ronda es el resultado del evento para esa gente.
+  const isPodiumRound = round?.type === 'final' || category?.rounds.length === 1;
+
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
   const hasAttemptColumns = data.event.scoringFormat === 'classic_tops_zones';
   const isLeague = data.event.scoringFormat === 'league_points';
   const groups = SCORE_HEADERS[data.event.scoringFormat] ?? [];
   const headers = groups.flat();
+  const cardLabels = CARD_LABELS[data.event.scoringFormat] ?? headers;
   // En qué índice arranca cada grupo: ahí van la línea divisoria y la cifra
   // grande, y las que siguen son su desempate.
   const groupStarts = new Set<number>();
@@ -456,9 +535,10 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                       key={row.registrationId}
                       row={row}
                       round={round}
-                      headers={headers}
+                      labels={cardLabels}
                       unit={unit}
                       isHeight={isHeight}
+                      isPodiumRound={isPodiumRound}
                       open={openRow === row.registrationId}
                       dimmed={focused !== null && focused !== row.registrationId}
                       onToggle={() => toggleRow(row.registrationId)}
@@ -548,18 +628,17 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                       const open = openRow === row.registrationId;
                       // The leader is the one thing the room looks for from the
                       // back of the gym; everything else it reads by walking up.
-                      const leading = row.result.rank === 1;
+                      const podium = podiumStyle(row.result.rank, isPodiumRound);
                       return (
                         <Fragment key={row.registrationId}>
                           <tr
                             onClick={() => toggleRow(row.registrationId)}
-                            onMouseEnter={() => setHovered(row.registrationId)}
-                            onMouseLeave={() => setHovered(null)}
+                            {...hoverHandlers(row.registrationId, setHovered)}
                             className={`cursor-pointer border-b border-cardborder/60 transition duration-200 hover:bg-stone ${
-                              leading ? 'bg-gold/10' : ''
+                              podium?.row ?? ''
                             } ${focused !== null && focused !== row.registrationId ? 'opacity-60' : ''}`}
                           >
-                            <td className={`px-4 py-5 text-center ${leading ? 'border-l-4 border-gold' : ''}`}>
+                            <td className={`px-4 py-5 text-center ${podium?.rail ?? ''}`}>
                               <span
                                 className="font-display text-5xl font-bold tabular-nums"
                                 title={row.result.tied ? 'Empate' : undefined}
@@ -627,7 +706,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                 unit={unit}
                 hovered={focused}
                 onHover={setHovered}
-                onSelect={toggleRow}
+                onSelect={toggleSelected}
               />
             )}
 
@@ -639,9 +718,9 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                 Esta tabla la corre{' '}
                 <a
                   href="/"
-                  className="font-display font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
+                  className={`${brandWordClass} underline decoration-gold decoration-2 underline-offset-4`}
                 >
-                  Crux
+                  CRUX
                 </a>
                 , plataforma de competencias de escalada.
               </p>

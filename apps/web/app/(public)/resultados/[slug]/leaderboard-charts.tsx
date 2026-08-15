@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { SCORE_TERM, flashCount } from '@/lib/labels';
+import { brandWordClass } from '@/lib/ui';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 
 /**
@@ -14,6 +15,31 @@ export interface HoverProps {
   hovered: string | null;
   onHover: (registrationId: string | null) => void;
   onSelect: (registrationId: string) => void;
+}
+
+/**
+ * Resaltar al pasar el cursor, y **solo** con cursor.
+ *
+ * En un teléfono el toque dispara `pointerenter` igual que un ratón, pero
+ * después no llega ningún `pointerleave`: el dedo se levanta y el resaltado se
+ * queda pegado a esa competidora, sin forma de quitarlo. Filtrando por
+ * `pointerType` el toque queda enteramente en manos de `onClick`, que sí
+ * alterna. Es el mismo motivo por el que esto no puede ser `onMouseEnter`:
+ * `MouseEvent` no dice de dónde vino el evento.
+ */
+export function hoverHandlers(registrationId: string, onHover: HoverProps['onHover']) {
+  return {
+    onPointerEnter: (event: React.PointerEvent) => {
+      if (event.pointerType === 'mouse') {
+        onHover(registrationId);
+      }
+    },
+    onPointerLeave: (event: React.PointerEvent) => {
+      if (event.pointerType === 'mouse') {
+        onHover(null);
+      }
+    },
+  };
 }
 
 // Podium metals. Measured as a triple against the card surface rather than
@@ -122,7 +148,7 @@ function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: st
       {bestClimb && bestClimb.delta > 0 && (
         <StatTile
           label="Mayor ascenso en la tabla"
-          what={`Quién más puestos ganó desde el primer ${unit}`}
+          what={`Quién más puestos ascendió desde el primer ${unit}`}
           value={`+${bestClimb.delta}`}
           detail={`${bestClimb.name} subió ${bestClimb.delta} puestos en la tabla de posiciones`}
         />
@@ -395,8 +421,7 @@ function BumpChart({
         return (
           <g
             key={row.registrationId}
-            onMouseEnter={() => onHover(row.registrationId)}
-            onMouseLeave={() => onHover(null)}
+            {...hoverHandlers(row.registrationId, onHover)}
             onClick={() => onSelect(row.registrationId)}
             // 0.45, no 0.2: resaltar a una no puede borrar a las demás. El resto
             // de la carrera es justamente el contexto que hace que resaltar
@@ -642,11 +667,18 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
           a 390 px de ancho. Aquí no hace falta desplazar como en la gráfica de
           puestos —son tres cifras y una barra, no un eje de quince nombres—,
           así que se encogen y todo sigue visible sin tener que arrastrar. */}
+      {/* En el teléfono la lectura va en su propio renglón. Compartiendo fila
+          con los tres títulos le quedaban 90 px y salía cortada con puntos
+          suspensivos justo cuando la estás leyendo — que es lo único que ese
+          texto hace. `min-h` reserva el alto aunque esté vacía, para que tocar
+          un tramo no empuje las barras hacia abajo. */}
+      <p className="mb-2 min-h-6 text-[15px] font-semibold text-ink sm:hidden">{reading}</p>
       <div className="mb-3 flex h-7 items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:gap-5">
         <span className="w-20 shrink-0 sm:w-36" />
-        <span className="flex-1 truncate text-base font-semibold normal-case tracking-normal text-ink">
+        <span className="hidden flex-1 truncate text-base font-semibold normal-case tracking-normal text-ink sm:block">
           {reading}
         </span>
+        <span className="sm:hidden flex-1" />
         <span className="w-16 shrink-0 text-center sm:w-24">{SCORE_TERM.top}</span>
         {!isHeight && <span className="w-12 shrink-0 text-center sm:w-20">{SCORE_TERM.flash}</span>}
       </div>
@@ -657,7 +689,12 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
               <span className="block font-display text-xl font-bold leading-tight">
                 {unit.slice(0, 1).toUpperCase()}
                 {stat.number}
-                {index === 0 && <span className="ml-2 align-middle text-[11px] font-semibold uppercase tracking-[0.14em] text-bark">crux</span>}
+                {/* El bloque más duro se llama crux, y la plataforma se llama
+                    igual por eso mismo. Va con la marca: es el único sitio
+                    donde el nombre significa las dos cosas a la vez. */}
+                {index === 0 && (
+                  <span className={`ml-2 align-middle text-[11px] uppercase ${brandWordClass}`}>crux</span>
+                )}
               </span>
               <span className="block truncate text-sm text-muted">{problemName(stat.problemId) ?? '—'}</span>
             </span>
@@ -686,8 +723,27 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
                       opacity:
                         hover !== null && hover.problemId === stat.problemId && hover.kind !== segment.kind ? 0.35 : 1,
                     }}
-                    onMouseEnter={() => setHover({ problemId: stat.problemId, kind: segment.kind })}
-                    onMouseLeave={() => setHover(null)}
+                    // Mismo problema que en las otras dos gráficas: en el
+                    // teléfono el toque enciende el tramo y nunca llega el
+                    // evento que lo apaga. Con cursor se enciende al pasar por
+                    // encima; con el dedo, el toque alterna.
+                    onPointerEnter={(event) => {
+                      if (event.pointerType === 'mouse') {
+                        setHover({ problemId: stat.problemId, kind: segment.kind });
+                      }
+                    }}
+                    onPointerLeave={(event) => {
+                      if (event.pointerType === 'mouse') {
+                        setHover(null);
+                      }
+                    }}
+                    onClick={() =>
+                      setHover((current) =>
+                        current?.problemId === stat.problemId && current.kind === segment.kind
+                          ? null
+                          : { problemId: stat.problemId, kind: segment.kind },
+                      )
+                    }
                   />
                 </Fragment>
               ))}
@@ -756,20 +812,23 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
           En el teléfono no se estrecha ni se arrastra: el nombre se sube a su
           propio renglón y la barra se queda con el ancho entero de la tarjeta,
           que era justo lo que faltaba. */}
-      <div className="mb-3 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:min-w-[33rem]">
+      {/* Centradas y no alineadas a la derecha: son dos columnas de dos
+          caracteres bajo un título de ocho, y pegadas al borde derecho el
+          número quedaba lejos de su propio rótulo y rozando el filo de la
+          tarjeta. */}
+      <div className="mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:min-w-[33rem] sm:gap-4">
         <span className="hidden w-44 shrink-0 sm:block" />
         <span className="flex-1" />
-        <span className="w-20 shrink-0 text-right">Promedio</span>
-        <span className="w-16 shrink-0 text-right">Tops</span>
+        <span className="w-20 shrink-0 text-center">Promedio</span>
+        <span className="w-12 shrink-0 text-center sm:w-16">Tops</span>
       </div>
       <ul className="flex flex-col gap-4">
         {ranked.map((climber) => (
           <li
             key={climber.id}
-            onMouseEnter={() => onHover(climber.id)}
-            onMouseLeave={() => onHover(null)}
+            {...hoverHandlers(climber.id, onHover)}
             onClick={() => onSelect(climber.id)}
-            className={`flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 transition-opacity duration-200 sm:min-w-[33rem] sm:flex-nowrap ${
+            className={`flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 transition-opacity duration-200 sm:min-w-[33rem] sm:flex-nowrap sm:gap-x-4 ${
               hovered !== null && hovered !== climber.id ? 'opacity-60' : ''
             }`}
           >
@@ -785,10 +844,10 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
                   this list, so the leader is the same gold in every chart. */}
               <span className="h-full rounded-lg" style={{ width: `${(climber.ratio / worst) * 100}%`, background: podiumColor(climber.rank) }} />
             </span>
-            <span className="w-20 shrink-0 text-right font-display text-xl font-bold tabular-nums">
+            <span className="w-20 shrink-0 text-center font-display text-xl font-bold tabular-nums">
               {climber.ratio.toFixed(1)}
             </span>
-            <span className="w-16 shrink-0 text-right font-display text-xl font-bold tabular-nums text-muted">
+            <span className="w-12 shrink-0 text-center font-display text-xl font-bold tabular-nums text-muted sm:w-16">
               {climber.tops}
             </span>
           </li>
@@ -832,7 +891,7 @@ export function LeaderboardCharts({
 
       <Panel
         title={`Puesto ${unit.singular} a ${unit.singular}`}
-        hint={`Una línea por competidor. Se muestra al cierre de cada ${unit.singular}.`}
+        hint={`Una línea por competidor. Se actualiza al cierre de cada ${unit.singular}.`}
       >
         {/* Dos geometrías de la misma gráfica, y el navegador escoge por ancho.
             Antes esto se desplazaba a lo ancho en el teléfono: 900 px de
@@ -878,7 +937,8 @@ export function LeaderboardCharts({
           Se lee de izquierda a derecha: arranca con el puesto tras el primer {unit.singular}. La escala
           vertical es cuántos compiten en la categoría.{' '}
           <span className="sm:hidden">
-            Toca una línea y sale de quién es, y se resalta en la tabla y en las demás gráficas.
+            Presiona una línea para ver el nombre del competidor al que corresponde; eso resalta su
+            posición en la tabla y en las demás gráficas.
           </span>
           <span className="hidden sm:inline">
             Haz clic sobre un competidor y se resalta en la tabla y en las demás gráficas.
@@ -889,7 +949,7 @@ export function LeaderboardCharts({
       <div className={`grid grid-cols-1 gap-6 ${hasAttemptsPerTop ? 'xl:grid-cols-[3fr_2fr]' : ''}`}>
         <Panel
           title={`¿Qué tan duros estaban los ${unit.plural}?`}
-          hint={`De los ${round.rows.length} de la categoría, cuántos hicieron top y cuántos se quedaron en zona. Del más duro al más amable.`}
+          hint={`De los ${round.rows.length} de la categoría, cuántos hicieron top y cuántos se quedaron en zona. Del más duro al más fácil.`}
         >
           <div className="mb-5 flex flex-wrap items-center gap-5 text-sm text-muted">
             <Swatch color={GOLD} label={SCORE_TERM.top} />
@@ -901,7 +961,7 @@ export function LeaderboardCharts({
         {hasAttemptsPerTop && (
           <Panel
             title="Cuántos intentos al top"
-            hint={`Promedio de intentos por cada top logrado. Solo cuenta los ${unit.plural} que sí topó; entra quien tenga dos tops o más. Menos es mejor.`}
+            hint={`Promedio de intentos por cada top logrado. Solo cuentan los ${unit.plural} en los que hizo top; entra quien tenga dos tops o más. Menos es mejor.`}
           >
             {/* El desplazamiento lateral arranca en `sm`: por debajo la fila se
                 parte en dos renglones y no hay nada que arrastrar. */}

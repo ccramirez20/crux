@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { StandingsMotif } from '@/components/standings-motif';
 import { TopographicMotif } from '@/components/topographic-motif';
-import { eyebrowClass, primaryButtonClass, secondaryButtonClass } from '@/lib/ui';
+import { brandWordClass, eyebrowClass, primaryButtonClass, secondaryButtonClass } from '@/lib/ui';
 import { HEADLINE, HEADLINE_LINES } from '@/lib/labels';
 
 // Local a la portada, no el `eyebrowClass` compartido: aquí encabezan una
@@ -130,9 +130,9 @@ export default function HomePage() {
             ))}
           </h1>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted md:text-xl">
-            Crux corre competencias de escalada de principio a fin: inscripción por enlace, jueces
-            que puntúan desde el celular aunque se caiga el wifi, y una tabla pública que se
-            actualiza sola.
+            <span className={brandWordClass}>CRUX</span> corre competencias de escalada de principio
+            a fin: inscripción por enlace, jueces que puntúan desde el celular aunque se caiga el
+            wifi, y una tabla pública que se actualiza sola.
           </p>
         </div>
 
