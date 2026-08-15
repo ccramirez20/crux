@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { cardClass, eyebrowClass } from '@/lib/ui';
 import { GENDER_LABEL, ROUND_TYPE_LABEL, labelFor, problemUnit } from '@/lib/labels';
-import { removeRound } from './actions';
+import { removeCategory, removeRound } from './actions';
 import { CategoryForm } from './category-form';
 import { RoundForm } from './round-form';
 import { RoundAdvances } from './round-advances';
@@ -71,29 +71,28 @@ function SpineNode({ tone }: { tone: 'round' | 'problem' }) {
 
 // Dos pasos y no un `confirm()`, igual que quitar a un inscrito: el diálogo del
 // navegador bloquea la pestaña para preguntar algo que cabe en el propio botón.
-// Va dentro de la ronda abierta y no en su encabezado, que ya es un <button>.
-function RemoveRound({
-  eventId,
-  roundId,
-  problemCount,
-  unit,
+// Va dentro del nivel abierto y no en su encabezado, que ya es un <button>.
+function RemoveNode({
+  label,
+  takesWith,
+  remove,
 }: {
-  eventId: string;
-  roundId: string;
-  problemCount: number;
-  unit: { singular: string; plural: string };
+  label: string;
+  /** Qué más se lleva por delante. Se dice al confirmar, no antes. */
+  takesWith: string | null;
+  remove: () => Promise<{ ok: true } | { ok: false; error: string }>;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function remove() {
+  function click() {
     if (!confirming) {
       setConfirming(true);
       return;
     }
     startTransition(async () => {
-      const result = await removeRound({ eventId, roundId });
+      const result = await remove();
       if (!result.ok) {
         setError(result.error);
         setConfirming(false);
@@ -108,26 +107,26 @@ function RemoveRound({
           {error}
         </span>
       )}
-      {/* Cuántos se lleva por delante, en el propio botón: la confirmación no
-          sirve de nada si no dice qué más se va con la ronda. */}
-      {confirming && problemCount > 0 && (
-        <span className="text-xs text-muted">
-          Se borran también sus {problemCount === 1 ? unit.singular : `${problemCount} ${unit.plural}`}.
-        </span>
-      )}
+      {/* Qué se lleva por delante, junto al botón: una confirmación que no dice
+          qué más desaparece no está confirmando nada. */}
+      {confirming && takesWith && <span className="text-xs text-muted">{takesWith}</span>}
       <button
         type="button"
-        onClick={remove}
+        onClick={click}
         onBlur={() => setConfirming(false)}
         disabled={isPending}
         className={`text-xs font-medium underline decoration-dotted underline-offset-4 ${
           confirming ? 'text-red-700' : 'text-muted hover:text-bark'
         }`}
       >
-        {isPending ? 'Borrando…' : confirming ? '¿Seguro?' : 'Borrar ronda'}
+        {isPending ? 'Borrando…' : confirming ? '¿Seguro?' : label}
       </button>
     </div>
   );
+}
+
+function countPhrase(count: number, singular: string, plural: string): string {
+  return count === 1 ? `su ${singular}` : `sus ${count} ${plural}`;
 }
 
 export function EventStructure({
@@ -303,11 +302,14 @@ export function EventStructure({
                                 unit={unit}
                               />
 
-                              <RemoveRound
-                                eventId={eventId}
-                                roundId={round.id}
-                                problemCount={round.problems.length}
-                                unit={unit}
+                              <RemoveNode
+                                label="Borrar ronda"
+                                takesWith={
+                                  round.problems.length > 0
+                                    ? `Se borran también ${countPhrase(round.problems.length, unit.singular, unit.plural)}.`
+                                    : null
+                                }
+                                remove={() => removeRound({ eventId, roundId: round.id })}
                               />
                             </div>
                           )}
@@ -316,6 +318,20 @@ export function EventStructure({
                     })}
 
                     <RoundForm eventId={eventId} categoryId={category.id} />
+
+                    <RemoveNode
+                      label="Borrar categoría"
+                      takesWith={
+                        category.rounds.length > 0
+                          ? `Se borran también ${countPhrase(category.rounds.length, 'ronda', 'rondas')}${
+                              totalProblems > 0
+                                ? ` y ${countPhrase(totalProblems, unit.singular, unit.plural)}`
+                                : ''
+                            }.`
+                          : null
+                      }
+                      remove={() => removeCategory({ eventId, categoryId: category.id })}
+                    />
                   </div>
                 </div>
               )}
