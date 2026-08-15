@@ -18,7 +18,7 @@ import type {
   LeaderboardPayload,
   LeaderboardRound,
   LeaderboardRow,
-  SiblingEvent,
+  SiblingEvents,
 } from '@/lib/leaderboard';
 import { brandWordClass } from '@/lib/ui';
 import { useLeaderboard } from '@/lib/use-leaderboard';
@@ -327,7 +327,7 @@ export function LeaderboardScreen({
 }: {
   initial: LeaderboardPayload;
   slug: string;
-  siblings: SiblingEvent[];
+  siblings: SiblingEvents;
 }) {
   const data = useLeaderboard(slug, initial);
   const [categoryId, setCategoryId] = useState<string | null>(initial.categories[0]?.id ?? null);
@@ -715,13 +715,18 @@ export function LeaderboardScreen({
                 por un enlace de WhatsApp no tiene cómo saber que hay una Fecha
                 1, ni que esto es una liga: son los otros eventos de la misma
                 organización, en orden de fecha. */}
-            {siblings.length > 0 && (
+            {siblings.events.length > 0 && (
               <div className="flex flex-col gap-2 border-t border-cardborder pt-6">
+                {/* Se agrupan por organización, que es lo que de verdad las une:
+                    todo evento que crea la misma cuenta cae en la misma. Por eso
+                    el rótulo la nombra en vez de decir "esta liga" — una liga y
+                    una copa de la misma gente son hermanas igual, y llamarlas a
+                    todas fechas de una liga sería mentira. */}
                 <span className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">
-                  Otras fechas de esta liga
+                  Más de {siblings.organization}
                 </span>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                  {siblings.map((sibling) => (
+                  {siblings.events.map((sibling) => (
                     <a
                       key={sibling.slug}
                       href={`/resultados/${sibling.slug}`}

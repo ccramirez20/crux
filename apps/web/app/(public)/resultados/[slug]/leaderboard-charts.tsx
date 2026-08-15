@@ -189,6 +189,23 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
       detail: `${bestClimb.name} subió ${bestClimb.delta} puestos en la tabla de posiciones`,
     });
   }
+
+  // Siempre tres. En una final de cuatro personas nadie "asciende" —los cuatro
+  // llegaron ahí y el orden apenas se mueve— y la fila se quedaba con dos
+  // cifras estiradas en el ancho de tres. Los tops de la ronda existen siempre
+  // y dicen algo que las otras dos no: cuánto se escaló en total.
+  if (out.length < 3 && !isHeight) {
+    const posibles = round.rows.length * round.problems.length;
+    out.push({
+      key: 'tops',
+      label: 'Tops de la ronda',
+      what: `De todo lo que se podía escalar, cuánto se topó`,
+      value: String(totalTops),
+      detail: `de ${posibles} posibles · ${round.rows.length} en la ronda por ${round.problems.length} ${
+        round.problems.length === 1 ? unit : `${unit}s`
+      }`,
+    });
+  }
   return out;
 }
 
@@ -258,7 +275,7 @@ function declutter(values: number[], minGap: number): number[] {
  * No se encoge la versión grande ni se recorta el campo: es la misma gráfica con
  * otra geometría, y la de la sala queda intacta.
  */
-function bumpLayout(compact: boolean, fieldSize: number) {
+function bumpLayout(compact: boolean, fieldSize: number, laneOverride?: number) {
   if (compact) {
     // El viewBox va casi 1:1 con los píxeles reales de la tarjeta (320 contra
     // ~302): un SVG se escala entero, así que un viewBox ancho no aprieta las
@@ -287,7 +304,12 @@ function bumpLayout(compact: boolean, fieldSize: number) {
   // abajo. Es la pantalla que se proyecta: veinticinco competidoras tienen que
   // caber en el mismo alto que catorce, o la mitad de la categoría queda fuera
   // del proyector.
-  const lane = Math.max(22, Math.min(38, Math.round(620 / fieldSize)));
+  //
+  // `laneOverride` lo manda la pantalla de proyección, que sí sabe cuánto alto
+  // tiene: dentro de una página la gráfica crece hacia abajo y el tope de 38
+  // evita que se vuelva un rollo, pero en un panel de alto fijo ese mismo tope
+  // deja media pantalla en blanco — sobre todo en una final de cuatro.
+  const lane = laneOverride ?? Math.max(22, Math.min(38, Math.round(620 / fieldSize)));
   return {
     lane,
     width: 1250,
@@ -316,6 +338,7 @@ export function BumpChart({
   article,
   compact = false,
   className,
+  laneOverride,
   hovered,
   onHover,
   onSelect,
@@ -326,6 +349,7 @@ export function BumpChart({
   article: string;
   compact?: boolean;
   className?: string;
+  laneOverride?: number;
 } & HoverProps) {
   // Cuánto mide cada nombre ya dibujado. Un contra-trazo alcanzaba para tapar la
   // guía, pero seguía pasando por debajo de las letras; medir el texto es la
@@ -376,7 +400,7 @@ export function BumpChart({
     gap,
     laneInset,
     weight,
-  } = bumpLayout(compact, shown.length);
+  } = bumpLayout(compact, shown.length, laneOverride);
   const roomy = lane >= 32;
   const endNameX = plotRight + 88;
   // El centro de cada columna de etiquetas, medido sobre el bloque de texto que

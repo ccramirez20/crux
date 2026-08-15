@@ -206,6 +206,46 @@ function ProjectedTable({
   );
 }
 
+/**
+ * El carril que hace que la gráfica de puestos llene el panel.
+ *
+ * Un SVG se escala entero y conserva su proporción, así que si su caja es más
+ * ancha que alta y la gráfica es más apaisada todavía, sobra alto: se ve una
+ * gráfica pequeña flotando en un panel grande. Eso se nota sobre todo en una
+ * final de cuatro, donde la gráfica natural mide 274 unidades de alto contra
+ * 1250 de ancho.
+ *
+ * La salida no es estirar —deformaría las curvas— sino separar los carriles
+ * hasta que la proporción de la gráfica sea la de su caja. El texto se ve
+ * igual; lo que cambia es que el dibujo ocupa el panel.
+ */
+const BUMP_VIEWBOX_WIDTH = 1250;
+const BUMP_PAD = 78 + 82;
+
+function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
+  const [lane, setLane] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    const measure = () => {
+      const element = box.current;
+      if (!element || rows < 2 || element.clientWidth === 0) {
+        return;
+      }
+      const targetHeight = BUMP_VIEWBOX_WIDTH * (element.clientHeight / element.clientWidth);
+      const ideal = (targetHeight - BUMP_PAD) / (rows - 1);
+      setLane(Math.round(Math.max(22, Math.min(260, ideal))));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (box.current) {
+      observer.observe(box.current);
+    }
+    return () => observer.disconnect();
+  }, [box, rows]);
+
+  return lane;
+}
+
 /** Las tres cifras de la ronda en una tira y no en tres tarjetas: en una fila de
  *  1900 px de ancho, tres tarjetas se estiran y quedan casi vacías. */
 function HighlightStrip({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
@@ -214,9 +254,11 @@ function HighlightStrip({ round, unit, isHeight }: { round: LeaderboardRound; un
     return null;
   }
   return (
-    <div className="flex shrink-0 divide-x divide-cardborder rounded-2xl border border-cardborder bg-card">
+    // Tres columnas iguales y fijas: repartir el ancho entre las que haya dejaba
+    // dos cifras estiradas en una final.
+    <div className="grid shrink-0 grid-cols-3 divide-x divide-cardborder rounded-2xl border border-cardborder bg-card">
       {items.map((item) => (
-        <div key={item.key} className="flex min-w-0 flex-1 items-baseline gap-4 px-6 py-3">
+        <div key={item.key} className="flex min-w-0 items-baseline gap-4 px-6 py-3">
           <span className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-pine">
             {item.value}
           </span>
@@ -243,6 +285,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [rotating, setRotating] = useState(false);
   const [slide, setSlide] = useState(0);
+  const bumpBox = useRef<HTMLDivElement>(null);
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
@@ -290,6 +333,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
 
   const date = formatEventDate(data.event.date);
   const isPodiumRound = round?.type === 'final';
+  const bumpLane = useBumpLane(bumpBox, round?.rows.length ?? 0);
   const chartTitle = {
     bump: `Puesto ${unit.singular} a ${unit.singular}`,
     detail: `Los ${unit.plural} y los intentos al top`,
@@ -376,7 +420,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   nuevo y la animación de entrada vuelve a correr. */}
               <div key={activeSlide} className="crux-fade flex min-h-0 flex-1 flex-col overflow-hidden">
                 {activeSlide === 'bump' && (
-                  <div className="flex min-h-0 flex-1 items-center">
+                  <div ref={bumpBox} className="flex min-h-0 flex-1 items-center">
                     {/* `w-full max-h-full` y no `h-full`: con `h-full` el SVG se
                         ajusta al alto y deja franjas de aire a los lados —
                         pequeño en el centro de un panel ancho. Así usa todo el
@@ -387,6 +431,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                       plural={unit.plural}
                       article={unit.article}
                       className="max-h-full w-full"
+                      {...(bumpLane === undefined ? {} : { laneOverride: bumpLane })}
                       {...inert}
                     />
                   </div>

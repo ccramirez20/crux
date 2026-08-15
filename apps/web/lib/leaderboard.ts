@@ -2,7 +2,17 @@ import { unstable_cache } from 'next/cache';
 import { z } from 'zod';
 import { SCORING_FORMATS, type Attempt, type ScoringFormat } from '@crux/core';
 import { resolveCurrentAttempts, scoreRound, type RankedResult } from '@crux/scoring';
-import { athletes, attempts, categories, eq, events, problems, registrations, rounds } from '@crux/db';
+import {
+  athletes,
+  attempts,
+  categories,
+  eq,
+  events,
+  organizations,
+  problems,
+  registrations,
+  rounds,
+} from '@crux/db';
 import { getDb } from './db';
 
 // `events.scoring_format` is a plain text column, and scoreRound indexes its
@@ -489,6 +499,12 @@ export interface SiblingEvent {
   date: string | null;
 }
 
+export interface SiblingEvents {
+  /** Cómo se llama quien las organiza: es lo único que de verdad las agrupa. */
+  organization: string;
+  events: SiblingEvent[];
+}
+
 /**
  * Las otras competencias de la misma organización.
  *
@@ -501,14 +517,19 @@ export interface SiblingEvent {
  * evento. Aquí la caché es de un minuto porque lo único que la mueve es que el
  * organizador cree otra fecha.
  */
-async function loadSiblingEvents(slug: string): Promise<SiblingEvent[]> {
+async function loadSiblingEvents(slug: string): Promise<SiblingEvents> {
   const db = getDb();
   const [event] = await db
-    .select({ id: events.id, organizationId: events.organizationId })
+    .select({
+      id: events.id,
+      organizationId: events.organizationId,
+      organization: organizations.name,
+    })
     .from(events)
+    .innerJoin(organizations, eq(events.organizationId, organizations.id))
     .where(eq(events.slug, slug));
   if (!event) {
-    return [];
+    return { organization: '', events: [] };
   }
 
   const rows = await db
@@ -517,7 +538,7 @@ async function loadSiblingEvents(slug: string): Promise<SiblingEvent[]> {
     .where(eq(events.organizationId, event.organizationId))
     .orderBy(events.date);
 
-  return rows.filter((row) => row.slug !== slug);
+  return { organization: event.organization, events: rows.filter((row) => row.slug !== slug) };
 }
 
 export const getSiblingEvents = unstable_cache(loadSiblingEvents, ['sibling-events'], {
