@@ -327,6 +327,15 @@ export function buildLeaderboard(
       }
 
       const problemIds = round.problems.map((p) => p.id);
+      // Una ronda solo sabe de la gente que está en ella. Sin esto, un intento
+      // de alguien que no clasificó —capturado por error, o por un juez en el
+      // bloque equivocado— entra igual en el conteo del muro y en la línea de
+      // tiempo: la ronda llegaba a decir "18 tops de 16 posibles", que es
+      // imposible y se ve en pantalla. El puntaje ya estaba a salvo porque
+      // `scoreRound` recibe la lista de inscripciones; lo que faltaba era
+      // recortar todo lo demás con el mismo criterio.
+      const inField = new Set(roundField.map((r) => r.id));
+      const fieldAttempts = attemptRows.filter((a) => inField.has(a.registrationId));
       const config = {
         problemIds,
         // Everyone registered in the category, not just whoever has been
@@ -335,12 +344,12 @@ export function buildLeaderboard(
         registrationIds: roundField.map((r) => r.id),
         problemPoints: round.problemPoints,
       };
-      const scored = scoreRound(format.data, attemptRows, config);
+      const scored = scoreRound(format.data, fieldAttempts, config);
       if (!scored.ok) {
         return { ...base, rows: [], error: scored.error.message };
       }
 
-      const current = resolveCurrentAttempts(attemptRows, new Set(problemIds));
+      const current = resolveCurrentAttempts(fieldAttempts, new Set(problemIds));
       const rows = scored.value.map((result) => {
         const registration = roundField.find((r) => r.id === result.registrationId);
         return {
@@ -376,7 +385,7 @@ export function buildLeaderboard(
         };
       });
 
-      const roundAttempts = attemptRows.filter((a) => problemIds.includes(a.problemId));
+      const roundAttempts = fieldAttempts.filter((a) => problemIds.includes(a.problemId));
 
       return {
         ...base,

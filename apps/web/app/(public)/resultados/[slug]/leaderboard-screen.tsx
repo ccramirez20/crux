@@ -723,7 +723,7 @@ export function LeaderboardScreen({
                     una copa de la misma gente son hermanas igual, y llamarlas a
                     todas fechas de una liga sería mentira. */}
                 <span className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">
-                  Más de {siblings.organization}
+                  Más competencias de {siblings.organization}
                 </span>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                   {siblings.events.map((sibling) => (

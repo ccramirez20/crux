@@ -258,8 +258,11 @@ function HighlightStrip({ round, unit, isHeight }: { round: LeaderboardRound; un
     // dos cifras estiradas en una final.
     <div className="grid shrink-0 grid-cols-3 divide-x divide-cardborder rounded-2xl border border-cardborder bg-card">
       {items.map((item) => (
-        <div key={item.key} className="flex min-w-0 items-baseline gap-4 px-6 py-3">
-          <span className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-pine">
+        // `items-center` y no `items-baseline`: la línea base del número de
+        // 36 px se alineaba con el rótulo de 11, y la cifra quedaba montada
+        // por encima de su propio texto.
+        <div key={item.key} className="flex min-w-0 items-center gap-4 px-6 py-3">
+          <span className="shrink-0 font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-pine">
             {item.value}
           </span>
           <span className="min-w-0">
@@ -285,6 +288,9 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [rotating, setRotating] = useState(false);
   const [slide, setSlide] = useState(0);
+  // Una gráfica fija deja de turnarse: sirve para dejar la de puestos puesta
+  // mientras corre una final.
+  const [pinned, setPinned] = useState(false);
   const bumpBox = useRef<HTMLDivElement>(null);
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
@@ -324,12 +330,12 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   // Cada turno dura lo que dura leerlo, así que no puede ser un intervalo fijo:
   // se programa el siguiente cambio con la duración del que está en pantalla.
   useEffect(() => {
-    if (slides.length < 2 || !activeSlide) {
+    if (pinned || slides.length < 2 || !activeSlide) {
       return;
     }
     const id = setTimeout(() => setSlide((s) => (s + 1) % slides.length), SLIDE_MS[activeSlide]);
     return () => clearTimeout(id);
-  }, [activeSlide, slides.length]);
+  }, [activeSlide, slides.length, pinned]);
 
   const date = formatEventDate(data.event.date);
   const isPodiumRound = round?.type === 'final';
@@ -404,15 +410,46 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                 {/* Los puntos dicen cuántos turnos hay y en cuál va. Sin ellos,
                     una pantalla que cambia sola parece que se movió sola. */}
                 {slides.length > 1 && (
-                  <span className="flex shrink-0 items-center gap-1.5">
-                    {slides.map((key, index) => (
-                      <span
-                        key={key}
-                        className={`h-2 w-2 rounded-full transition-colors duration-500 ${
-                          index === slide % slides.length ? 'bg-pine' : 'bg-cardborder'
-                        }`}
-                      />
-                    ))}
+                  <span className="flex shrink-0 items-center gap-2">
+                    {slides.map((key, index) => {
+                      const active = index === slide % slides.length;
+                      return (
+                        // Tocar un punto lleva a esa gráfica y la deja fija;
+                        // tocar el que ya está activo suelta el turno y vuelve
+                        // a rotar. El área de clic es de 24 px aunque el punto
+                        // mida 8: nadie le apunta a ocho píxeles.
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            if (active) {
+                              setPinned((value) => !value);
+                              return;
+                            }
+                            setSlide(index);
+                            setPinned(true);
+                          }}
+                          title={
+                            active && pinned
+                              ? 'Fija — toca para volver a rotar'
+                              : active
+                                ? 'Toca para fijar esta gráfica'
+                                : 'Ver esta gráfica'
+                          }
+                          className="flex h-6 w-6 items-center justify-center"
+                        >
+                          <span
+                            className={`rounded-full transition-all duration-300 ${
+                              active
+                                ? pinned
+                                  ? 'h-2.5 w-2.5 bg-gold ring-2 ring-gold/30'
+                                  : 'h-2.5 w-2.5 bg-pine'
+                                : 'h-2 w-2 bg-cardborder'
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
                   </span>
                 )}
               </div>
