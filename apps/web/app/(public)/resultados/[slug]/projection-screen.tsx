@@ -490,15 +490,15 @@ function HighlightStrip({
   return (
     <div className="grid shrink-0 grid-cols-3 divide-x divide-cardborder rounded-2xl border border-cardborder bg-card">
       {shown.map((item) => (
-        <div key={item.key} className="crux-fade flex min-w-0 items-center justify-center gap-4 px-6 py-3">
-          <span className="shrink-0 font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-pine">
+        <div key={item.key} className="crux-fade flex min-w-0 items-center justify-center gap-5 px-6 py-5">
+          <span className="shrink-0 font-display text-5xl font-bold leading-none tracking-tight tabular-nums text-pine">
             {item.value}
           </span>
           <span className="min-w-0">
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted">
               {item.label}
             </span>
-            <span className="block truncate text-base text-ink">{item.detail}</span>
+            <span className="mt-0.5 block truncate text-lg text-ink">{item.detail}</span>
           </span>
         </div>
       ))}
@@ -732,7 +732,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   // en una columna flex los hijos se encogen por debajo de su
                   // contenido, y sin recortar cada uno, el muro se metía encima
                   // del título de los intentos.
-                  <div className="flex min-h-0 flex-1 flex-col gap-10 overflow-hidden pt-6">
+                  <div className="relative flex min-h-0 flex-1 flex-col gap-10 overflow-hidden pt-6">
                     <div className="min-h-0 shrink-0 overflow-hidden">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                         Qué tan duros estaban · del más duro al más fácil
@@ -753,13 +753,17 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                     {/* Con dos gráficas ya hay bastante que leer: lo que sobre
                         lo cierran las curvas y nada más. La medida es la del
                         otro turno, que comparte panel y tamaño. */}
-                    {/* El mismo umbral que el otro turno: si sobran los 76 px
-                        que miden las curvas, cierran el panel; si no, no
-                        aparecen. Dos reglas distintas para el mismo panel
-                        hacían que en una semifinal salieran en un turno y en el
-                        otro no. */}
+                    {/* Las curvas al fondo y no como un bloque más: lo que
+                        sobraba era blanco suelto debajo de las dos gráficas, y
+                        un motivo apoyado ahí abajo seguía siendo una tercera
+                        cosa apilada. Puestas de fondo, el panel se cierra solo
+                        y las gráficas se apoyan encima. Mismo umbral que el
+                        otro turno: si no cabe entero, no aparece. */}
                     {bumpLeftover >= FILL.motif && (
-                      <div className="pointer-events-none mt-auto px-10 opacity-45" aria-hidden="true">
+                      <div
+                        className="pointer-events-none absolute inset-x-6 bottom-4 opacity-40"
+                        aria-hidden="true"
+                      >
                         <TopographicMotif />
                       </div>
                     )}
