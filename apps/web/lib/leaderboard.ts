@@ -482,3 +482,44 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
 export const getLeaderboard = unstable_cache(loadLeaderboard, ['leaderboard'], {
   revalidate: 5,
 });
+
+export interface SiblingEvent {
+  slug: string;
+  name: string;
+  date: string | null;
+}
+
+/**
+ * Las otras competencias de la misma organización.
+ *
+ * Una fecha de liga suelta se lee como un evento suelto: quien llega a la
+ * Fecha 2 por un enlace de WhatsApp no tiene forma de saber que existe una
+ * Fecha 1, ni que la liga es una liga.
+ *
+ * Va aparte de `getLeaderboard` y no dentro del payload a propósito: eso viaja
+ * a cada espectador cada cinco segundos, y esta lista no cambia durante un
+ * evento. Aquí la caché es de un minuto porque lo único que la mueve es que el
+ * organizador cree otra fecha.
+ */
+async function loadSiblingEvents(slug: string): Promise<SiblingEvent[]> {
+  const db = getDb();
+  const [event] = await db
+    .select({ id: events.id, organizationId: events.organizationId })
+    .from(events)
+    .where(eq(events.slug, slug));
+  if (!event) {
+    return [];
+  }
+
+  const rows = await db
+    .select({ slug: events.slug, name: events.name, date: events.date })
+    .from(events)
+    .where(eq(events.organizationId, event.organizationId))
+    .orderBy(events.date);
+
+  return rows.filter((row) => row.slug !== slug);
+}
+
+export const getSiblingEvents = unstable_cache(loadSiblingEvents, ['sibling-events'], {
+  revalidate: 60,
+});

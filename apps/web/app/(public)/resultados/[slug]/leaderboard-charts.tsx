@@ -128,17 +128,23 @@ function StatTile({
   );
 }
 
-export function Headline({
-  round,
-  unit,
-  isHeight,
-  dense = false,
-}: {
-  round: LeaderboardRound;
-  unit: string;
-  isHeight: boolean;
-  dense?: boolean;
-}) {
+export interface Highlight {
+  key: string;
+  label: string;
+  what: string;
+  value: string;
+  detail: string;
+}
+
+/**
+ * Las tres cifras de la ronda, ya calculadas.
+ *
+ * Va aparte de la fila de tarjetas porque hay dos presentaciones: las tarjetas
+ * de la página y la tira compacta de la pantalla de proyección. El cálculo es
+ * el mismo y no puede vivir dos veces — es de lo poco en esta pantalla que
+ * podría dar dos respuestas distintas sin que nadie lo note.
+ */
+export function roundHighlights(round: LeaderboardRound, unit: string, isHeight: boolean): Highlight[] {
   const stats = round.problemStats;
   const crux = [...stats].sort((a, b) => a.tops - b.tops)[0];
   const problemName = (id: string) => round.problems.find((p) => p.id === id)?.name;
@@ -155,35 +161,53 @@ export function Headline({
     }))
     .sort((a, b) => b.delta - a.delta)[0];
 
+  const out: Highlight[] = [];
+  if (crux) {
+    out.push({
+      key: 'crux',
+      label: `El ${unit} más duro`,
+      what: `Cuál fue el ${unit} que menos gente pudo hacer`,
+      value: `${unit.slice(0, 1).toUpperCase()}${crux.number}`,
+      detail: `${problemName(crux.problemId) ?? 'Sin nombre'} · le hicieron top ${crux.tops} de ${crux.field}`,
+    });
+  }
+  if (!isHeight) {
+    out.push({
+      key: 'flashes',
+      label: 'Flashes de la ronda',
+      what: 'De todos los tops, cuántos salieron al primer intento',
+      value: totalTops > 0 ? `${Math.round((totalFlashes / totalTops) * 100)}%` : '—',
+      detail: `${flashCount(totalFlashes)} de ${totalTops} tops en la ronda`,
+    });
+  }
+  if (bestClimb && bestClimb.delta > 0) {
+    out.push({
+      key: 'climb',
+      label: 'Mayor ascenso en la tabla',
+      what: `Quién más puestos ascendió desde el primer ${unit}`,
+      value: `+${bestClimb.delta}`,
+      detail: `${bestClimb.name} subió ${bestClimb.delta} puestos en la tabla de posiciones`,
+    });
+  }
+  return out;
+}
+
+export function Headline({
+  round,
+  unit,
+  isHeight,
+  dense = false,
+}: {
+  round: LeaderboardRound;
+  unit: string;
+  isHeight: boolean;
+  dense?: boolean;
+}) {
   return (
     <div className={`grid grid-cols-1 md:grid-cols-3 ${dense ? 'gap-3' : 'gap-6'}`}>
-      {crux && (
-        <StatTile
-          dense={dense}
-          label={`El ${unit} más duro`}
-          what={`Cuál fue el ${unit} que menos gente pudo hacer`}
-          value={`${unit.slice(0, 1).toUpperCase()}${crux.number}`}
-          detail={`${problemName(crux.problemId) ?? 'Sin nombre'} · le hicieron top ${crux.tops} de ${crux.field}`}
-        />
-      )}
-      {!isHeight && (
-        <StatTile
-          dense={dense}
-          label="Flashes de la ronda"
-          what="De todos los tops, cuántos salieron al primer intento"
-          value={totalTops > 0 ? `${Math.round((totalFlashes / totalTops) * 100)}%` : '—'}
-          detail={`${flashCount(totalFlashes)} de ${totalTops} tops en la ronda`}
-        />
-      )}
-      {bestClimb && bestClimb.delta > 0 && (
-        <StatTile
-          dense={dense}
-          label="Mayor ascenso en la tabla"
-          what={`Quién más puestos ascendió desde el primer ${unit}`}
-          value={`+${bestClimb.delta}`}
-          detail={`${bestClimb.name} subió ${bestClimb.delta} puestos en la tabla de posiciones`}
-        />
-      )}
+      {roundHighlights(round, unit, isHeight).map(({ key, ...item }) => (
+        <StatTile key={key} dense={dense} {...item} />
+      ))}
     </div>
   );
 }
@@ -660,7 +684,19 @@ interface WallHover {
   kind: 'top' | 'zone' | 'none';
 }
 
-export function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
+export function Wall({
+  round,
+  unit,
+  isHeight,
+  // En proyección el muro comparte panel con los intentos al top, y con el
+  // aire de la página los dos no caben en el alto que hay.
+  dense = false,
+}: {
+  round: LeaderboardRound;
+  unit: string;
+  isHeight: boolean;
+  dense?: boolean;
+}) {
   const [hover, setHover] = useState<WallHover | null>(null);
   // Menos tops es más duro, y con los mismos tops manda el flash: once tops de
   // los cuales seis salieron al primer intento no es el mismo bloque que once
@@ -719,7 +755,7 @@ export function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit:
         <span className="w-16 shrink-0 text-center sm:w-24">{SCORE_TERM.top}</span>
         {!isHeight && <span className="w-12 shrink-0 text-center sm:w-20">{SCORE_TERM.flash}</span>}
       </div>
-      <ul className="flex flex-col gap-5">
+      <ul className={`flex flex-col ${dense ? 'gap-3' : 'gap-5'}`}>
         {stats.map((stat, index) => (
           <li key={stat.problemId} className="flex items-center gap-2 sm:gap-5">
             <span className="w-20 shrink-0 sm:w-36">
@@ -739,7 +775,7 @@ export function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit:
             {/* Cada tramo dice qué significa su color al pasarle el cursor: se
                 queda encendido y los otros dos de su barra se apagan, y el
                 texto sale arriba. Un color solo no dice qué mide. */}
-            <span className="relative flex h-9 flex-1 overflow-hidden rounded-lg" style={{ background: LANE }}>
+            <span className={`relative flex flex-1 overflow-hidden rounded-lg ${dense ? 'h-8' : 'h-9'}`} style={{ background: LANE }}>
               {(
                 [
                   { kind: 'top', width: (stat.tops / stat.field) * 100, background: GOLD },
@@ -810,7 +846,18 @@ export function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit:
  * How many goes each top cost. One axis, sorted, low is good — a scatter asked
  * the reader to decode two dimensions and a diagonal before it said anything.
  */
-export function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: LeaderboardRound } & HoverProps) {
+export function AttemptsPerTop({
+  round,
+  // En proyección esta gráfica comparte panel con la del muro y no puede
+  // llevarse todo el alto: se recorta a las primeras y se queda sin el ancho
+  // mínimo, que ahí no tiene a dónde desplazarse.
+  limit = 10,
+  fixedWidth = true,
+  hovered,
+  onHover,
+  onSelect,
+}: { round: LeaderboardRound; limit?: number; fixedWidth?: boolean } & HoverProps) {
+  const minWidth = fixedWidth ? 'sm:min-w-[33rem]' : '';
   const climbers = round.rows.flatMap((row) =>
     // Two tops minimum. Otherwise a single lucky flash scores 1.0 and outranks
     // someone who sent five, which is the exact opposite of the point.
@@ -832,7 +879,7 @@ export function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: L
     return null;
   }
 
-  const ranked = climbers.sort((a, b) => a.ratio - b.ratio).slice(0, 10);
+  const ranked = climbers.sort((a, b) => a.ratio - b.ratio).slice(0, limit);
   const worst = Math.max(...ranked.map((c) => c.ratio));
 
   return (
@@ -853,7 +900,7 @@ export function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: L
           caracteres bajo un título de ocho, y pegadas al borde derecho el
           número quedaba lejos de su propio rótulo y rozando el filo de la
           tarjeta. */}
-      <div className="mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:min-w-[33rem] sm:gap-4">
+      <div className={`mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:gap-4 ${minWidth}`}>
         <span className="hidden w-44 shrink-0 sm:block" />
         <span className="flex-1" />
         <span className="w-20 shrink-0 text-center">Promedio</span>
@@ -865,7 +912,7 @@ export function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: L
             key={climber.id}
             {...hoverHandlers(climber.id, onHover)}
             onClick={() => onSelect(climber.id)}
-            className={`flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 transition-opacity duration-200 sm:min-w-[33rem] sm:flex-nowrap sm:gap-x-4 ${
+            className={`flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 transition-opacity duration-200 sm:flex-nowrap sm:gap-x-4 ${minWidth} ${
               hovered !== null && hovered !== climber.id ? 'opacity-60' : ''
             }`}
           >

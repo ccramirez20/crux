@@ -13,7 +13,13 @@ import {
   labelFor,
   problemUnit,
 } from '@/lib/labels';
-import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
+import type {
+  LeaderboardCategory,
+  LeaderboardPayload,
+  LeaderboardRound,
+  LeaderboardRow,
+  SiblingEvent,
+} from '@/lib/leaderboard';
 import { brandWordClass } from '@/lib/ui';
 import { useLeaderboard } from '@/lib/use-leaderboard';
 import { LeaderboardCharts, hoverHandlers } from './leaderboard-charts';
@@ -25,7 +31,7 @@ import { LeaderboardCharts, hoverHandlers } from './leaderboard-charts';
 // Van en pares con una divisoria entre ellos: la línea es la que separa, no un
 // piso extra de títulos. Dos filas de encabezado engordaban la tabla a lo ancho
 // sin decir nada que "Tops · Intentos | Zonas · Intentos" no diga en una.
-const SCORE_HEADERS: Record<string, string[][]> = {
+export const SCORE_HEADERS: Record<string, string[][]> = {
   classic_tops_zones: [
     ['Tops', 'Intentos'],
     ['Zonas', 'Intentos'],
@@ -314,7 +320,15 @@ function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; ro
   );
 }
 
-export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPayload; slug: string }) {
+export function LeaderboardScreen({
+  initial,
+  slug,
+  siblings,
+}: {
+  initial: LeaderboardPayload;
+  slug: string;
+  siblings: SiblingEvent[];
+}) {
   const data = useLeaderboard(slug, initial);
   const [categoryId, setCategoryId] = useState<string | null>(initial.categories[0]?.id ?? null);
   const [roundId, setRoundId] = useState<string | null>(defaultRound(initial.categories[0]));
@@ -695,6 +709,34 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                 onHover={setHovered}
                 onSelect={toggleSelected}
               />
+            )}
+
+            {/* Una fecha suelta se lee como un evento suelto. Quien llega aquí
+                por un enlace de WhatsApp no tiene cómo saber que hay una Fecha
+                1, ni que esto es una liga: son los otros eventos de la misma
+                organización, en orden de fecha. */}
+            {siblings.length > 0 && (
+              <div className="flex flex-col gap-2 border-t border-cardborder pt-6">
+                <span className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">
+                  Otras fechas de esta liga
+                </span>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                  {siblings.map((sibling) => (
+                    <a
+                      key={sibling.slug}
+                      href={`/resultados/${sibling.slug}`}
+                      className="font-display text-lg font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
+                    >
+                      {sibling.name}
+                      {formatEventDate(sibling.date) && (
+                        <span className="ml-2 text-base font-normal text-muted no-underline">
+                          {formatEventDate(sibling.date)}
+                        </span>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Una línea, al final y en gris: esta pantalla es del evento, no

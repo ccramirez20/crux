@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TopographicMotif } from '@/components/topographic-motif';
 import {
   DISCIPLINE_LABEL,
   ROUND_TYPE_LABEL,
-  SCORE_TERM,
   formatEventDate,
   labelFor,
   problemUnit,
@@ -13,8 +13,8 @@ import {
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound } from '@/lib/leaderboard';
 import { brandWordClass } from '@/lib/ui';
 import { useLeaderboard } from '@/lib/use-leaderboard';
-import { AttemptsPerTop, BumpChart, Headline, Wall } from './leaderboard-charts';
-import { BlockBadge, podiumStyle, scoreCells } from './leaderboard-screen';
+import { AttemptsPerTop, BumpChart, Wall, roundHighlights } from './leaderboard-charts';
+import { BlockBadge, SCORE_HEADERS, podiumStyle, scoreCells } from './leaderboard-screen';
 
 /**
  * La pantalla que se proyecta a toda la sala, y nada más.
@@ -28,18 +28,35 @@ import { BlockBadge, podiumStyle, scoreCells } from './leaderboard-screen';
  * el mismo cálculo. Lo único nuevo aquí es la disposición y los relojes.
  */
 
-/** Cuánto dura cada gráfica en pantalla. */
+/** Cuánto dura cada turno de la derecha. */
 const SLIDE_MS = {
   // La de puestos es una historia: hay que seguir una línea de un extremo al
-  // otro, y eso no se hace en quince segundos desde el fondo del salón.
+  // otro, y eso no se hace en diez segundos desde el fondo del salón.
   bump: 30_000,
-  // Las otras dos son una lista ordenada. Se leen de un vistazo.
-  wall: 15_000,
-  attempts: 15_000,
+  // La otra son dos listas ordenadas. Se leen de un vistazo.
+  detail: 10_000,
 } as const;
 
 /** Cada cuánto pasa a la siguiente categoría, cuando la rotación está activa. */
 const CATEGORY_MS = 30_000;
+
+/** Cuánto aguantan los controles en pantalla sin que nadie mueva el ratón. */
+const CONTROLS_MS = 3_000;
+
+/**
+ * La montaña de la marca: la misma silueta de las curvas de nivel, cerrada.
+ * A la izquierda del nombre y en pequeño — es un sello, no una ilustración.
+ */
+function PeakMark() {
+  return (
+    <svg viewBox="0 0 48 40" className="h-11 w-14 shrink-0" aria-hidden="true">
+      <path d="M4 34 L18 10 L26 22 L32 15 L44 34 Z" fill="none" stroke="#2F4A3E" strokeWidth={2.5} strokeLinejoin="round" />
+      {/* La nieve en oro: es el único acento y cae en la cima, que es de donde
+          sale el nombre. */}
+      <path d="M12.5 24 L18 10 L23.5 18.2 L20 20 L17 17.5 Z" fill="#E3A83B" />
+    </svg>
+  );
+}
 
 /**
  * Cuánto se encoge la tabla, medido contra el alto que de verdad hay.
@@ -52,6 +69,10 @@ const CATEGORY_MS = 30_000;
  * el hueco y se reparte entre las filas.
  */
 const TIERS = [
+  // Una final son cuatro personas en una pared entera. Sin este tramo la tabla
+  // se quedaba en el tamaño de una clasificatoria de catorce y el momento más
+  // importante del día se veía igual de pequeño que el resto.
+  { min: 96, row: 'py-5', rank: 'text-5xl', name: 'text-3xl', badge: 'h-14 min-w-14 text-2xl', score: 'text-4xl' },
   { min: 70, row: 'py-3', rank: 'text-4xl', name: 'text-2xl', badge: 'h-11 min-w-11 text-lg', score: 'text-3xl' },
   { min: 54, row: 'py-2', rank: 'text-3xl', name: 'text-xl', badge: 'h-9 min-w-9 text-base', score: 'text-2xl' },
   { min: 46, row: 'py-1.5', rank: 'text-2xl', name: 'text-lg', badge: 'h-8 min-w-8 text-sm', score: 'text-xl' },
@@ -63,8 +84,6 @@ const TIERS = [
 const TABLE_HEADER_PX = 30;
 
 function useRowTier(box: React.RefObject<HTMLElement | null>, rows: number) {
-  // Antes de medir se usa el tramo más apretado que probablemente sirva: así el
-  // primer pintado ya sale cerca y no se ve el salto de un tamaño a otro.
   const [perRow, setPerRow] = useState(0);
 
   useEffect(() => {
@@ -82,6 +101,8 @@ function useRowTier(box: React.RefObject<HTMLElement | null>, rows: number) {
     return () => observer.disconnect();
   }, [box, rows]);
 
+  // Antes de medir se usa un tramo aproximado por cantidad de filas: así el
+  // primer pintado ya sale cerca y no se ve el salto de un tamaño a otro.
   if (perRow === 0) {
     return TIERS[Math.min(Math.max(Math.floor(rows / 6), 0), TIERS.length - 1)]!;
   }
@@ -93,75 +114,125 @@ function ProjectedTable({
   unit,
   isHeight,
   isPodiumRound,
-  scoreHeader,
+  groups,
 }: {
   round: LeaderboardRound;
   unit: { singular: string; plural: string };
   isHeight: boolean;
   isPodiumRound: boolean;
-  scoreHeader: string;
+  groups: string[][];
 }) {
   const box = useRef<HTMLDivElement>(null);
   const scale = useRowTier(box, round.rows.length);
-  const header = 'px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted';
+  const header = 'px-1.5 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted';
+  const headers = groups.flat();
+  // Dónde empieza cada grupo: ahí va la divisoria y ahí va la cifra que manda.
+  // Los desempates que la siguen van en gris, igual que en la tabla pública.
+  const groupStarts = new Set<number>();
+  groups.reduce((index, group) => {
+    groupStarts.add(index);
+    return index + group.length;
+  }, 0);
 
   return (
     <div ref={box} className="h-full overflow-hidden">
-    <table className="w-full border-collapse text-left">
-      <thead>
-        <tr>
-          <th className={`${header} w-14 text-center`}>Puesto</th>
-          <th className={`${header} w-px whitespace-nowrap`}>Competidor</th>
-          {round.problems.map((problem) => (
-            <th key={problem.id} className={`${header} text-center`}>
-              {unit.singular.slice(0, 1).toUpperCase()}
-              {problem.number}
-            </th>
-          ))}
-          <th className={`${header} w-16 text-center`}>{scoreHeader}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {round.rows.map((row) => {
-          const podium = podiumStyle(row.result.rank, isPodiumRound);
-          return (
-            <tr key={row.registrationId} className={`border-b border-cardborder/60 ${podium?.row ?? ''}`}>
-              <td className={`${scale.row} px-2 text-center ${podium?.rail ?? ''}`}>
-                <span className={`font-display font-bold tabular-nums ${scale.rank}`}>
-                  {row.result.tied ? '=' : ''}
-                  {row.result.rank}
-                </span>
-              </td>
-              <td className={`${scale.row} whitespace-nowrap px-2`}>
-                <span className={`font-display font-semibold ${scale.name}`}>{row.athleteName}</span>
-                {row.bibNumber && (
-                  <span className="ml-2 text-sm text-muted tabular-nums">#{row.bibNumber}</span>
-                )}
-              </td>
-              {round.problems.map((problem) => (
-                <td key={problem.id} className={`${scale.row} px-1 text-center`}>
-                  <BlockBadge
-                    cell={row.cells.find((c) => c.problemId === problem.id)}
-                    isHeight={isHeight}
-                    className={scale.badge}
-                  />
+      <table className="w-full border-collapse text-left">
+        <thead>
+          <tr>
+            <th className={`${header} w-14 text-center`}>Puesto</th>
+            <th className={`${header} w-px whitespace-nowrap`}>Competidor</th>
+            {round.problems.map((problem) => (
+              <th key={problem.id} className={`${header} text-center`}>
+                {unit.singular.slice(0, 1).toUpperCase()}
+                {problem.number}
+              </th>
+            ))}
+            {headers.map((label, index) => (
+              <th
+                key={index}
+                className={`${header} w-14 text-center ${
+                  groupStarts.has(index) ? 'border-l border-cardborder/60' : ''
+                }`}
+              >
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {round.rows.map((row) => {
+            const podium = podiumStyle(row.result.rank, isPodiumRound);
+            return (
+              <tr key={row.registrationId} className={`border-b border-cardborder/60 ${podium?.row ?? ''}`}>
+                <td className={`${scale.row} px-1.5 text-center ${podium?.rail ?? ''}`}>
+                  <span className={`font-display font-bold tabular-nums ${scale.rank}`}>
+                    {row.result.tied ? '=' : ''}
+                    {row.result.rank}
+                  </span>
                 </td>
-              ))}
-              <td className={`${scale.row} px-2 text-center`}>
-                <span className={`font-display font-bold tabular-nums ${scale.score}`}>
-                  {scoreCells(row.result)[0]}
-                </span>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+                <td className={`${scale.row} whitespace-nowrap px-1.5`}>
+                  <span className={`font-display font-semibold ${scale.name}`}>{row.athleteName}</span>
+                  {row.bibNumber && (
+                    <span className="ml-2 text-sm text-muted tabular-nums">#{row.bibNumber}</span>
+                  )}
+                </td>
+                {round.problems.map((problem) => (
+                  <td key={problem.id} className={`${scale.row} px-1 text-center`}>
+                    <BlockBadge
+                      cell={row.cells.find((c) => c.problemId === problem.id)}
+                      isHeight={isHeight}
+                      className={scale.badge}
+                    />
+                  </td>
+                ))}
+                {scoreCells(row.result).map((value, index) => (
+                  <td
+                    key={index}
+                    className={`${scale.row} px-1.5 text-center tabular-nums ${
+                      groupStarts.has(index)
+                        ? `border-l border-cardborder/60 font-display font-bold ${scale.score}`
+                        : 'font-display text-base text-muted'
+                    }`}
+                  >
+                    {value}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-/** Una categoría con al menos una ronda juzgada: las demás no tienen qué proyectar. */
+/** Las tres cifras de la ronda en una tira y no en tres tarjetas: en una fila de
+ *  1900 px de ancho, tres tarjetas se estiran y quedan casi vacías. */
+function HighlightStrip({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
+  const items = roundHighlights(round, unit, isHeight);
+  if (items.length === 0) {
+    return null;
+  }
+  return (
+    <div className="flex shrink-0 divide-x divide-cardborder rounded-2xl border border-cardborder bg-card">
+      {items.map((item) => (
+        <div key={item.key} className="flex min-w-0 flex-1 items-baseline gap-4 px-6 py-3">
+          <span className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-pine">
+            {item.value}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              {item.label}
+            </span>
+            <span className="block truncate text-base text-ink">{item.detail}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Una categoría con algo que proyectar: las demás dejarían la pared en blanco. */
 function projectableRound(category: LeaderboardCategory): LeaderboardRound | null {
   const judged = category.rounds.filter((r) => !r.error && r.rows.some((row) => row.cells.length > 0));
   return judged.at(-1) ?? category.rounds.find((r) => !r.error && r.problems.length > 0) ?? null;
@@ -175,9 +246,8 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
+  const groups = SCORE_HEADERS[data.event.scoringFormat] ?? [];
 
-  // Solo las categorías que tienen algo que mostrar. Una recién creada, sin
-  // rondas, dejaría la pantalla en blanco durante treinta segundos.
   const shown = data.categories
     .map((category) => ({ category, round: projectableRound(category) }))
     .filter((entry): entry is { category: LeaderboardCategory; round: LeaderboardRound } => entry.round !== null);
@@ -198,17 +268,18 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   const round = current?.round;
   const hasAttemptsPerTop =
     (round?.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length ?? 0) >= 3;
+  // Dos turnos, no tres: la de puestos es la nuestra y se queda con su tiempo;
+  // el muro y los intentos al top son la misma pregunta —cómo se comportó la
+  // ronda— y juntos se leen en diez segundos.
   const slides = [
     round && round.timeline.length > 1 ? ('bump' as const) : null,
-    round && round.problemStats.length > 0 ? ('wall' as const) : null,
-    hasAttemptsPerTop ? ('attempts' as const) : null,
-  ].filter((s): s is 'bump' | 'wall' | 'attempts' => s !== null);
+    round && round.problemStats.length > 0 ? ('detail' as const) : null,
+  ].filter((s): s is 'bump' | 'detail' => s !== null);
 
   const activeSlide = slides[slide % Math.max(slides.length, 1)];
 
-  // Cada gráfica se queda lo que dura leerla, así que el turno no puede ser un
-  // intervalo fijo: se programa el siguiente cambio con la duración de la que
-  // está en pantalla.
+  // Cada turno dura lo que dura leerlo, así que no puede ser un intervalo fijo:
+  // se programa el siguiente cambio con la duración del que está en pantalla.
   useEffect(() => {
     if (slides.length < 2 || !activeSlide) {
       return;
@@ -219,12 +290,9 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
 
   const date = formatEventDate(data.event.date);
   const isPodiumRound = round?.type === 'final';
-  const scoreHeader = isHeight ? 'Altura' : data.event.scoringFormat === 'classic_tops_zones' ? SCORE_TERM.top : 'Puntaje';
-
   const chartTitle = {
     bump: `Puesto ${unit.singular} a ${unit.singular}`,
-    wall: `¿Qué tan duros estaban los ${unit.plural}?`,
-    attempts: 'Cuántos intentos al top',
+    detail: `Los ${unit.plural} y los intentos al top`,
   };
 
   // Nadie interactúa con una pared. Las gráficas piden estos tres porque en la
@@ -232,33 +300,32 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   const inert = { hovered: null, onHover: () => {}, onSelect: () => {} };
 
   return (
-    // `group` para los controles: en un proyector el ratón no se mueve nunca, y
-    // así no hay botones encima de la competencia. Basta mover el ratón para
-    // que aparezcan.
-    <main className="group flex h-screen flex-col gap-3 overflow-hidden bg-stone px-6 py-4">
-      <header className="flex shrink-0 items-end justify-between gap-6">
-        <div className="flex min-w-0 items-end gap-5">
-          <div className="hidden w-40 shrink-0 xl:block">
-            <TopographicMotif />
-          </div>
-          <div className="min-w-0">
-            <span className={`${brandWordClass} text-sm`}>CRUX</span>
-            <h1 className="truncate font-display text-4xl font-bold leading-tight">{data.event.name}</h1>
-            <p className="text-base text-muted">
-              {labelFor(DISCIPLINE_LABEL, data.event.discipline)}
-              {date ? ` · ${date}` : ''}
-              {round ? ` · ${labelFor(ROUND_TYPE_LABEL, round.type)}` : ''}
-            </p>
-          </div>
+    <main className="flex h-screen flex-col gap-3 overflow-hidden bg-stone px-6 py-4">
+      <header className="flex shrink-0 items-center gap-6">
+        <PeakMark />
+        <div className="min-w-0 shrink-0">
+          <span className={`${brandWordClass} text-sm`}>CRUX</span>
+          <h1 className="truncate font-display text-4xl font-bold leading-tight">{data.event.name}</h1>
+          <p className="text-base text-muted">
+            {labelFor(DISCIPLINE_LABEL, data.event.discipline)}
+            {date ? ` · ${date}` : ''}
+            {round ? ` · ${labelFor(ROUND_TYPE_LABEL, round.type)}` : ''}
+          </p>
+        </div>
+
+        {/* Las curvas de la marca se comen el aire que sobra entre el nombre y
+            la categoría, que es donde el encabezado se veía vacío. */}
+        <div className="min-w-0 flex-1 opacity-70">
+          <TopographicMotif />
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
           {current && (
-            <span className="rounded-full bg-pine px-5 py-2 font-display text-2xl font-bold text-white">
+            <span className="rounded-full bg-pine px-4 py-1.5 font-display text-lg font-semibold text-white">
               {current.category.name}
             </span>
           )}
-          <span className="flex items-center gap-2 font-display text-lg font-semibold text-pine">
+          <span className="flex items-center gap-2 font-display text-lg font-semibold text-pine tabular-nums">
             <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
             {new Date(data.updatedAt).toLocaleTimeString('es-CO', {
               timeZone: data.event.timezone,
@@ -274,14 +341,14 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
         </p>
       ) : (
         <>
-          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-4">
+          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] gap-4">
             <section className="min-h-0 overflow-hidden rounded-2xl border border-cardborder bg-card px-4 py-3">
               <ProjectedTable
                 round={round}
                 unit={unit}
                 isHeight={isHeight}
                 isPodiumRound={isPodiumRound}
-                scoreHeader={scoreHeader}
+                groups={groups}
               />
             </section>
 
@@ -290,9 +357,8 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                 <h2 className="font-display text-2xl font-bold leading-tight">
                   {activeSlide ? chartTitle[activeSlide] : ''}
                 </h2>
-                {/* Los puntos dicen cuántas gráficas hay y en cuál va. Sin
-                    ellos, una pantalla que cambia sola parece que se movió
-                    sola. */}
+                {/* Los puntos dicen cuántos turnos hay y en cuál va. Sin ellos,
+                    una pantalla que cambia sola parece que se movió sola. */}
                 {slides.length > 1 && (
                   <span className="flex shrink-0 items-center gap-1.5">
                     {slides.map((key, index) => (
@@ -306,36 +372,60 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   </span>
                 )}
               </div>
-              {/* `key` en el contenedor: al cambiar de gráfica React monta una
-                  nueva y la animación de entrada vuelve a correr. Sin eso el
-                  cambio es un salto. */}
-              <div key={activeSlide} className="crux-fade min-h-0 flex-1 overflow-hidden">
+              {/* `key` en el contenedor: al cambiar de turno React monta uno
+                  nuevo y la animación de entrada vuelve a correr. */}
+              <div key={activeSlide} className="crux-fade flex min-h-0 flex-1 flex-col overflow-hidden">
                 {activeSlide === 'bump' && (
-                  <BumpChart
-                    round={round}
-                    unit={unit.singular}
-                    plural={unit.plural}
-                    article={unit.article}
-                    className="h-full w-full"
-                    {...inert}
-                  />
+                  <div className="flex min-h-0 flex-1 items-center">
+                    {/* `w-full max-h-full` y no `h-full`: con `h-full` el SVG se
+                        ajusta al alto y deja franjas de aire a los lados —
+                        pequeño en el centro de un panel ancho. Así usa todo el
+                        ancho y solo se encoge si de verdad no cabe. */}
+                    <BumpChart
+                      round={round}
+                      unit={unit.singular}
+                      plural={unit.plural}
+                      article={unit.article}
+                      className="max-h-full w-full"
+                      {...inert}
+                    />
+                  </div>
                 )}
-                {activeSlide === 'wall' && <Wall round={round} unit={unit.singular} isHeight={isHeight} />}
-                {activeSlide === 'attempts' && <AttemptsPerTop round={round} {...inert} />}
+                {activeSlide === 'detail' && (
+                  // `overflow-hidden` en cada bloque y no solo en el contenedor:
+                  // en una columna flex los hijos se encogen por debajo de su
+                  // contenido, y sin recortar cada uno, el muro se metía encima
+                  // del título de los intentos.
+                  <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+                    <div className="min-h-0 shrink overflow-hidden">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                        Qué tan duros estaban · del más duro al más fácil
+                      </p>
+                      <Wall round={round} unit={unit.singular} isHeight={isHeight} dense />
+                    </div>
+                    {hasAttemptsPerTop && (
+                      <div className="min-h-0 shrink overflow-hidden">
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                          Intentos por cada top · menos es mejor
+                        </p>
+                        {/* Cuatro y no diez: aquí comparte panel con el muro, y
+                            lo que esta gráfica hace —comparar— ya se ve con los
+                            cuatro primeros. */}
+                        <AttemptsPerTop round={round} limit={4} fixedWidth={false} {...inert} />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
           </div>
 
-          {/* Las tres cifras se quedan las tres en pantalla en vez de turnarse:
-              caben en fila, y rotarlas escondería dos datos detrás de un
-              temporizador justo cuando alguien mira la pared. */}
-          <div className="shrink-0">
-            <Headline round={round} unit={unit.singular} isHeight={isHeight} dense />
-          </div>
+          <HighlightStrip round={round} unit={unit.singular} isHeight={isHeight} />
         </>
       )}
 
       <ProjectionControls
+        slug={slug}
         categories={shown.map((entry) => entry.category.name)}
         activeIndex={categoryIndex % Math.max(shown.length, 1)}
         rotating={rotating}
@@ -350,12 +440,14 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
 }
 
 function ProjectionControls({
+  slug,
   categories,
   activeIndex,
   rotating,
   onPick,
   onRotate,
 }: {
+  slug: string;
   categories: string[];
   activeIndex: number;
   rotating: boolean;
@@ -363,6 +455,33 @@ function ProjectionControls({
   onRotate: () => void;
 }) {
   const [fullscreen, setFullscreen] = useState(false);
+  // Se esconde sola a los tres segundos de que nadie mueva el ratón, como los
+  // controles de un video. Antes era `hover` sobre la página, y eso los dejaba
+  // clavados en pantalla mientras el puntero estuviera encima de la ventana —
+  // que en un portátil conectado a un proyector es siempre.
+  const [visible, setVisible] = useState(true);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const wake = useCallback(() => {
+    setVisible(true);
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
+    timer.current = setTimeout(() => setVisible(false), CONTROLS_MS);
+  }, []);
+
+  useEffect(() => {
+    wake();
+    window.addEventListener('pointermove', wake);
+    window.addEventListener('keydown', wake);
+    return () => {
+      window.removeEventListener('pointermove', wake);
+      window.removeEventListener('keydown', wake);
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
+    };
+  }, [wake]);
 
   useEffect(() => {
     const sync = () => setFullscreen(document.fullscreenElement !== null);
@@ -381,7 +500,11 @@ function ProjectionControls({
   const pill = 'rounded-full px-4 py-1.5 font-display text-sm font-semibold transition';
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 flex justify-center pb-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 focus-within:opacity-100">
+    <div
+      className={`pointer-events-none fixed inset-x-0 bottom-0 flex justify-center pb-3 transition-opacity duration-500 ${
+        visible ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
       <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-full border border-cardborder bg-card px-3 py-2 shadow-lg">
         {categories.map((name, index) => (
           <button
@@ -414,6 +537,10 @@ function ProjectionControls({
         >
           {fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
         </button>
+        {/* La salida. Sin esto, de la pantalla de proyección no se vuelve. */}
+        <Link href={`/resultados/${slug}`} className={`${pill} text-muted hover:text-pine`}>
+          ← Volver a la tabla
+        </Link>
       </div>
     </div>
   );
