@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { cardClass, eyebrowClass } from '@/lib/ui';
 import { GENDER_LABEL, ROUND_TYPE_LABEL, labelFor, problemUnit } from '@/lib/labels';
+import { removeRound } from './actions';
 import { CategoryForm } from './category-form';
 import { RoundForm } from './round-form';
 import { RoundAdvances } from './round-advances';
@@ -65,6 +66,67 @@ function SpineNode({ tone }: { tone: 'round' | 'problem' }) {
       aria-hidden="true"
       className={`absolute -left-[7px] top-3 h-3 w-3 rounded-full border-2 ${color}`}
     />
+  );
+}
+
+// Dos pasos y no un `confirm()`, igual que quitar a un inscrito: el diálogo del
+// navegador bloquea la pestaña para preguntar algo que cabe en el propio botón.
+// Va dentro de la ronda abierta y no en su encabezado, que ya es un <button>.
+function RemoveRound({
+  eventId,
+  roundId,
+  problemCount,
+  unit,
+}: {
+  eventId: string;
+  roundId: string;
+  problemCount: number;
+  unit: { singular: string; plural: string };
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function remove() {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    startTransition(async () => {
+      const result = await removeRound({ eventId, roundId });
+      if (!result.ok) {
+        setError(result.error);
+        setConfirming(false);
+      }
+    });
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center justify-end gap-2">
+      {error && (
+        <span role="alert" className="flex-1 text-xs font-medium text-red-700">
+          {error}
+        </span>
+      )}
+      {/* Cuántos se lleva por delante, en el propio botón: la confirmación no
+          sirve de nada si no dice qué más se va con la ronda. */}
+      {confirming && problemCount > 0 && (
+        <span className="text-xs text-muted">
+          Se borran también sus {problemCount === 1 ? unit.singular : `${problemCount} ${unit.plural}`}.
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={remove}
+        onBlur={() => setConfirming(false)}
+        disabled={isPending}
+        className={`text-xs font-medium underline decoration-dotted underline-offset-4 ${
+          confirming ? 'text-red-700' : 'text-muted hover:text-bark'
+        }`}
+      >
+        {isPending ? 'Borrando…' : confirming ? '¿Seguro?' : 'Borrar ronda'}
+      </button>
+    </div>
   );
 }
 
@@ -238,6 +300,13 @@ export function EventStructure({
                                 roundId={round.id}
                                 nextNumber={round.problems.length + 1}
                                 scoringFormat={scoringFormat}
+                                unit={unit}
+                              />
+
+                              <RemoveRound
+                                eventId={eventId}
+                                roundId={round.id}
+                                problemCount={round.problems.length}
                                 unit={unit}
                               />
                             </div>

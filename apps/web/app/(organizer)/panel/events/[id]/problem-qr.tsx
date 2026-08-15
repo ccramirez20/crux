@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import QRCode from 'qrcode';
 import { eyebrowClass, fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
-import { updateProblem } from './actions';
+import { removeProblem, updateProblem } from './actions';
 
 // La ficha del bloque tiene dos acciones y ninguna cabe en otra pantalla: sacar
 // el QR que se pega en la pared, y corregir lo que quedó mal escrito. Editar
@@ -40,6 +40,7 @@ export function ProblemCard({
   const [zoneValue, setZoneValue] = useState(zonePoints === null ? '' : String(zonePoints));
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   async function toggle() {
     if (dataUrl) {
@@ -72,6 +73,24 @@ export function ProblemCard({
       return;
     }
     setIsEditing(false);
+  }
+
+  // Dos pasos y no un `confirm()`, igual que en el resto del panel. Vive dentro
+  // del panel de edición: es la misma corrección de un dato mal puesto, solo que
+  // el dato de más es el bloque entero.
+  async function remove() {
+    if (!confirmingRemove) {
+      setConfirmingRemove(true);
+      return;
+    }
+    setError(null);
+    setIsSubmitting(true);
+    const result = await removeProblem({ eventId, problemId });
+    setIsSubmitting(false);
+    if (!result.ok) {
+      setError(result.error);
+      setConfirmingRemove(false);
+    }
   }
 
   return (
@@ -183,14 +202,27 @@ export function ProblemCard({
             </p>
           )}
 
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={isSubmitting}
-            className={secondaryButtonClass}
-          >
-            {isSubmitting ? 'Guardando…' : 'Guardar'}
-          </button>
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={isSubmitting}
+              className={secondaryButtonClass}
+            >
+              {isSubmitting ? 'Guardando…' : 'Guardar'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void remove()}
+              onBlur={() => setConfirmingRemove(false)}
+              disabled={isSubmitting}
+              className={`text-xs font-medium underline decoration-dotted underline-offset-4 ${
+                confirmingRemove ? 'text-red-700' : 'text-muted hover:text-bark'
+              }`}
+            >
+              {confirmingRemove ? '¿Seguro?' : `Borrar ${unit.singular}`}
+            </button>
+          </div>
         </div>
       )}
 

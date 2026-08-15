@@ -38,7 +38,10 @@ function podiumColor(rank: number): string {
   return rank === 1 ? GOLD : rank === 2 ? SILVER : rank === 3 ? BRONZE : MUTED;
 }
 
-const cardClass = 'rounded-2xl border border-cardborder bg-card p-7';
+// El aire de la tarjeta cede en el teléfono y solo ahí: 28 px por lado se comen
+// 56 de los 358 que quedan a 390, y eso sale del ancho de la gráfica, que es lo
+// único que esta pantalla tiene que dar. De `sm` para arriba nada cambia.
+const cardClass = 'rounded-2xl border border-cardborder bg-card p-4 sm:p-7';
 const eyebrow = 'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted';
 
 function Panel({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
@@ -46,9 +49,11 @@ function Panel({ title, hint, children }: { title: string; hint: string; childre
     <figure className={`${cardClass} m-0 flex flex-col`}>
       {/* El título tiene que ganarle al contenido, no competir con él: a
           tamaño de subtítulo se perdía entre las barras y las líneas. */}
-      <figcaption className="mb-7">
-        <h2 className="font-display text-[1.75rem] font-bold leading-tight tracking-tight text-ink">{title}</h2>
-        <p className="mt-1.5 text-base text-muted">{hint}</p>
+      <figcaption className="mb-5 sm:mb-7">
+        <h2 className="font-display text-2xl font-bold leading-tight tracking-tight text-ink sm:text-[1.75rem]">
+          {title}
+        </h2>
+        <p className="mt-1.5 text-[15px] text-muted sm:text-base">{hint}</p>
       </figcaption>
       {children}
     </figure>
@@ -68,10 +73,13 @@ function StatTile({ label, what, value, detail }: { label: string; what: string;
           uno se leía como que ese importaba más. Pine y no oro — el oro contra
           el hueso de la tarjeta queda en 1.8:1 y se pierde; este da 8:1 y sigue
           siendo acento. */}
-      <span className="mt-1 font-display text-[3.25rem] font-bold leading-none tracking-tight tabular-nums" style={{ color: PINE }}>
+      <span
+        className="mt-1 font-display text-[2.75rem] font-bold leading-none tracking-tight tabular-nums sm:text-[3.25rem]"
+        style={{ color: PINE }}
+      >
         {value}
       </span>
-      <span className="text-base text-muted">{detail}</span>
+      <span className="text-[15px] text-muted sm:text-base">{detail}</span>
     </div>
   );
 }
@@ -156,15 +164,86 @@ function declutter(values: number[], minGap: number): number[] {
   return out;
 }
 
+/**
+ * La misma gráfica, para un teléfono.
+ *
+ * Lo que no cabe a 302 px de tarjeta es el **nombre**: medido, uno largo ocupa
+ * 369 px él solo a tamaño de proyector, y aun a 12 px se lleva la mitad del
+ * ancho útil. Así que en el teléfono los dos extremos son el puesto —que es lo
+ * que la persona viene a buscar, "voy cuarta"— y el nombre aparece cuando tocas
+ * una línea. Tocar ya resaltaba a esa competidora en la tabla y en las demás
+ * gráficas; esto solo le pone nombre a lo que ya estaba pasando.
+ *
+ * No se encoge la versión grande ni se recorta el campo: es la misma gráfica con
+ * otra geometría, y la de la sala queda intacta.
+ */
+function bumpLayout(compact: boolean, fieldSize: number) {
+  if (compact) {
+    // El viewBox va casi 1:1 con los píxeles reales de la tarjeta (320 contra
+    // ~302): un SVG se escala entero, así que un viewBox ancho no aprieta las
+    // líneas, aprieta las letras. A esta escala un 13 del viewBox se ve como 12.
+    const lane = Math.max(19, Math.min(30, Math.round(560 / fieldSize)));
+    return {
+      lane,
+      width: 320,
+      padTop: 26,
+      padBottom: 44,
+      plotLeft: 34,
+      plotRight: 284,
+      startRankX: 26,
+      endRankX: 294,
+      rankSize: 13,
+      tickSize: 12,
+      gap: Math.min(15, lane - 2),
+      laneInset: 10,
+      // Los trazos y los nodos son medidas absolutas del viewBox, y este viewBox
+      // es cuatro veces más angosto: un halo de 10 que en la sala apenas separa
+      // dos líneas, aquí las funde. Todo el grosor baja parejo.
+      weight: 0.65,
+    };
+  }
+  // El carril se estrecha con el campo en vez de estirar la gráfica hacia
+  // abajo. Es la pantalla que se proyecta: veinticinco competidoras tienen que
+  // caber en el mismo alto que catorce, o la mitad de la categoría queda fuera
+  // del proyector.
+  const lane = Math.max(22, Math.min(38, Math.round(620 / fieldSize)));
+  return {
+    lane,
+    width: 1250,
+    padTop: 78,
+    padBottom: 82,
+    // El área de dibujo se come el aire de los dos costados: la etiqueta más
+    // larga mide 168 px y arrancaba en x=88, y del otro lado sobraba otro tanto
+    // antes del chip. La gráfica es el foco de esta pantalla, así que el ancho
+    // que sobraba es suyo y no de los márgenes.
+    plotLeft: 224,
+    plotRight: 880,
+    startRankX: 190,
+    endRankX: 956,
+    rankSize: lane >= 32 ? 18 : 15,
+    tickSize: 15,
+    gap: Math.min(26, lane - 2),
+    laneInset: 22,
+    weight: 1,
+  };
+}
+
 function BumpChart({
   round,
   unit,
   plural,
   article,
+  compact = false,
   hovered,
   onHover,
   onSelect,
-}: { round: LeaderboardRound; unit: string; plural: string; article: string } & HoverProps) {
+}: {
+  round: LeaderboardRound;
+  unit: string;
+  plural: string;
+  article: string;
+  compact?: boolean;
+} & HoverProps) {
   // Cuánto mide cada nombre ya dibujado. Un contra-trazo alcanzaba para tapar la
   // guía, pero seguía pasando por debajo de las letras; medir el texto es la
   // única forma de que la guía empiece donde el nombre termina, y de paso sirve
@@ -200,21 +279,22 @@ function BumpChart({
     point.ranks[row.registrationId] ?? shown.length;
   const maxRank = Math.max(...shown.flatMap((row) => points.map((p) => rankAt(row, p))));
 
-  // El carril se estrecha con el campo en vez de estirar la gráfica hacia
-  // abajo. Es la pantalla que se proyecta: veinticinco competidoras tienen que
-  // caber en el mismo alto que catorce, o la mitad de la categoría queda fuera
-  // del proyector.
-  const lane = Math.max(22, Math.min(38, Math.round(620 / shown.length)));
+  const {
+    lane,
+    width,
+    padTop,
+    padBottom,
+    plotLeft,
+    plotRight,
+    startRankX,
+    endRankX,
+    rankSize,
+    tickSize,
+    gap,
+    laneInset,
+    weight,
+  } = bumpLayout(compact, shown.length);
   const roomy = lane >= 32;
-  const padTop = 78;
-  const padBottom = 82;
-  // El área de dibujo se come el aire de los dos costados: la etiqueta más larga
-  // mide 168 px y arrancaba en x=88, y del otro lado sobraba otro tanto antes
-  // del chip. La gráfica es el foco de esta pantalla, así que el ancho que
-  // sobraba es suyo y no de los márgenes.
-  const plotLeft = 224;
-  const plotRight = 880;
-  const endRankX = plotRight + 76;
   const endNameX = plotRight + 88;
   // El centro de cada columna de etiquetas, medido sobre el bloque de texto que
   // ocupan y no sobre el ancho disponible: el título tiene que quedar encima de
@@ -222,7 +302,6 @@ function BumpChart({
   const startLabelMid = plotLeft - 118;
   const endLabelMid = plotRight + 150;
   const deltaX = 1240;
-  const width = 1250;
   const height = padTop + (maxRank - 1) * lane + padBottom;
   const laneTop = padTop - lane / 2;
   const laneBottom = padTop + (maxRank - 1) * lane + lane / 2;
@@ -230,7 +309,6 @@ function BumpChart({
   const x = (index: number) => plotLeft + (index * (plotRight - plotLeft)) / (points.length - 1);
   const y = (rank: number) => padTop + (rank - 1) * lane;
 
-  const gap = Math.min(26, lane - 2);
   const endYs = declutter(shown.map((row) => y(rankAt(row, points.at(-1)!))), gap);
   const startYs = declutter(shown.map((row) => y(rankAt(row, points[0]!))), gap);
 
@@ -239,29 +317,35 @@ function BumpChart({
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="w-full min-w-[900px]"
+      className={compact ? 'w-full' : 'w-full min-w-[900px]'}
       role="img"
       aria-label={`Puesto de cada competidor al cierre de cada ${unit}`}
     >
       {/* Los dos extremos se titulan igual —"puesto tras el bloque N"— porque
           son lo mismo medido en dos momentos; "posición final" mentiría
           mientras todavía queden bloques por escalar. El número sale del primer
-          y del último punto, así que una ronda de siete dice "bloque 7". */}
-      <text x={startLabelMid} y={30} textAnchor="middle" {...axis}>
-        PUESTO TRAS
-      </text>
-      <text x={startLabelMid} y={48} textAnchor="middle" {...axis}>
-        {article.toUpperCase()} {unit.toUpperCase()} {points[0]!.problemNumber}
-      </text>
-      <text x={endLabelMid} y={30} textAnchor="middle" {...axis}>
-        PUESTO TRAS
-      </text>
-      <text x={endLabelMid} y={48} textAnchor="middle" {...axis}>
-        {article.toUpperCase()} {unit.toUpperCase()} {points.at(-1)!.problemNumber}
-      </text>
-      <text x={deltaX} y={30} textAnchor="end" {...axis}>
-        CAMBIO
-      </text>
+          y del último punto, así que una ronda de siete dice "bloque 7".
+          En el teléfono estos títulos viven en HTML sobre la gráfica: aquí no
+          hay dónde ponerlos sin robarle ancho a las líneas. */}
+      {!compact && (
+        <>
+          <text x={startLabelMid} y={30} textAnchor="middle" {...axis}>
+            PUESTO TRAS
+          </text>
+          <text x={startLabelMid} y={48} textAnchor="middle" {...axis}>
+            {article.toUpperCase()} {unit.toUpperCase()} {points[0]!.problemNumber}
+          </text>
+          <text x={endLabelMid} y={30} textAnchor="middle" {...axis}>
+            PUESTO TRAS
+          </text>
+          <text x={endLabelMid} y={48} textAnchor="middle" {...axis}>
+            {article.toUpperCase()} {unit.toUpperCase()} {points.at(-1)!.problemNumber}
+          </text>
+          <text x={deltaX} y={30} textAnchor="end" {...axis}>
+            CAMBIO
+          </text>
+        </>
+      )}
 
       {/* La banda empieza y termina con el área de dibujo. Extenderla hasta la
           columna de cambio amarraba la fila con su chip, pero sacaba la piel de
@@ -270,9 +354,9 @@ function BumpChart({
         row % 2 === 0 ? (
           <rect
             key={row}
-            x={plotLeft - 22}
+            x={plotLeft - laneInset}
             y={y(row + 1) - lane / 2}
-            width={plotRight - plotLeft + 44}
+            width={plotRight - plotLeft + laneInset * 2}
             height={lane}
             fill={LANE}
             opacity={0.7}
@@ -283,7 +367,7 @@ function BumpChart({
       {points.map((point, index) => (
         <g key={point.problemNumber}>
           <line x1={x(index)} y1={laneTop} x2={x(index)} y2={laneBottom} stroke={RULE} strokeWidth={1} opacity={0.8} />
-          <text x={x(index)} y={laneBottom + 24} textAnchor="middle" fontSize={15} fontWeight={700} fill={INK}>
+          <text x={x(index)} y={laneBottom + 24} textAnchor="middle" fontSize={tickSize} fontWeight={700} fill={INK}>
             {tick(index)}
           </text>
         </g>
@@ -291,9 +375,11 @@ function BumpChart({
       {/* Una palabra: qué son esas marcas. Los intentos acumulados vivían aquí
           abajo y eran dos filas de texto para un dato que nadie venía a buscar;
           que cada marca sea el cierre de su bloque ya lo dice el subtítulo. */}
-      <text x={(plotLeft + plotRight) / 2} y={laneBottom + 48} textAnchor="middle" {...axis}>
-        {plural.toUpperCase()}
-      </text>
+      {!compact && (
+        <text x={(plotLeft + plotRight) / 2} y={laneBottom + 48} textAnchor="middle" {...axis}>
+          {plural.toUpperCase()}
+        </text>
+      )}
 
       {shown.map((row, index) => {
         const color = podiumColor(row.result.rank);
@@ -324,16 +410,29 @@ function BumpChart({
             {/* Every line gets a surface-coloured under-stroke, not just the
                 leaders: at a crossing one line has to visibly pass over the
                 other or the two dissolve into an X nobody can follow. */}
-            <path d={path} fill="none" stroke={SURFACE} strokeWidth={podium || focused ? 10 : 7} strokeLinecap="round" />
+            <path
+              d={path}
+              fill="none"
+              stroke={SURFACE}
+              strokeWidth={(podium || focused ? 10 : 7) * weight}
+              strokeLinecap="round"
+            />
             <path
               d={path}
               fill="none"
               stroke={color}
-              strokeWidth={podium || focused ? 4.5 : 2.5}
+              strokeWidth={(podium || focused ? 4.5 : 2.5) * weight}
               strokeLinecap="round"
               opacity={podium || focused ? 1 : 0.55}
             />
-            <circle cx={x(points.length - 1)} cy={y(endRank)} r={podium ? 8 : 5} fill={color} stroke={SURFACE} strokeWidth={2.5} />
+            <circle
+              cx={x(points.length - 1)}
+              cy={y(endRank)}
+              r={(podium ? 8 : 5) * weight}
+              fill={color}
+              stroke={SURFACE}
+              strokeWidth={2.5 * weight}
+            />
 
             {/* La guía amarra la etiqueta con su línea. Las etiquetas se
                 separan entre sí para poder leerse, así que no siempre caen
@@ -341,7 +440,7 @@ function BumpChart({
                 es cuál línea. Punteada y tenue: es una ayuda de lectura, no un
                 trazo más compitiendo con las curvas. */}
             <line
-              x1={plotLeft - 22}
+              x1={plotLeft - laneInset}
               y1={startYs[index]!}
               x2={plotLeft}
               y2={y(startRank)}
@@ -349,13 +448,63 @@ function BumpChart({
               strokeWidth={1.5}
               strokeDasharray="2 3"
             />
+
+            {/* En el teléfono los extremos son solo el puesto, y el nombre sale
+                al tocar la línea. Es la decisión que hace que quepa: el nombre
+                más largo pesa la mitad del ancho útil de la tarjeta, y con él
+                puesto de fijo no queda gráfica que mirar. */}
+            {compact && (
+              <>
+                <text
+                  x={startRankX}
+                  y={startYs[index]! + 4}
+                  textAnchor="end"
+                  fontSize={rankSize}
+                  fontWeight={700}
+                  fill={focused ? INK : MUTED}
+                  className="tabular-nums"
+                >
+                  {startRank}
+                </text>
+                <text
+                  x={endRankX}
+                  y={endYs[index]! + 4}
+                  textAnchor="start"
+                  fontSize={rankSize}
+                  fontWeight={700}
+                  fill={podium || focused ? INK : MUTED}
+                  className="tabular-nums"
+                >
+                  {endRank}
+                </text>
+                {/* Sobre el nodo y alineado a la derecha, que es donde siempre
+                    hay aire; el reborde del color de la tarjeta lo despega de
+                    las líneas que le pasen por debajo. */}
+                {focused && (
+                  <text
+                    x={plotRight}
+                    y={y(endRank) - 10}
+                    textAnchor="end"
+                    fontSize={13}
+                    fontWeight={700}
+                    fill={INK}
+                    stroke={SURFACE}
+                    strokeWidth={4}
+                    paintOrder="stroke"
+                  >
+                    {row.athleteName}
+                  </text>
+                )}
+              </>
+            )}
+
             {/* Del nombre a su chip, y solo para quien se movió: el chip está
                 lejos y con dos vecinas quietas no había nada que dijera de quién
                 era ese ▼12. Va del color de su propio chip, para que se lea como
                 el rastro de ese chip y no como un renglón de tabla. Arranca en
                 el final medido del nombre, así que no lo toca por largo que
                 sea; hasta que la medida existe, no se dibuja. */}
-            {delta !== 0 && nameWidth !== undefined && (
+            {!compact && delta !== 0 && nameWidth !== undefined && (
               <line
                 x1={endNameX + nameWidth + 12}
                 y1={endYs[index]!}
@@ -373,55 +522,60 @@ function BumpChart({
                 nombre y no lo delega al carril — con seis empatadas en el puesto
                 1 una etiqueta suelta frente al carril 4 se leía como cuarto
                 puesto cuando iba primera. */}
-            <text
-              x={plotLeft - 34}
-              y={startYs[index]! + 5}
-              textAnchor="end"
-              fontSize={roomy ? 16 : 13}
-              fontWeight={500}
-              fill={focused ? INK : MUTED}
-            >
-              <tspan fontWeight={700} className="tabular-nums">
-                {startRank}.
-              </tspan>
-              <tspan dx={6}>{row.athleteName}</tspan>
-            </text>
-            {/* A la derecha el puesto va en su propia columna: pegado al nombre,
-                "12 Manuela" se leía como una sola cosa larga. Y separado del
-                área de dibujo, porque al ir alineado a la derecha el de dos
-                dígitos arrancaba encima del nodo de su propia línea. */}
-            <text
-              x={endRankX}
-              y={endYs[index]! + 5}
-              textAnchor="end"
-              fontSize={roomy ? 18 : 15}
-              fontWeight={700}
-              fill={podium ? INK : MUTED}
-              className="tabular-nums"
-            >
-              {endRank}.
-            </text>
-            <text
-              ref={(element) => {
-                if (element) {
-                  nameRefs.current.set(row.registrationId, element);
-                } else {
-                  nameRefs.current.delete(row.registrationId);
-                }
-              }}
-              x={endNameX}
-              y={endYs[index]! + 5}
-              fontSize={roomy ? 18 : 15}
-              fontWeight={500}
-              fill={podium ? INK : MUTED}
-            >
-              {row.athleteName}
-            </text>
+            {!compact && (
+              <>
+                <text
+                  x={plotLeft - 34}
+                  y={startYs[index]! + 5}
+                  textAnchor="end"
+                  fontSize={roomy ? 16 : 13}
+                  fontWeight={500}
+                  fill={focused ? INK : MUTED}
+                >
+                  <tspan fontWeight={700} className="tabular-nums">
+                    {startRank}.
+                  </tspan>
+                  <tspan dx={6}>{row.athleteName}</tspan>
+                </text>
+                {/* A la derecha el puesto va en su propia columna: pegado al
+                    nombre, "12 Manuela" se leía como una sola cosa larga. Y
+                    separado del área de dibujo, porque al ir alineado a la
+                    derecha el de dos dígitos arrancaba encima del nodo de su
+                    propia línea. */}
+                <text
+                  x={endRankX}
+                  y={endYs[index]! + 5}
+                  textAnchor="end"
+                  fontSize={roomy ? 18 : 15}
+                  fontWeight={700}
+                  fill={podium ? INK : MUTED}
+                  className="tabular-nums"
+                >
+                  {endRank}.
+                </text>
+                <text
+                  ref={(element) => {
+                    if (element) {
+                      nameRefs.current.set(row.registrationId, element);
+                    } else {
+                      nameRefs.current.delete(row.registrationId);
+                    }
+                  }}
+                  x={endNameX}
+                  y={endYs[index]! + 5}
+                  fontSize={roomy ? 18 : 15}
+                  fontWeight={500}
+                  fill={podium ? INK : MUTED}
+                >
+                  {row.athleteName}
+                </text>
+              </>
+            )}
 
             {/* A filled chip, not a bare glyph. A 14px triangle in a flat colour
                 vanishes from across a gym; a solid block with a light arrow on
                 it survives the distance. */}
-            {delta !== 0 && (
+            {!compact && delta !== 0 && (
               <g>
                 <rect x={deltaX - 54} y={endYs[index]! - 13} width={54} height={26} rx={6} fill={delta > 0 ? PINE : BRONZE} />
                 <text x={deltaX - 27} y={endYs[index]! + 6} textAnchor="middle" fontSize={15} fontWeight={700} fill="#FFFFFF">
@@ -592,14 +746,18 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
     <div>
       {/* Sin encabezados, el "5" de al lado no se leía como la cantidad de
           tops: cada número necesita su nombre encima, igual que en la tabla. */}
-      {/* Esta sí se desplaza en vez de encogerse, como la gráfica de puestos.
-          Se probó estrechando las columnas y no sirve: "Promedio" y "Tops"
-          chocan hasta leerse "PROMEDITOPS", y la barra queda en 48 px, donde
-          todas se ven iguales y dejan de comparar nada — que es lo único que
-          esta gráfica hace. El min-w le garantiza a la barra el ancho con el
-          que sí se distinguen los promedios. */}
-      <div className="mb-3 flex min-w-[33rem] items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
-        <span className="w-44 shrink-0" />
+      {/* De `sm` para arriba se desplaza en vez de encogerse. Se probó
+          estrechando las columnas y no sirve: "Promedio" y "Tops" chocan hasta
+          leerse "PROMEDITOPS", y la barra queda en 48 px, donde todas se ven
+          iguales y dejan de comparar nada — que es lo único que esta gráfica
+          hace. El min-w le garantiza a la barra el ancho con el que sí se
+          distinguen los promedios.
+
+          En el teléfono no se estrecha ni se arrastra: el nombre se sube a su
+          propio renglón y la barra se queda con el ancho entero de la tarjeta,
+          que era justo lo que faltaba. */}
+      <div className="mb-3 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:min-w-[33rem]">
+        <span className="hidden w-44 shrink-0 sm:block" />
         <span className="flex-1" />
         <span className="w-20 shrink-0 text-right">Promedio</span>
         <span className="w-16 shrink-0 text-right">Tops</span>
@@ -611,11 +769,13 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
             onMouseEnter={() => onHover(climber.id)}
             onMouseLeave={() => onHover(null)}
             onClick={() => onSelect(climber.id)}
-            className={`flex min-w-[33rem] cursor-pointer items-center gap-4 transition-opacity duration-200 ${
+            className={`flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 transition-opacity duration-200 sm:min-w-[33rem] sm:flex-nowrap ${
               hovered !== null && hovered !== climber.id ? 'opacity-60' : ''
             }`}
           >
-            <span className="w-44 shrink-0 truncate font-display text-lg font-semibold">{climber.name}</span>
+            <span className="w-full shrink-0 truncate font-display text-lg font-semibold sm:w-44">
+              {climber.name}
+            </span>
             <span
               className="flex h-7 flex-1 overflow-hidden rounded-lg"
               style={{ background: LANE }}
@@ -674,9 +834,35 @@ export function LeaderboardCharts({
         title={`Puesto ${unit.singular} a ${unit.singular}`}
         hint={`Una línea por competidor. Se muestra al cierre de cada ${unit.singular}.`}
       >
-        {/* En el teléfono la gráfica no se encoge hasta volverse ilegible: se
-            desplaza. Un eje de 15 nombres a 360 px de ancho no es una gráfica. */}
-        <div className="overflow-x-auto">
+        {/* Dos geometrías de la misma gráfica, y el navegador escoge por ancho.
+            Antes esto se desplazaba a lo ancho en el teléfono: 900 px de
+            gráfica dentro de una caja de 300 son tres pantallas de arrastre, y
+            además le roba el gesto al scroll de la página. */}
+        <div className="sm:hidden">
+          {/* Los títulos de las dos columnas de puestos, en HTML: dentro del SVG
+              no cabrían sin quitarle ancho a las líneas. */}
+          {round.timeline.length > 1 && (
+            <div className={`mb-2 flex items-center justify-between ${eyebrow}`}>
+              <span>
+                Tras {unit.article} {unit.singular} {round.timeline[0]!.problemNumber}
+              </span>
+              <span>
+                Tras {unit.article} {unit.singular} {round.timeline.at(-1)!.problemNumber}
+              </span>
+            </div>
+          )}
+          <BumpChart
+            round={round}
+            unit={unit.singular}
+            plural={unit.plural}
+            article={unit.article}
+            compact
+            hovered={hovered}
+            onHover={onHover}
+            onSelect={onSelect}
+          />
+        </div>
+        <div className="hidden overflow-x-auto sm:block">
           <BumpChart
             round={round}
             unit={unit.singular}
@@ -688,10 +874,15 @@ export function LeaderboardCharts({
           />
         </div>
         {/* Esto se lee de afán y de pie. Tres frases, no un párrafo. */}
-        <p className="mt-4 text-base text-muted">
+        <p className="mt-4 text-[15px] text-muted sm:text-base">
           Se lee de izquierda a derecha: arranca con el puesto tras el primer {unit.singular}. La escala
-          vertical es cuántos compiten en la categoría. Haz clic sobre un competidor y se resalta en la
-          tabla y en las demás gráficas.
+          vertical es cuántos compiten en la categoría.{' '}
+          <span className="sm:hidden">
+            Toca una línea y sale de quién es, y se resalta en la tabla y en las demás gráficas.
+          </span>
+          <span className="hidden sm:inline">
+            Haz clic sobre un competidor y se resalta en la tabla y en las demás gráficas.
+          </span>
         </p>
       </Panel>
 
@@ -710,10 +901,11 @@ export function LeaderboardCharts({
         {hasAttemptsPerTop && (
           <Panel
             title="Cuántos intentos al top"
-            hint={`Promedio de intentos por cada top logrado. Solo cuenta los ${unit.plural} que sí topó; entra quien tenga dos tops o más. En el teléfono se desplaza a lo ancho.`}
+            hint={`Promedio de intentos por cada top logrado. Solo cuenta los ${unit.plural} que sí topó; entra quien tenga dos tops o más. Menos es mejor.`}
           >
-            {/* Igual que la gráfica de puestos: en el teléfono se desplaza. */}
-            <div className="overflow-x-auto">
+            {/* El desplazamiento lateral arranca en `sm`: por debajo la fila se
+                parte en dos renglones y no hay nada que arrastrar. */}
+            <div className="sm:overflow-x-auto">
               <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} onSelect={onSelect} />
             </div>
           </Panel>

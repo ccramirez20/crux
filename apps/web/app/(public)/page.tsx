@@ -290,7 +290,7 @@ export default function HomePage() {
             href={`mailto:${CONTACT_EMAIL}`}
             className="font-display text-base font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
           >
-            Escribirnos
+            Escríbenos
           </a>
         </div>
       </footer>

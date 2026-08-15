@@ -5,7 +5,7 @@ import { resolveCurrentAttempts } from '@crux/scoring';
 import { attemptVerdict } from '@/lib/attempt-scope';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
-import { clientKey, isRateLimited, recordFailure } from '@/lib/rate-limit';
+import { clientKey, isRateLimited, recordAttempt } from '@/lib/rate-limit';
 
 const attemptInputSchema = z.object({
   clientAttemptId: z.string().uuid(),
@@ -110,7 +110,7 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
   // por los dedazos de otro, y sus capturas se quedaban en el teléfono. Con el
   // código bueno ya no se consulta el limitador nunca.
   if (verdict === 'bad-code') {
-    const key = clientKey(request);
+    const key = clientKey(request.headers);
     // 429, not 403: the queue treats 403 as "the code changed, go ask again" and
     // clears it. Being throttled is temporary, so it has to stay non-terminal —
     // the pending attempts wait on the phone and the next tick retries.
@@ -120,7 +120,7 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
         { status: 429 },
       );
     }
-    recordFailure(key);
+    recordAttempt(key);
     return NextResponse.json(
       { ok: false, error: 'El código del evento no es correcto.' },
       { status: 403 },
