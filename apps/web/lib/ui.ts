@@ -17,3 +17,10 @@ export const labelClass = 'text-sm font-medium text-bark';
 // jerarquía sin dibujar más cajas.
 export const eyebrowClass =
   'text-[11px] font-semibold uppercase tracking-[0.14em] text-muted';
+
+// El nombre se ve siempre igual: la versalita del logotipo, en pine. Da lo
+// mismo que sea la cabecera de la tabla proyectada, un pie de página o media
+// frase de la portada — si dice el nombre, se lee como la marca y no como una
+// palabra más. La versión de cabecera abre más el tracking; en prosa va más
+// cerrado, porque ahí compite con el ritmo del renglón.
+export const brandWordClass = 'font-display font-bold tracking-[0.12em] text-pine';

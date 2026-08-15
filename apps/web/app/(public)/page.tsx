@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { StandingsMotif } from '@/components/standings-motif';
 import { TopographicMotif } from '@/components/topographic-motif';
-import { eyebrowClass, primaryButtonClass, secondaryButtonClass } from '@/lib/ui';
+import { brandWordClass, eyebrowClass, primaryButtonClass, secondaryButtonClass } from '@/lib/ui';
 import { HEADLINE, HEADLINE_LINES } from '@/lib/labels';
 
 // Local a la portada, no el `eyebrowClass` compartido: aquí encabezan una
@@ -43,7 +43,7 @@ const STEPS = [
   },
   {
     title: 'Los jueces puntúan desde el celular',
-    body: 'Cada juez registra tops, zonas e intentos. Si el wifi se cae sigue funcionando, y sincroniza cuando vuelve.',
+    body: 'Cada juez registra tops, zonas e intentos. Si el wifi se cae, la app sigue funcionando y el juez puede seguir puntuando. Lo que quedó pendiente se sincroniza solo cuando vuelve la señal.',
   },
   {
     title: 'La tabla se actualiza sola',
@@ -130,9 +130,9 @@ export default function HomePage() {
             ))}
           </h1>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted md:text-xl">
-            Crux corre competencias de escalada de principio a fin: inscripción por enlace, jueces
-            que puntúan desde el celular aunque se caiga el wifi, y una tabla pública que se
-            actualiza sola.
+            <span className={brandWordClass}>CRUX</span> corre competencias de escalada de principio
+            a fin: inscripción por enlace, jueces que puntúan desde el celular aunque se caiga el
+            wifi, y una tabla pública que se actualiza sola.
           </p>
         </div>
 
@@ -155,8 +155,9 @@ export default function HomePage() {
             La tabla no es una hoja de cálculo proyectada.
           </h2>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted">
-            Se lee desde el fondo del gimnasio, enseña su propio código de colores y deja los
-            desempates a la vista, para que nadie tenga que preguntar por qué alguien va adelante.
+            Una pantalla fácil de leer desde lejos durante todo el evento, con colores pensados en
+            el páramo y los desempates a la vista, para que nadie tenga que preguntar por qué
+            alguien va adelante.
           </p>
         </div>
 

@@ -16,7 +16,7 @@ import {
   ordinal,
   problemUnit,
 } from '@/lib/labels';
-import { cardClass, eyebrowClass } from '@/lib/ui';
+import { brandWordClass, cardClass, eyebrowClass } from '@/lib/ui';
 import { ConversionBar } from './conversion-bar';
 
 // Nombre completo e historial deportivo de terceros: gente que inscribió el
@@ -525,8 +525,8 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
 
       <p className="border-t border-cardborder pt-6 text-base text-muted">
         Este historial lo lleva{' '}
-        <a href="/" className="font-display font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4">
-          Crux
+        <a href="/" className={`${brandWordClass} underline decoration-gold decoration-2 underline-offset-4`}>
+          CRUX
         </a>
         , plataforma de competencias de escalada.
       </p>
