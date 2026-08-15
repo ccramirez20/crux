@@ -120,10 +120,11 @@ export function AttemptForm({
 
   const isBoulder = discipline === 'boulder';
 
-  function bump() {
-    const next = tally + 1;
-    setTally(next);
-    writeTally(problemId, registration.id, next);
+  /** Nunca por debajo de cero: no existe "menos dos intentos". */
+  function setCount(next: number) {
+    const value = Math.max(0, next);
+    setTally(value);
+    writeTally(problemId, registration.id, value);
   }
 
   /**
@@ -215,30 +216,43 @@ export function AttemptForm({
 
       {isBoulder ? (
         <>
-          {/* La rayita de la hoja. Se toca cada vez que se tira, incluida la
-              buena, y al marcar Top o Zona el número ya está puesto. No sale
-              del celular: mientras no logre nada no hay hecho que guardar. */}
-          <div className="flex items-center gap-3 rounded-lg border border-cardborder bg-stone/50 p-3">
-            <div className="min-w-0 flex-1">
-              <span className="block text-sm font-medium text-bark">Intentos que lleva</span>
-              <span className="block text-xs text-muted">Toca cada vez que se tira</span>
+          {/* La rayita de la hoja. Se toca cada vez que lo intenta, incluido el
+              intento bueno, y al marcar Top o Zona el número ya está puesto. No
+              sale del celular: mientras no logre nada no hay hecho que guardar.
+              Con − además de +: el juez cuenta de pie y mirando la pared, y un
+              toque de más no puede obligarlo a empezar de cero. */}
+          <div className="flex flex-col gap-2 rounded-lg border border-cardborder bg-stone/50 p-3">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-bark">Intentos que lleva</span>
+                <span className="block text-xs text-muted">Toca cada vez que lo intenta</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCount(tally - 1)}
+                disabled={tally === 0}
+                aria-label="Quitar un intento"
+                className="h-12 w-12 shrink-0 rounded-lg border-[1.5px] border-pine font-display text-xl font-bold text-pine disabled:opacity-30"
+              >
+                −
+              </button>
+              <span className="w-10 text-center font-display text-3xl font-bold tabular-nums">
+                {tally}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCount(tally + 1)}
+                aria-label="Sumar un intento"
+                className="h-12 w-14 shrink-0 rounded-lg bg-pine font-display text-lg font-bold text-stone"
+              >
+                +1
+              </button>
             </div>
-            <span className="font-display text-3xl font-bold tabular-nums">{tally}</span>
-            <button
-              type="button"
-              onClick={bump}
-              className="h-12 shrink-0 rounded-lg bg-pine px-5 font-display text-lg font-bold text-stone"
-            >
-              +1
-            </button>
             {tally > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  setTally(0);
-                  clearTally(problemId, registration.id);
-                }}
-                className="shrink-0 text-xs font-medium text-muted underline"
+                onClick={() => setCount(0)}
+                className="self-end text-xs font-medium text-muted underline"
               >
                 Reiniciar
               </button>
