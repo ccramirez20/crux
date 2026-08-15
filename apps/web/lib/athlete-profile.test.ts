@@ -56,6 +56,7 @@ function round(overrides: Partial<LeaderboardRound> = {}): LeaderboardRound {
     problems: [{ id: 'p1', number: 1, name: null, topPoints: null, zonePoints: null }],
     rows: [],
     error: null,
+    lastAttempts: [],
     timeline: [],
     problemStats: [],
     ...overrides,

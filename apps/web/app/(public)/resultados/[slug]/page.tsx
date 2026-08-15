@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getLeaderboard } from '@/lib/leaderboard';
+import { getLeaderboard, getSiblingEvents } from '@/lib/leaderboard';
 import { LeaderboardScreen } from './leaderboard-screen';
 
 // The public face of the product: projected on a wall for hours while the
@@ -11,10 +11,12 @@ export default async function ResultadosPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const leaderboard = await getLeaderboard(slug);
+  // En paralelo: son dos cachés distintas y la segunda no debe retrasar la
+  // tabla, que es lo que la sala está esperando.
+  const [leaderboard, siblings] = await Promise.all([getLeaderboard(slug), getSiblingEvents(slug)]);
   if (!leaderboard) {
     notFound();
   }
 
-  return <LeaderboardScreen initial={leaderboard} slug={slug} />;
+  return <LeaderboardScreen initial={leaderboard} slug={slug} siblings={siblings} />;
 }

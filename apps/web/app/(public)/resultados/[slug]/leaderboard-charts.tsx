@@ -1,7 +1,8 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { SCORE_TERM, flashCount } from '@/lib/labels';
+import { SCORE_TERM } from '@/lib/labels';
+import { roundHighlights, type Highlight } from '@/lib/round-highlights';
 import { brandWordClass } from '@/lib/ui';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 
@@ -88,74 +89,68 @@ function Panel({ title, hint, children }: { title: string; hint: string; childre
 
 /* ------------------------------------------------------------------ tiles */
 
-function StatTile({ label, what, value, detail }: { label: string; what: string; value: string; detail: string }) {
+function StatTile({
+  label,
+  what,
+  value,
+  detail,
+  dense = false,
+}: {
+  label: string;
+  what: string;
+  value: string;
+  detail: string;
+  /** En proyección la tarjeta comparte pantalla con la tabla y una gráfica, y
+   *  no puede gastar 190 px de alto. Es la misma tarjeta, más apretada. */
+  dense?: boolean;
+}) {
   return (
-    <div className={`${cardClass} flex flex-col gap-2 py-6`}>
+    <div className={`${cardClass} flex flex-col ${dense ? 'gap-1 !p-4' : 'gap-2 py-6'}`}>
       <span className={eyebrow}>{label}</span>
       {/* The tile says what it is measuring before it says the number. A big
           figure with only a two-word label makes the reader guess the unit. */}
-      <span className="text-sm text-muted">{what}</span>
+      <span className={dense ? 'text-xs leading-snug text-muted' : 'text-sm text-muted'}>{what}</span>
       {/* Los tres del mismo color: son tres hechos del mismo rango, y teñir solo
           uno se leía como que ese importaba más. Pine y no oro — el oro contra
           el hueso de la tarjeta queda en 1.8:1 y se pierde; este da 8:1 y sigue
           siendo acento. */}
       <span
-        className="mt-1 font-display text-[2.75rem] font-bold leading-none tracking-tight tabular-nums sm:text-[3.25rem]"
+        className={`mt-1 font-display font-bold leading-none tracking-tight tabular-nums ${
+          dense ? 'text-[2.25rem]' : 'text-[2.75rem] sm:text-[3.25rem]'
+        }`}
         style={{ color: PINE }}
       >
         {value}
       </span>
-      <span className="text-[15px] text-muted sm:text-base">{detail}</span>
+      <span className={dense ? 'text-xs leading-snug text-muted' : 'text-[15px] text-muted sm:text-base'}>
+        {detail}
+      </span>
     </div>
   );
 }
 
-function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
-  const stats = round.problemStats;
-  const crux = [...stats].sort((a, b) => a.tops - b.tops)[0];
-  const problemName = (id: string) => round.problems.find((p) => p.id === id)?.name;
-
-  const totalTops = stats.reduce((sum, s) => sum + s.tops, 0);
-  const totalFlashes = stats.reduce((sum, s) => sum + s.flashes, 0);
-
-  const first = round.timeline[0];
-  const last = round.timeline.at(-1);
-  const bestClimb = round.rows
-    .map((row) => ({
-      name: row.athleteName,
-      delta: (first?.ranks[row.registrationId] ?? 0) - (last?.ranks[row.registrationId] ?? 0),
-    }))
-    .sort((a, b) => b.delta - a.delta)[0];
-
+export function Headline({
+  round,
+  unit,
+  isHeight,
+  dense = false,
+}: {
+  round: LeaderboardRound;
+  unit: string;
+  isHeight: boolean;
+  dense?: boolean;
+}) {
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-      {crux && (
-        <StatTile
-          label={`El ${unit} más duro`}
-          what={`Cuál fue el ${unit} que menos gente pudo hacer`}
-          value={`${unit.slice(0, 1).toUpperCase()}${crux.number}`}
-          detail={`${problemName(crux.problemId) ?? 'Sin nombre'} · le hicieron top ${crux.tops} de ${crux.field}`}
-        />
-      )}
-      {!isHeight && (
-        <StatTile
-          label="Flashes de la ronda"
-          what="De todos los tops, cuántos salieron al primer intento"
-          value={totalTops > 0 ? `${Math.round((totalFlashes / totalTops) * 100)}%` : '—'}
-          detail={`${flashCount(totalFlashes)} de ${totalTops} tops en la ronda`}
-        />
-      )}
-      {bestClimb && bestClimb.delta > 0 && (
-        <StatTile
-          label="Mayor ascenso en la tabla"
-          what={`Quién más puestos ascendió desde el primer ${unit}`}
-          value={`+${bestClimb.delta}`}
-          detail={`${bestClimb.name} subió ${bestClimb.delta} puestos en la tabla de posiciones`}
-        />
-      )}
+    <div className={`grid grid-cols-1 md:grid-cols-3 ${dense ? 'gap-3' : 'gap-6'}`}>
+      {roundHighlights(round, unit, isHeight).map(({ key, ...item }) => (
+        <StatTile key={key} dense={dense} {...item} />
+      ))}
     </div>
   );
 }
+
+export type { Highlight };
+export { roundHighlights };
 
 /* ------------------------------------------------------------- bump chart */
 
@@ -203,7 +198,7 @@ function declutter(values: number[], minGap: number): number[] {
  * No se encoge la versión grande ni se recorta el campo: es la misma gráfica con
  * otra geometría, y la de la sala queda intacta.
  */
-function bumpLayout(compact: boolean, fieldSize: number) {
+function bumpLayout(compact: boolean, fieldSize: number, laneOverride?: number) {
   if (compact) {
     // El viewBox va casi 1:1 con los píxeles reales de la tarjeta (320 contra
     // ~302): un SVG se escala entero, así que un viewBox ancho no aprieta las
@@ -232,7 +227,12 @@ function bumpLayout(compact: boolean, fieldSize: number) {
   // abajo. Es la pantalla que se proyecta: veinticinco competidoras tienen que
   // caber en el mismo alto que catorce, o la mitad de la categoría queda fuera
   // del proyector.
-  const lane = Math.max(22, Math.min(38, Math.round(620 / fieldSize)));
+  //
+  // `laneOverride` lo manda la pantalla de proyección, que sí sabe cuánto alto
+  // tiene: dentro de una página la gráfica crece hacia abajo y el tope de 38
+  // evita que se vuelva un rollo, pero en un panel de alto fijo ese mismo tope
+  // deja media pantalla en blanco — sobre todo en una final de cuatro.
+  const lane = laneOverride ?? Math.max(22, Math.min(38, Math.round(620 / fieldSize)));
   return {
     lane,
     width: 1250,
@@ -254,12 +254,14 @@ function bumpLayout(compact: boolean, fieldSize: number) {
   };
 }
 
-function BumpChart({
+export function BumpChart({
   round,
   unit,
   plural,
   article,
   compact = false,
+  className,
+  laneOverride,
   hovered,
   onHover,
   onSelect,
@@ -269,6 +271,8 @@ function BumpChart({
   plural: string;
   article: string;
   compact?: boolean;
+  className?: string;
+  laneOverride?: number;
 } & HoverProps) {
   // Cuánto mide cada nombre ya dibujado. Un contra-trazo alcanzaba para tapar la
   // guía, pero seguía pasando por debajo de las letras; medir el texto es la
@@ -319,7 +323,7 @@ function BumpChart({
     gap,
     laneInset,
     weight,
-  } = bumpLayout(compact, shown.length);
+  } = bumpLayout(compact, shown.length, laneOverride);
   const roomy = lane >= 32;
   const endNameX = plotRight + 88;
   // El centro de cada columna de etiquetas, medido sobre el bloque de texto que
@@ -343,11 +347,15 @@ function BumpChart({
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className={compact ? 'w-full' : 'w-full min-w-[900px]'}
+      // El `min-w` obliga a desplazarse antes que a encoger, que es lo correcto
+      // dentro de una página. En proyección no hay dónde desplazarse: la
+      // pantalla es la que es, así que ahí se pasa `w-full` a secas y el SVG se
+      // escala solo.
+      className={className ?? (compact ? 'w-full' : 'w-full min-w-[900px]')}
       role="img"
       aria-label={`Puesto de cada competidor al cierre de cada ${unit}`}
     >
-      {/* Los dos extremos se titulan igual —"puesto tras el bloque N"— porque
+      {/* Los dos extremos se titulan igual —"puesto luego del bloque N"— porque
           son lo mismo medido en dos momentos; "posición final" mentiría
           mientras todavía queden bloques por escalar. El número sale del primer
           y del último punto, así que una ronda de siete dice "bloque 7".
@@ -356,16 +364,16 @@ function BumpChart({
       {!compact && (
         <>
           <text x={startLabelMid} y={30} textAnchor="middle" {...axis}>
-            PUESTO TRAS
+            PUESTO LUEGO
           </text>
           <text x={startLabelMid} y={48} textAnchor="middle" {...axis}>
-            {article.toUpperCase()} {unit.toUpperCase()} {points[0]!.problemNumber}
+            {article === 'la' ? 'DE LA' : 'DEL'} {unit.toUpperCase()} {points[0]!.problemNumber}
           </text>
           <text x={endLabelMid} y={30} textAnchor="middle" {...axis}>
-            PUESTO TRAS
+            PUESTO LUEGO
           </text>
           <text x={endLabelMid} y={48} textAnchor="middle" {...axis}>
-            {article.toUpperCase()} {unit.toUpperCase()} {points.at(-1)!.problemNumber}
+            {article === 'la' ? 'DE LA' : 'DEL'} {unit.toUpperCase()} {points.at(-1)!.problemNumber}
           </text>
           <text x={deltaX} y={30} textAnchor="end" {...axis}>
             CAMBIO
@@ -623,7 +631,19 @@ interface WallHover {
   kind: 'top' | 'zone' | 'none';
 }
 
-function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
+export function Wall({
+  round,
+  unit,
+  isHeight,
+  // En proyección el muro comparte panel con los intentos al top, y con el
+  // aire de la página los dos no caben en el alto que hay.
+  dense = false,
+}: {
+  round: LeaderboardRound;
+  unit: string;
+  isHeight: boolean;
+  dense?: boolean;
+}) {
   const [hover, setHover] = useState<WallHover | null>(null);
   // Menos tops es más duro, y con los mismos tops manda el flash: once tops de
   // los cuales seis salieron al primer intento no es el mismo bloque que once
@@ -682,7 +702,7 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
         <span className="w-16 shrink-0 text-center sm:w-24">{SCORE_TERM.top}</span>
         {!isHeight && <span className="w-12 shrink-0 text-center sm:w-20">{SCORE_TERM.flash}</span>}
       </div>
-      <ul className="flex flex-col gap-5">
+      <ul className={`flex flex-col ${dense ? 'gap-3' : 'gap-5'}`}>
         {stats.map((stat, index) => (
           <li key={stat.problemId} className="flex items-center gap-2 sm:gap-5">
             <span className="w-20 shrink-0 sm:w-36">
@@ -702,7 +722,7 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
             {/* Cada tramo dice qué significa su color al pasarle el cursor: se
                 queda encendido y los otros dos de su barra se apagan, y el
                 texto sale arriba. Un color solo no dice qué mide. */}
-            <span className="relative flex h-9 flex-1 overflow-hidden rounded-lg" style={{ background: LANE }}>
+            <span className={`relative flex flex-1 overflow-hidden rounded-lg ${dense ? 'h-8' : 'h-9'}`} style={{ background: LANE }}>
               {(
                 [
                   { kind: 'top', width: (stat.tops / stat.field) * 100, background: GOLD },
@@ -773,11 +793,37 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
  * How many goes each top cost. One axis, sorted, low is good — a scatter asked
  * the reader to decode two dimensions and a diagonal before it said anything.
  */
-function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: LeaderboardRound } & HoverProps) {
+export function AttemptsPerTop({
+  round,
+  // En proyección esta gráfica comparte panel con la del muro y no puede
+  // llevarse todo el alto: se recorta a las primeras y se queda sin el ancho
+  // mínimo, que ahí no tiene a dónde desplazarse.
+  limit = 10,
+  fixedWidth = true,
+  // Cuántos tops hacen falta para entrar y cuánta gente para que la gráfica
+  // valga la pena. Los dos tops se quedan: con uno solo, un flash de suerte
+  // promedia 1.0 y le gana a quien envió cinco, que es lo contrario de lo que
+  // esto mide. Dos competidoras sí bastan — en una final de cuatro es lo que
+  // hay, y dos barras ya comparan. Los mismos pisos en las dos pantallas: que
+  // la tabla pública y la de proyección discrepen sobre si esta gráfica existe
+  // es peor que cualquiera de los dos criterios.
+  minTops = 2,
+  minClimbers = 2,
+  hovered,
+  onHover,
+  onSelect,
+}: {
+  round: LeaderboardRound;
+  limit?: number;
+  fixedWidth?: boolean;
+  minTops?: number;
+  minClimbers?: number;
+} & HoverProps) {
+  const minWidth = fixedWidth ? 'sm:min-w-[33rem]' : '';
   const climbers = round.rows.flatMap((row) =>
     // Two tops minimum. Otherwise a single lucky flash scores 1.0 and outranks
     // someone who sent five, which is the exact opposite of the point.
-    row.result.format === 'classic_tops_zones' && row.result.tops >= 2
+    row.result.format === 'classic_tops_zones' && row.result.tops >= minTops
       ? [{
           id: row.registrationId,
           name: row.athleteName,
@@ -791,11 +837,11 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
         }]
       : [],
   );
-  if (climbers.length < 3) {
+  if (climbers.length < minClimbers) {
     return null;
   }
 
-  const ranked = climbers.sort((a, b) => a.ratio - b.ratio).slice(0, 10);
+  const ranked = climbers.sort((a, b) => a.ratio - b.ratio).slice(0, limit);
   const worst = Math.max(...ranked.map((c) => c.ratio));
 
   return (
@@ -816,7 +862,7 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
           caracteres bajo un título de ocho, y pegadas al borde derecho el
           número quedaba lejos de su propio rótulo y rozando el filo de la
           tarjeta. */}
-      <div className="mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:min-w-[33rem] sm:gap-4">
+      <div className={`mb-3 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted sm:gap-4 ${minWidth}`}>
         <span className="hidden w-44 shrink-0 sm:block" />
         <span className="flex-1" />
         <span className="w-20 shrink-0 text-center">Promedio</span>
@@ -828,7 +874,7 @@ function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: Leaderbo
             key={climber.id}
             {...hoverHandlers(climber.id, onHover)}
             onClick={() => onSelect(climber.id)}
-            className={`flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 transition-opacity duration-200 sm:min-w-[33rem] sm:flex-nowrap sm:gap-x-4 ${
+            className={`flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 transition-opacity duration-200 sm:flex-nowrap sm:gap-x-4 ${minWidth} ${
               hovered !== null && hovered !== climber.id ? 'opacity-60' : ''
             }`}
           >
@@ -883,7 +929,7 @@ export function LeaderboardCharts({
   }
   const isHeight = round.rows[0]?.result.format === 'max_height';
   const hasAttemptsPerTop =
-    round.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length >= 3;
+    round.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length >= 2;
 
   return (
     <div className="flex flex-col gap-6">
@@ -903,10 +949,12 @@ export function LeaderboardCharts({
           {round.timeline.length > 1 && (
             <div className={`mb-2 flex items-center justify-between ${eyebrow}`}>
               <span>
-                Tras {unit.article} {unit.singular} {round.timeline[0]!.problemNumber}
+                Luego {unit.article === 'la' ? 'de la' : 'del'} {unit.singular}{' '}
+                {round.timeline[0]!.problemNumber}
               </span>
               <span>
-                Tras {unit.article} {unit.singular} {round.timeline.at(-1)!.problemNumber}
+                Luego {unit.article === 'la' ? 'de la' : 'del'} {unit.singular}{' '}
+                {round.timeline.at(-1)!.problemNumber}
               </span>
             </div>
           )}
@@ -934,8 +982,7 @@ export function LeaderboardCharts({
         </div>
         {/* Esto se lee de afán y de pie. Tres frases, no un párrafo. */}
         <p className="mt-4 text-[15px] text-muted sm:text-base">
-          Se lee de izquierda a derecha: arranca con el puesto tras el primer {unit.singular}. La escala
-          vertical es cuántos compiten en la categoría.{' '}
+          Se lee de izquierda a derecha: arranca con el puesto luego del primer {unit.singular}.{' '}
           <span className="sm:hidden">
             Presiona una línea para ver el nombre del competidor al que corresponde; eso resalta su
             posición en la tabla y en las demás gráficas.

@@ -76,6 +76,28 @@ const FECHAS = [
     judgeCode: 'LIGA26',
     seed: 20260822,
     skipLast: 0,
+    // La única de las tres con formato completo, y por eso es la que se muestra:
+    // una fecha de una sola ronda no enseña ni el corte de clasificados ni el
+    // podio, que solo existe en una final. Las otras dos se quedan en
+    // clasificatoria porque así se corren de verdad y porque el contraste entre
+    // las tres es justo lo que hay que poder ver.
+    rounds: [
+      { type: 'qualification', advances: 6, blocks: ['Frailejón', 'Cóndor', 'Chingaza', 'Sumapaz', 'Nevado'] },
+      { type: 'semifinal', advances: 4, blocks: ['Guatavita', 'Iguaque', 'Chicaque', 'Monserrate'] },
+      // Sin cupo: de la final no pasa nadie a ningún lado, y eso es lo que la
+      // hace final.
+      { type: 'final', advances: null, blocks: ['Cocuy', 'Ritacuba', 'Puracé', 'Tolima'] },
+    ],
+  },
+];
+
+// Lo que tiene un evento que no diga otra cosa: una clasificatoria de cinco
+// bloques y nadie pasando a ninguna parte.
+const DEFAULT_ROUNDS = [
+  {
+    type: 'qualification',
+    advances: null,
+    blocks: ['Frailejón', 'Cóndor', 'Chingaza', 'Sumapaz', 'Nevado'],
   },
 ];
 
@@ -145,23 +167,6 @@ async function seedFecha(fecha, org, owner) {
       values (${event.id}, ${group.name}, ${group.gender}, 16, 'open')
       returning id`;
 
-    const [round] = await sql`
-      insert into rounds (category_id, type, "order") values (${category.id}, 'qualification', 1) returning id`;
-
-    const problems = [];
-    const blockNames = ['Frailejón', 'Cóndor', 'Chingaza', 'Sumapaz', 'Nevado'];
-    for (let number = 1; number <= 5; number++) {
-      // Sin `problemPoints` los dos quedan en NULL, que es exactamente lo que
-      // tenían las dos fechas de la liga antes de que existiera la copa: para
-      // ellas la fila insertada no cambia.
-      const points = fecha.problemPoints?.[number - 1] ?? { top: null, zone: null };
-      const [problem] = await sql`
-        insert into problems (round_id, number, name, top_points, zone_points)
-        values (${round.id}, ${number}, ${blockNames[number - 1]}, ${points.top}, ${points.zone})
-        returning id`;
-      problems.push(problem.id);
-    }
-
     // Cada atleta tiene un nivel real; de ahí sale si topa, si llega a zona y
     // en cuántos intentos. Sin esto todo el mundo hace lo mismo y la tabla no
     // tiene historia que contar.
@@ -189,29 +194,61 @@ async function seedFecha(fecha, org, owner) {
       registrations.push({ id: registration.id, skill: 0.25 + random() * 0.7 });
     }
 
-    // Rotación real de gimnasio: cada tanda, cada competidor pasa a otro
-    // bloque. Por eso los puestos se mueven durante la sesión en vez de quedar
-    // definidos desde el primer bloque.
-    for (let heat = 0; heat < problems.length; heat++) {
-      for (const [index, registration] of registrations.entries()) {
-        const problemId = problems[(index + heat) % problems.length];
-        const roll = random();
-        const topped = roll < registration.skill;
-        const zoned = !topped && roll < registration.skill + 0.3;
-        const tries = 1 + Math.floor(random() * 4);
-        clock += 30 + Math.floor(random() * 90);
+    const roundsCfg = fecha.rounds ?? DEFAULT_ROUNDS;
+    for (const [roundIndex, cfg] of roundsCfg.entries()) {
+      const [round] = await sql`
+        insert into rounds (category_id, type, "order", advances)
+        values (${category.id}, ${cfg.type}, ${roundIndex + 1}, ${cfg.advances})
+        returning id`;
 
-        await sql`
-          insert into attempts (client_attempt_id, registration_id, problem_id, judge_label, top, top_attempts, zone, zone_attempts, captured_at)
-          values (${randomUUID()}, ${registration.id}, ${problemId}, ${'Juez ' + (1 + (heat % 3))},
-                  ${topped}, ${topped ? tries : null}, ${topped || zoned},
-                  ${topped || zoned ? Math.max(1, tries - Math.floor(random() * 2)) : null},
-                  ${new Date(start.getTime() + clock * 1000).toISOString()})`;
-        totalAttempts += 1;
+      const problems = [];
+      for (let number = 1; number <= cfg.blocks.length; number++) {
+        // Sin `problemPoints` los dos quedan en NULL, que es exactamente lo que
+        // tenían las dos fechas de la liga antes de que existiera la copa: para
+        // ellas la fila insertada no cambia.
+        const points = fecha.problemPoints?.[number - 1] ?? { top: null, zone: null };
+        const [problem] = await sql`
+          insert into problems (round_id, number, name, top_points, zone_points)
+          values (${round.id}, ${number}, ${cfg.blocks[number - 1]}, ${points.top}, ${points.zone})
+          returning id`;
+        problems.push(problem.id);
+      }
+
+      // Cada ronda es más dura que la anterior, que es de lo que se trata una
+      // final. Sin el escalón, la semifinal salía con más tops que la
+      // clasificatoria y la tabla contaba una competencia al revés.
+      const harder = roundIndex * 0.18;
+
+      // Se capturan intentos de todo el mundo en todas las rondas, no solo de
+      // quien clasificó: quién pasa lo decide la tabla a partir del corte, y
+      // adivinarlo aquí dejaría filas en blanco cada vez que la simulación y el
+      // desempate real no coincidieran.
+      // Rotación real de gimnasio: cada tanda, cada competidor pasa a otro
+      // bloque. Por eso los puestos se mueven durante la sesión en vez de
+      // quedar definidos desde el primer bloque.
+      for (let heat = 0; heat < problems.length; heat++) {
+        for (const [index, registration] of registrations.entries()) {
+          const problemId = problems[(index + heat) % problems.length];
+          const roll = random();
+          const skill = Math.max(0.05, registration.skill - harder);
+          const topped = roll < skill;
+          const zoned = !topped && roll < skill + 0.3;
+          const tries = 1 + Math.floor(random() * 4);
+          clock += 30 + Math.floor(random() * 90);
+
+          await sql`
+            insert into attempts (client_attempt_id, registration_id, problem_id, judge_label, top, top_attempts, zone, zone_attempts, captured_at)
+            values (${randomUUID()}, ${registration.id}, ${problemId}, ${'Juez ' + (1 + (heat % 3))},
+                    ${topped}, ${topped ? tries : null}, ${topped || zoned},
+                    ${topped || zoned ? Math.max(1, tries - Math.floor(random() * 2)) : null},
+                    ${new Date(start.getTime() + clock * 1000).toISOString()})`;
+          totalAttempts += 1;
+        }
       }
     }
 
-    console.log(`  ${group.name}: ${registrations.length} inscritos, 5 bloques.`);
+    const rondas = roundsCfg.map((r) => `${r.type} (${r.blocks.length})`).join(' → ');
+    console.log(`  ${group.name}: ${registrations.length} inscritos · ${rondas}`);
   }
 
   console.log(`  ${totalAttempts} intentos.`);

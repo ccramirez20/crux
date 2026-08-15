@@ -2,7 +2,17 @@ import { unstable_cache } from 'next/cache';
 import { z } from 'zod';
 import { SCORING_FORMATS, type Attempt, type ScoringFormat } from '@crux/core';
 import { resolveCurrentAttempts, scoreRound, type RankedResult } from '@crux/scoring';
-import { athletes, attempts, categories, eq, events, problems, registrations, rounds } from '@crux/db';
+import {
+  athletes,
+  attempts,
+  categories,
+  eq,
+  events,
+  organizations,
+  problems,
+  registrations,
+  rounds,
+} from '@crux/db';
 import { getDb } from './db';
 
 // `events.scoring_format` is a plain text column, and scoreRound indexes its
@@ -107,6 +117,23 @@ export interface ProblemStats {
   field: number;
 }
 
+/**
+ * Las últimas capturas que entraron a la ronda.
+ *
+ * No cambia ningún puntaje —eso ya lo dice la tabla— pero es lo único que hace
+ * que una pared proyectada se sienta viva entre actualizaciones: alguien acaba
+ * de escalar y la sala lo ve. Va por ronda porque es lo que se proyecta.
+ */
+export interface LastAttempt {
+  athleteName: string;
+  problemNumber: number;
+  top: boolean;
+  zone: boolean;
+  /** Los intentos que le costó lo que logró, o los que lleva si no logró nada. */
+  attempts: number | null;
+  capturedAt: string;
+}
+
 export interface LeaderboardRound {
   id: string;
   type: string;
@@ -117,6 +144,7 @@ export interface LeaderboardRound {
   error: string | null;
   timeline: TimelinePoint[];
   problemStats: ProblemStats[];
+  lastAttempts: LastAttempt[];
 }
 
 /**
@@ -305,6 +333,7 @@ export function buildLeaderboard(
         problems: round.problems,
         timeline: [],
         problemStats: [],
+        lastAttempts: [],
       };
 
       if (!format.success) {
@@ -317,6 +346,15 @@ export function buildLeaderboard(
       }
 
       const problemIds = round.problems.map((p) => p.id);
+      // Una ronda solo sabe de la gente que está en ella. Sin esto, un intento
+      // de alguien que no clasificó —capturado por error, o por un juez en el
+      // bloque equivocado— entra igual en el conteo del muro y en la línea de
+      // tiempo: la ronda llegaba a decir "18 tops de 16 posibles", que es
+      // imposible y se ve en pantalla. El puntaje ya estaba a salvo porque
+      // `scoreRound` recibe la lista de inscripciones; lo que faltaba era
+      // recortar todo lo demás con el mismo criterio.
+      const inField = new Set(roundField.map((r) => r.id));
+      const fieldAttempts = attemptRows.filter((a) => inField.has(a.registrationId));
       const config = {
         problemIds,
         // Everyone registered in the category, not just whoever has been
@@ -325,12 +363,12 @@ export function buildLeaderboard(
         registrationIds: roundField.map((r) => r.id),
         problemPoints: round.problemPoints,
       };
-      const scored = scoreRound(format.data, attemptRows, config);
+      const scored = scoreRound(format.data, fieldAttempts, config);
       if (!scored.ok) {
         return { ...base, rows: [], error: scored.error.message };
       }
 
-      const current = resolveCurrentAttempts(attemptRows, new Set(problemIds));
+      const current = resolveCurrentAttempts(fieldAttempts, new Set(problemIds));
       const rows = scored.value.map((result) => {
         const registration = roundField.find((r) => r.id === result.registrationId);
         return {
@@ -366,7 +404,36 @@ export function buildLeaderboard(
         };
       });
 
-      const roundAttempts = attemptRows.filter((a) => problemIds.includes(a.problemId));
+      const roundAttempts = fieldAttempts.filter((a) => problemIds.includes(a.problemId));
+
+      // Las cinco más recientes por **reloj del juez**, no por orden de llegada:
+      // la cola del teléfono sincroniza en lote cuando vuelve el wifi, así que
+      // la última fila insertada suele ser de hace media hora. Tres porque es
+      // lo máximo que la pantalla llega a mostrar; cuántas se ven las decide el
+      // espacio que haya.
+      const recent = [...roundAttempts]
+        .sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : a.capturedAt > b.capturedAt ? -1 : 0))
+        .slice(0, 5)
+        .flatMap((attempt) => {
+          const row = roundField.find((r) => r.id === attempt.registrationId);
+          const problem = round.problems.find((p) => p.id === attempt.problemId);
+          if (!row || !problem) {
+            return [];
+          }
+          return [
+            {
+              athleteName: row.athleteFullName,
+              problemNumber: problem.number,
+              top: attempt.top,
+              zone: attempt.zone,
+              attempts: attempt.top ? attempt.topAttempts : attempt.zone ? attempt.zoneAttempts : null,
+              capturedAt:
+                attempt.capturedAt instanceof Date
+                  ? attempt.capturedAt.toISOString()
+                  : String(attempt.capturedAt),
+            },
+          ];
+        });
 
       return {
         ...base,
@@ -374,6 +441,7 @@ export function buildLeaderboard(
         error: null,
         timeline: buildTimeline(format.data, roundAttempts, round.problems, config),
         problemStats,
+        lastAttempts: recent,
       };
     }
 
@@ -481,4 +549,56 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
  */
 export const getLeaderboard = unstable_cache(loadLeaderboard, ['leaderboard'], {
   revalidate: 5,
+});
+
+export interface SiblingEvent {
+  slug: string;
+  name: string;
+  date: string | null;
+}
+
+export interface SiblingEvents {
+  /** Cómo se llama quien las organiza: es lo único que de verdad las agrupa. */
+  organization: string;
+  events: SiblingEvent[];
+}
+
+/**
+ * Las otras competencias de la misma organización.
+ *
+ * Una fecha de liga suelta se lee como un evento suelto: quien llega a la
+ * Fecha 2 por un enlace de WhatsApp no tiene forma de saber que existe una
+ * Fecha 1, ni que la liga es una liga.
+ *
+ * Va aparte de `getLeaderboard` y no dentro del payload a propósito: eso viaja
+ * a cada espectador cada cinco segundos, y esta lista no cambia durante un
+ * evento. Aquí la caché es de un minuto porque lo único que la mueve es que el
+ * organizador cree otra fecha.
+ */
+async function loadSiblingEvents(slug: string): Promise<SiblingEvents> {
+  const db = getDb();
+  const [event] = await db
+    .select({
+      id: events.id,
+      organizationId: events.organizationId,
+      organization: organizations.name,
+    })
+    .from(events)
+    .innerJoin(organizations, eq(events.organizationId, organizations.id))
+    .where(eq(events.slug, slug));
+  if (!event) {
+    return { organization: '', events: [] };
+  }
+
+  const rows = await db
+    .select({ slug: events.slug, name: events.name, date: events.date })
+    .from(events)
+    .where(eq(events.organizationId, event.organizationId))
+    .orderBy(events.date);
+
+  return { organization: event.organization, events: rows.filter((row) => row.slug !== slug) };
+}
+
+export const getSiblingEvents = unstable_cache(loadSiblingEvents, ['sibling-events'], {
+  revalidate: 60,
 });
