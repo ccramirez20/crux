@@ -82,6 +82,13 @@ export const rounds = pgTable('rounds', {
     .references(() => categories.id),
   type: roundTypeEnum('type').notNull(),
   order: integer('order').notNull(),
+  // Cuántos pasan de esta ronda a la siguiente. La ronda que sigue se corre
+  // solo con ellos: sin esto, una final se dibujaba con toda la categoría y los
+  // que no clasificaron salían en la tabla con casillas vacías.
+  //
+  // Null es "pasan todos", que es como se comportaban los eventos creados antes
+  // de esta columna y lo correcto en un evento de una sola ronda.
+  advances: integer('advances'),
 });
 
 export const problems = pgTable('problems', {

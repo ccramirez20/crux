@@ -26,6 +26,7 @@ export interface TreeRow {
   roundId: string | null;
   roundType: string | null;
   roundOrder: number | null;
+  roundAdvances: number | null;
   problemId: string | null;
   problemNumber: number | null;
   problemName: string | null;
@@ -102,7 +103,7 @@ export interface ProblemStats {
   zones: number;
   /** Topped on the first go. To a climber this is the honest read on how hard a block was. */
   flashes: number;
-  /** Competitors registered in the category — the denominator. */
+  /** Cuántos compiten en esa ronda — el denominador. En una final son los finalistas, no la categoría entera. */
   field: number;
 }
 
@@ -184,6 +185,7 @@ interface RoundDraft {
   id: string;
   type: string;
   order: number;
+  advances: number | null;
   problems: LeaderboardProblem[];
   problemPoints: RoundPoints;
 }
@@ -192,6 +194,28 @@ interface CategoryDraft {
   id: string;
   name: string;
   rounds: RoundDraft[];
+}
+
+/**
+ * Quiénes pasan de una ronda a la siguiente.
+ *
+ * `rows` llega ya ordenada por puesto desde packages/scoring.
+ *
+ * **Un empate en el corte pasa completo.** Si clasifican 8 y los puestos 7, 8 y
+ * 9 empataron, pasan los nueve: partir un empate por el orden en que quedaron
+ * en un arreglo es inventar un desempate que el formato no tiene, y en una
+ * competencia federada eso es una reclamación. Quien quiera cortar exacto
+ * desempata en la pared, no en la tabla.
+ */
+export function advancingIds(rows: LeaderboardRow[], advances: number | null): string[] {
+  if (advances === null || advances >= rows.length) {
+    return rows.map((r) => r.registrationId);
+  }
+  if (advances <= 0) {
+    return [];
+  }
+  const cutoff = rows[advances - 1]!.result.rank;
+  return rows.filter((r) => r.result.rank <= cutoff).map((r) => r.registrationId);
 }
 
 /**
@@ -224,6 +248,7 @@ export function buildLeaderboard(
         id: row.roundId,
         type: row.roundType,
         order: row.roundOrder,
+        advances: row.roundAdvances,
         problems: [],
         problemPoints: {},
       };
@@ -254,7 +279,25 @@ export function buildLeaderboard(
   const categories: LeaderboardCategory[] = drafts.map((category) => {
     const categoryRegistrations = eventRegistrations.filter((r) => r.categoryId === category.id);
 
-    const rounds: LeaderboardRound[] = category.rounds.map((round) => {
+    // Las rondas se recorren en orden y no con `map` porque cada una depende de
+    // la anterior: el campo de la semifinal son quienes pasaron la
+    // clasificatoria, y el de la final quienes pasaron la semifinal.
+    const rounds: LeaderboardRound[] = [];
+    let field = categoryRegistrations;
+
+    for (const round of [...category.rounds].sort((a, b) => a.order - b.order)) {
+      const built = buildRound(round, field);
+      rounds.push(built);
+      // Una ronda sin filas no recorta nada: o todavía no tiene bloques, o el
+      // formato falló. Vaciar el campo ahí dejaría las rondas siguientes en
+      // blanco por un evento a medio armar.
+      if (built.rows.length > 0) {
+        const passing = new Set(advancingIds(built.rows, round.advances));
+        field = field.filter((r) => passing.has(r.id));
+      }
+    }
+
+    function buildRound(round: RoundDraft, roundField: RegistrationRow[]): LeaderboardRound {
       const base = {
         id: round.id,
         type: round.type,
@@ -279,7 +322,7 @@ export function buildLeaderboard(
         // Everyone registered in the category, not just whoever has been
         // judged: that is what puts a competitor with no attempts on screen
         // at zero and last instead of leaving them off the table.
-        registrationIds: categoryRegistrations.map((r) => r.id),
+        registrationIds: roundField.map((r) => r.id),
         problemPoints: round.problemPoints,
       };
       const scored = scoreRound(format.data, attemptRows, config);
@@ -289,7 +332,7 @@ export function buildLeaderboard(
 
       const current = resolveCurrentAttempts(attemptRows, new Set(problemIds));
       const rows = scored.value.map((result) => {
-        const registration = categoryRegistrations.find((r) => r.id === result.registrationId);
+        const registration = roundField.find((r) => r.id === result.registrationId);
         return {
           registrationId: result.registrationId,
           athleteId: registration?.athleteId ?? null,
@@ -319,7 +362,7 @@ export function buildLeaderboard(
           tops: onProblem.filter((a) => a.top).length,
           zones: onProblem.filter((a) => a.zone && !a.top).length,
           flashes: onProblem.filter((a) => a.top && (a.topAttempts ?? 1) === 1).length,
-          field: categoryRegistrations.length,
+          field: roundField.length,
         };
       });
 
@@ -332,7 +375,7 @@ export function buildLeaderboard(
         timeline: buildTimeline(format.data, roundAttempts, round.problems, config),
         problemStats,
       };
-    });
+    }
 
     return { id: category.id, name: category.name, rounds };
   });
@@ -369,6 +412,7 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
         roundId: rounds.id,
         roundType: rounds.type,
         roundOrder: rounds.order,
+        roundAdvances: rounds.advances,
         problemId: problems.id,
         problemNumber: problems.number,
         problemName: problems.name,

@@ -5,6 +5,7 @@ import { cardClass, eyebrowClass } from '@/lib/ui';
 import { GENDER_LABEL, ROUND_TYPE_LABEL, labelFor, problemUnit } from '@/lib/labels';
 import { CategoryForm } from './category-form';
 import { RoundForm } from './round-form';
+import { RoundAdvances } from './round-advances';
 import { ProblemForm } from './problem-form';
 import { ProblemCard } from './problem-qr';
 
@@ -15,7 +16,13 @@ type Problem = {
   topPoints: number | null;
   zonePoints: number | null;
 };
-type Round = { id: string; type: string; order: number; problems: Problem[] };
+type Round = {
+  id: string;
+  type: string;
+  order: number;
+  advances: number | null;
+  problems: Problem[];
+};
 type Category = {
   id: string;
   name: string;
@@ -190,6 +197,18 @@ export function EventStructure({
 
                           {roundIsOpen && (
                             <div className="relative mt-3 flex flex-col gap-2 border-l-2 border-sage pl-5">
+                              {/* Solo si hay una ronda después: de la última no
+                                  pasa nadie a ningún lado. */}
+                              {round.order < category.rounds.length && (
+                                <div className="mb-2 rounded-lg border border-cardborder bg-stone/50 p-3">
+                                  <RoundAdvances
+                                    eventId={eventId}
+                                    roundId={round.id}
+                                    advances={round.advances}
+                                  />
+                                </div>
+                              )}
+
                               {round.problems.length === 0 && (
                                 <p className="text-sm text-muted">
                                   Sin {unit.plural}. Cada {unit.singular} que agregues genera su

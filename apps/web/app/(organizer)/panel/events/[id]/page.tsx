@@ -68,6 +68,7 @@ export default async function EventDetailPage({
       roundId: rounds.id,
       roundType: rounds.type,
       roundOrder: rounds.order,
+      roundAdvances: rounds.advances,
       problemId: problems.id,
       problemNumber: problems.number,
       problemName: problems.name,
@@ -125,7 +126,13 @@ export default async function EventDetailPage({
     topPoints: number | null;
     zonePoints: number | null;
   };
-  type Round = { id: string; type: string; order: number; problems: Problem[] };
+  type Round = {
+    id: string;
+    type: string;
+    order: number;
+    advances: number | null;
+    problems: Problem[];
+  };
   type Category = {
     id: string;
     name: string;
@@ -156,7 +163,13 @@ export default async function EventDetailPage({
     }
     let round = category.rounds.find((r) => r.id === row.roundId);
     if (!round) {
-      round = { id: row.roundId, type: row.roundType, order: row.roundOrder, problems: [] };
+      round = {
+        id: row.roundId,
+        type: row.roundType,
+        order: row.roundOrder,
+        advances: row.roundAdvances,
+        problems: [],
+      };
       category.rounds.push(round);
     }
     if (row.problemId === null || row.problemNumber === null) {

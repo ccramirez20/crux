@@ -1,6 +1,66 @@
 import { describe, expect, it } from 'vitest';
 import type { Attempt } from '@crux/core';
-import { buildLeaderboard, type RegistrationRow, type TreeRow } from './leaderboard';
+import {
+  advancingIds,
+  buildLeaderboard,
+  type LeaderboardRow,
+  type RegistrationRow,
+  type TreeRow,
+} from './leaderboard';
+
+// Solo importa el puesto: `advancingIds` decide por rank y nada más.
+function fila(registrationId: string, rank: number): LeaderboardRow {
+  return {
+    registrationId,
+    athleteId: null,
+    athleteName: registrationId,
+    bibNumber: null,
+    result: {
+      format: 'classic_tops_zones',
+      rank,
+      tied: false,
+      registrationId,
+      tops: 0,
+      topAttempts: 0,
+      zones: 0,
+      zoneAttempts: 0,
+    },
+    cells: [],
+  };
+}
+
+describe('advancingIds', () => {
+  it('sin cupo definido pasan todos', () => {
+    const rows = [fila('a', 1), fila('b', 2), fila('c', 3)];
+    expect(advancingIds(rows, null)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('corta en el cupo', () => {
+    const rows = [fila('a', 1), fila('b', 2), fila('c', 3), fila('d', 4)];
+    expect(advancingIds(rows, 2)).toEqual(['a', 'b']);
+  });
+
+  // La regla que evita una reclamación en una competencia federada: si el corte
+  // cae en mitad de un empate, pasan todos los empatados.
+  it('un empate sobre el corte pasa completo', () => {
+    const rows = [fila('a', 1), fila('b', 2), fila('c', 2), fila('d', 4)];
+    expect(advancingIds(rows, 2)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('un empate justo debajo del corte no pasa', () => {
+    const rows = [fila('a', 1), fila('b', 2), fila('c', 3), fila('d', 3)];
+    expect(advancingIds(rows, 2)).toEqual(['a', 'b']);
+  });
+
+  it('un cupo mayor que el campo no inventa gente', () => {
+    const rows = [fila('a', 1), fila('b', 2)];
+    expect(advancingIds(rows, 8)).toEqual(['a', 'b']);
+  });
+
+  it('cupo en cero deja la siguiente ronda vacía', () => {
+    expect(advancingIds([fila('a', 1)], 0)).toEqual([]);
+  });
+});
 
 // The strategies themselves are covered in packages/scoring. What this file
 // guards is the wiring: that each round gets the right blocks, the right
@@ -31,6 +91,7 @@ function treeRow(overrides: Partial<TreeRow>): TreeRow {
     roundId: 'round-clasi',
     roundType: 'qualification',
     roundOrder: 1,
+    roundAdvances: null,
     problemId: null,
     problemNumber: null,
     problemName: null,
