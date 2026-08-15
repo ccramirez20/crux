@@ -400,7 +400,13 @@ function RecentCaptures({
           return (
             <li
               key={`${capture.athleteName}-${capture.capturedAt}`}
-              className="flex items-baseline justify-between gap-4 rounded-lg bg-stone/50 px-4 py-2"
+              className={`flex items-baseline justify-between gap-4 rounded-lg border-l-4 bg-stone/40 px-4 py-2 ${
+                capture.top
+                  ? 'border-gold'
+                  : capture.zone
+                    ? 'border-sage'
+                    : 'border-cardborder'
+              }`}
             >
               <span className="min-w-0 truncate font-display text-lg font-semibold leading-tight text-ink">
                 {capture.athleteName} {what}
@@ -447,20 +453,44 @@ function PanelFill({
 
 /** Las tres cifras de la ronda en una tira y no en tres tarjetas: en una fila de
  *  1900 px de ancho, tres tarjetas se estiran y quedan casi vacías. */
-function HighlightStrip({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
+function HighlightStrip({
+  round,
+  unit,
+  isHeight,
+}: {
+  round: LeaderboardRound;
+  unit: string;
+  isHeight: boolean;
+}) {
   const items = roundHighlights(round, unit, isHeight);
+  // Tres a la vez, siempre las mismas cuatro y en el mismo orden en toda
+  // categoría. Cuando hay una de más la ventana corre de a una: rotar es mejor
+  // que esconder la cuarta para siempre y mejor que apretar cuatro en el ancho
+  // de tres. Veinte segundos, porque son dos renglones leídos desde el fondo
+  // del salón, no un titular.
+  const [offset, setOffset] = useState(0);
+  const rota = items.length > 3;
+
+  useEffect(() => {
+    if (!rota) {
+      return;
+    }
+    const id = setInterval(() => setOffset((value) => (value + 1) % items.length), 20_000);
+    return () => clearInterval(id);
+  }, [rota, items.length]);
+
   if (items.length === 0) {
     return null;
   }
+  const shown = Array.from(
+    { length: Math.min(3, items.length) },
+    (_, index) => items[(offset + index) % items.length]!,
+  );
+
   return (
-    // Tres columnas iguales y fijas: repartir el ancho entre las que haya dejaba
-    // dos cifras estiradas en una final.
     <div className="grid shrink-0 grid-cols-3 divide-x divide-cardborder rounded-2xl border border-cardborder bg-card">
-      {items.map((item) => (
-        // `items-center` y no `items-baseline`: la línea base del número de
-        // 36 px se alineaba con el rótulo de 11, y la cifra quedaba montada
-        // por encima de su propio texto.
-        <div key={item.key} className="flex min-w-0 items-center justify-center gap-4 px-6 py-3">
+      {shown.map((item) => (
+        <div key={item.key} className="crux-fade flex min-w-0 items-center justify-center gap-4 px-6 py-3">
           <span className="shrink-0 font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-pine">
             {item.value}
           </span>
@@ -683,7 +713,10 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                         una final —es el momento del día y aquí tiene sitio
                         propio— y si no, las olas. La gráfica no se estira para
                         taparlo: con cuatro finalistas, estirada se ve peor. */}
-                    {isPodiumRound && bumpLeftover >= FILL.podium && round.rows.length >= 3 ? (
+                    {isPodiumRound && round.rows.length >= 3 ? (
+                      // Sitio reservado, no lo que sobre: medir primero y
+                      // decidir después dejaba el podio fuera justo en las
+                      // pantallas grandes, que es donde más sitio hay.
                       <div className="mt-4 shrink-0 pb-2">
                         <Podium round={round} />
                       </div>
