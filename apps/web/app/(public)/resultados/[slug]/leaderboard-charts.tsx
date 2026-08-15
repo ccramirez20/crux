@@ -237,7 +237,15 @@ function bumpLayout(compact: boolean, fieldSize: number, laneOverride?: number) 
     lane,
     width: 1250,
     padTop: 78,
-    padBottom: 82,
+    // El pie crece con el carril porque los rótulos del eje —B1, B2…— no cuelgan
+    // del borde del viewBox sino de `laneBottom`, que es medio carril más abajo.
+    // Con los 82 fijos de antes, un carril de más de 116 px empujaba B1…B4 y la
+    // palabra BLOQUES fuera del viewBox y el SVG los recortaba sin avisar: la
+    // gráfica de la pantalla proyectada quedaba en líneas sueltas sobre un eje
+    // sin nombres, que es exactamente cuando hay carriles enormes (una final de
+    // cuatro llenando el alto). Dentro de la página el carril nunca pasa de 38,
+    // así que ahí ganan los 82 de siempre y no se mueve nada.
+    padBottom: Math.max(82, Math.round(lane / 2) + 62),
     // El área de dibujo se come el aire de los dos costados: la etiqueta más
     // larga mide 168 px y arrancaba en x=88, y del otro lado sobraba otro tanto
     // antes del chip. La gráfica es el foco de esta pantalla, así que el ancho
@@ -905,6 +913,37 @@ export function AttemptsPerTop({
 
 /* -------------------------------------------------------------- assembly */
 
+/**
+ * Qué bloque es cada B1, B2, B3.
+ *
+ * Los nombres solo salían en «¿Qué tan duros estaban los bloques?», así que para
+ * saber que B3 era Puracé había que bajar a otra tarjeta y volver. La tabla y
+ * esta gráfica hablaban en códigos que no se resuelven en ningún sitio cercano.
+ *
+ * Se omite entera si el organizador no les puso nombre: entonces el código ya es
+ * el nombre y una línea que dijera «B1 · B2 · B3» sería ruido.
+ */
+function ProblemLegend({ round, unit }: { round: LeaderboardRound; unit: string }) {
+  const named = round.problems.filter((problem) => problem.name).sort((a, b) => a.number - b.number);
+  if (named.length === 0) {
+    return null;
+  }
+  const initial = unit.slice(0, 1).toUpperCase();
+  return (
+    <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
+      {named.map((problem) => (
+        <li key={problem.id}>
+          <span className="font-semibold text-ink">
+            {initial}
+            {problem.number}
+          </span>{' '}
+          {problem.name}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Swatch({ color, label }: { color: string; label: string }) {
   return (
     <span className="flex items-center gap-2">
@@ -991,6 +1030,7 @@ export function LeaderboardCharts({
             Haz clic sobre un competidor y se resalta en la tabla y en las demás gráficas.
           </span>
         </p>
+        <ProblemLegend round={round} unit={unit.singular} />
       </Panel>
 
       <div className={`grid grid-cols-1 gap-6 ${hasAttemptsPerTop ? 'xl:grid-cols-[3fr_2fr]' : ''}`}>
