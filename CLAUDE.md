@@ -1,6 +1,6 @@
 # CRUX — Plataforma de competencias deportivas
 
-Motor de competencias para deporte amateur, entrando por escalada. Contexto de negocio en `@docs/00-tesis.md`. Este archivo son las reglas que aplican siempre.
+Motor de competencias deportivas, del gimnasio al evento federado, entrando por escalada. Contexto de negocio en `@docs/00-tesis.md`. Este archivo son las reglas que aplican siempre.
 
 ## Regla de alcance
 

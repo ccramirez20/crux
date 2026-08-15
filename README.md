@@ -2,12 +2,20 @@
 
 **Plataforma de competencias deportivas, entrando por escalada.**
 
-El deporte amateur colombiano se administra con WhatsApp, un formulario de Google
-y alguien gritando puntajes el día del evento. CRUX corre una competencia de
-principio a fin: inscripción por enlace, jueces que capturan desde el teléfono
-aunque se caiga el wifi, y una tabla pública que se actualiza sola.
+Una competencia de escalada en Colombia se administra hoy con WhatsApp, un
+formulario de Google y alguien gritando puntajes el día del evento. CRUX la corre
+de principio a fin: inscripción por enlace, jueces que capturan desde el teléfono
+aunque se caiga el wifi, tabla pública que se actualiza sola y una pantalla de
+proyección para la sala.
 
-**Demo en vivo:** https://crux-web-pi.vercel.app · [tabla de un evento real](https://crux-web-pi.vercel.app/resultados/liga-paramo)
+Empieza por el gimnasio y la liga local porque ahí es donde se puede entrar sin
+permiso de nadie, pero el modelo —intentos auditables, formatos de puntaje
+intercambiables, historial por competidor entre eventos— es el que exige una
+federación.
+
+**Demo en vivo:** https://crux-web-pi.vercel.app ·
+[tabla de un evento real](https://crux-web-pi.vercel.app/resultados/liga-paramo) ·
+[la misma, en modo proyección](https://crux-web-pi.vercel.app/resultados/liga-paramo/proyectar)
 
 ![Tabla pública de resultados](docs/img/tabla-publica.png)
 
@@ -112,8 +120,14 @@ jueces: [`apps/web/public/manual.html`](apps/web/public/manual.html), servido en
 
 ## Estado
 
-Etapa 1 (competencias) en producción. Lo que sigue —diagnóstico biomecánico por
-video en el navegador, y generador de bloques— está descrito y **deliberadamente
-bloqueado** hasta que un gimnasio real corra un evento con 20+ inscritos sin
-soporte manual el día del evento. El detalle de las etapas y qué desbloquea cada
-una está en [`CLAUDE.md`](CLAUDE.md) y [`docs/01-etapas.md`](docs/01-etapas.md).
+Etapa 1 (competencias) en producción, con el ciclo completo funcionando:
+organizador, inscripción pública con freno por IP, captura del juez offline con
+cola de sincronización probada en un iPhone real, tabla pública y perfil de
+competidor —ambos con vista propia por debajo de `sm`— y pantalla de proyección
+que rota sola. Falta lo que solo da un evento de verdad.
+
+Lo que sigue —diagnóstico biomecánico por video en el navegador, y generador de
+bloques— está descrito y **deliberadamente bloqueado** hasta que un gimnasio real
+corra un evento con 20+ inscritos sin soporte manual el día del evento. El
+detalle de las etapas y qué desbloquea cada una está en
+[`CLAUDE.md`](CLAUDE.md) y [`docs/01-etapas.md`](docs/01-etapas.md).
