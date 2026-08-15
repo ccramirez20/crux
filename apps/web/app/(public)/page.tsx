@@ -30,11 +30,12 @@ const DEMO_BOARD = '/resultados/liga-paramo';
  * página abierta no se deshace, y una cuenta propia se puede pasar a otra
  * persona el día que alguien más responda los correos.
  *
- * Provisional hasta que haya dominio, y entonces esto pasa a algo como
- * hola@crux.co — es el único sitio del código donde vive, así que cambiarlo es
- * una línea.
+ * Es la dirección pública, y por eso no es la del administrador: `ADMIN_EMAIL`
+ * identifica a quien emite invitaciones y también es su usuario para entrar,
+ * así que publicarla sería regalar la mitad de esa credencial. Vive en otro
+ * dominio y no se escribe en ningún sitio; esta se reenvía al mismo buzón.
  */
-const CONTACT_EMAIL = 'crux.competencias@gmail.com';
+const CONTACT_EMAIL = 'contacto@cruxcompetencias.com';
 
 const STEPS = [
   {

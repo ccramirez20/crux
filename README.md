@@ -13,9 +13,9 @@ permiso de nadie, pero el modelo —intentos auditables, formatos de puntaje
 intercambiables, historial por competidor entre eventos— es el que exige una
 federación.
 
-**Demo en vivo:** https://crux-web-pi.vercel.app ·
-[tabla de un evento real](https://crux-web-pi.vercel.app/resultados/liga-paramo) ·
-[la misma, en modo proyección](https://crux-web-pi.vercel.app/resultados/liga-paramo/proyectar)
+**Demo en vivo:** https://cruxcompetencias.com ·
+[tabla de un evento real](https://cruxcompetencias.com/resultados/liga-paramo) ·
+[la misma, en modo proyección](https://cruxcompetencias.com/resultados/liga-paramo/proyectar)
 
 ![Tabla pública de resultados](docs/img/tabla-publica.png)
 
