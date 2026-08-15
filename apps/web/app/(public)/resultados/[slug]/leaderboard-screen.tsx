@@ -1,6 +1,7 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Fragment, useMemo, useState } from 'react';
 import type { RankedResult } from '@crux/scoring';
 import { TopographicMotif } from '@/components/topographic-motif';
 import {
@@ -14,9 +15,8 @@ import {
 } from '@/lib/labels';
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 import { brandWordClass } from '@/lib/ui';
+import { useLeaderboard } from '@/lib/use-leaderboard';
 import { LeaderboardCharts, hoverHandlers } from './leaderboard-charts';
-
-const REFRESH_MS = 5000;
 
 // Headers per format. Splitting classic into four columns is the whole point:
 // those four *are* the tiebreak order, so someone arguing a placing reads the
@@ -46,7 +46,7 @@ const CARD_LABELS: Record<string, string[]> = {
   max_height: ['Altura'],
 };
 
-function scoreCells(result: RankedResult): string[] {
+export function scoreCells(result: RankedResult): string[] {
   switch (result.format) {
     case 'classic_tops_zones':
       return [result.tops, result.topAttempts, result.zones, result.zoneAttempts].map(String);
@@ -69,14 +69,20 @@ function scoreCells(result: RankedResult): string[] {
  * La plata y el bronce dicen otra cosa —quién se subió al podio— y en una
  * clasificatoria eso todavía no existe: ahí el segundo pasa a la siguiente
  * ronda igual que el octavo, y pintarlo de plata anunciaría un resultado que no
- * ha ocurrido. Por eso las tres medallas salen en la final, y en una categoría
- * de una sola ronda, donde esa ronda *es* el resultado. En las demás sigue
- * saliendo solo el líder, que es lo que hasta ahí se puede afirmar.
+ * ha ocurrido. Por eso las tres medallas salen **solo en una final**.
+ *
+ * Y solo en una final, no "cuando la categoría tiene una sola ronda", que fue
+ * el primer intento: eso adivina la intención a partir de cuántas rondas
+ * alcanzó a crear el organizador, y durante el evento eso miente. Una
+ * clasificatoria a la que todavía no le han agregado la final es exactamente
+ * una categoría de una sola ronda, y ahí es donde el podio engaña. La intención
+ * ya está dicha en un dato que el organizador escribe a mano: el tipo de ronda.
+ * Quien corre una liga de una sola ronda la crea como final y tiene su podio.
  *
  * Los tres colores son los mismos de las gráficas y ya estaban validados como
  * tripleta contra la superficie de tarjeta.
  */
-function podiumStyle(rank: number, isPodiumRound: boolean): { row: string; rail: string } | null {
+export function podiumStyle(rank: number, isPodiumRound: boolean): { row: string; rail: string } | null {
   if (rank === 1) {
     return { row: 'bg-gold/10', rail: 'border-l-4 border-gold' };
   }
@@ -116,8 +122,18 @@ function pillClass(active: boolean, tone: 'category' | 'round'): string {
  * chips: the header row names which block each mark belongs to, which is the
  * difference between a scoreboard and a row of decorations.
  */
-function BlockBadge({ cell, isHeight }: { cell: LeaderboardRow['cells'][number] | undefined; isHeight: boolean }) {
-  const base = 'inline-flex h-12 min-w-12 items-center justify-center rounded-lg px-2 font-display text-lg font-bold';
+export function BlockBadge({
+  cell,
+  isHeight,
+  // En proyección la insignia se encoge con la cantidad de gente: la categoría
+  // entera tiene que caber en el alto de la pantalla.
+  className = 'h-12 min-w-12 text-lg',
+}: {
+  cell: LeaderboardRow['cells'][number] | undefined;
+  isHeight: boolean;
+  className?: string;
+}) {
+  const base = `inline-flex items-center justify-center rounded-lg px-2 font-display font-bold ${className}`;
   // Nothing captured yet reads differently from captured-and-failed: the first
   // is an empty slot, the second is a result. Both have to be visible from the
   // back of the room, or an unjudged block looks like a zero.
@@ -299,7 +315,7 @@ function RowDetail({ round, row, unit, isHeight }: { round: LeaderboardRound; ro
 }
 
 export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPayload; slug: string }) {
-  const [data, setData] = useState(initial);
+  const data = useLeaderboard(slug, initial);
   const [categoryId, setCategoryId] = useState<string | null>(initial.categories[0]?.id ?? null);
   const [roundId, setRoundId] = useState<string | null>(defaultRound(initial.categories[0]));
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -319,54 +335,12 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
   const toggleSelected = (registrationId: string) =>
     setSelected((current) => (current === registrationId ? null : registrationId));
 
-  // Decision #4: poll a cached response, no sockets. A hidden tab is a laptop
-  // lid closed next to the projector — no reason to keep asking, but the
-  // moment it comes back it has to catch up rather than wait out a tick.
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const refresh = async () => {
-      if (document.hidden) {
-        return;
-      }
-      try {
-        const response = await fetch(`/api/resultados/${slug}`, {
-          signal: controller.signal,
-          cache: 'no-store',
-        });
-        if (response.ok) {
-          const next = (await response.json()) as LeaderboardPayload;
-          // Nunca retroceder. La respuesta se sirve con
-          // `stale-while-revalidate=30`, así que dos refrescos seguidos pueden
-          // caer en copias de distinta edad y el reloj "En vivo" se devolvía
-          // unos segundos delante de toda la sala. Una foto más vieja que la
-          // que ya está en pantalla no aporta nada, tenga los datos que tenga.
-          setData((prev) => (next.updatedAt > prev.updatedAt ? next : prev));
-        }
-      } catch {
-        // Wifi at a gym drops. Keep the last standings on screen and try again
-        // on the next tick — a blank wall is worse than a five-second-old one.
-      }
-    };
-
-    const id = setInterval(refresh, REFRESH_MS);
-    document.addEventListener('visibilitychange', refresh);
-
-    return () => {
-      clearInterval(id);
-      document.removeEventListener('visibilitychange', refresh);
-      controller.abort();
-    };
-  }, [slug]);
-
   // Selections survive a refresh by id, and fall back if the organizer removed
   // whatever was selected while the screen was up.
   const category = data.categories.find((c) => c.id === categoryId) ?? data.categories[0];
   const round = category?.rounds.find((r) => r.id === roundId) ?? category?.rounds.find((r) => r.id === defaultRound(category));
 
-  // Una final es podio; una categoría de una sola ronda también, porque esa
-  // ronda es el resultado del evento para esa gente.
-  const isPodiumRound = round?.type === 'final' || category?.rounds.length === 1;
+  const isPodiumRound = round?.type === 'final';
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
@@ -417,6 +391,18 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                 {date ? ` · ${date}` : ''}
               </p>
             </div>
+            <div className="flex items-center gap-5">
+              {/* El modo proyección se ofrece desde aquí y no solo desde el
+                  panel: quien conecta el portátil al proyector el día del
+                  evento suele tener abierta esta pantalla, no la del
+                  organizador. Oculto en el teléfono: proyectar desde un
+                  teléfono no existe. */}
+              <Link
+                href={`/resultados/${slug}/proyectar`}
+                className="hidden font-display text-base font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4 lg:inline"
+              >
+                Proyectar →
+              </Link>
             <p className="flex items-center gap-2.5 font-display text-lg font-semibold text-pine">
               <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
               {/* Dos cosas, las dos necesarias para que el reloj no mienta.
@@ -433,6 +419,7 @@ export function LeaderboardScreen({ initial, slug }: { initial: LeaderboardPaylo
                 hour12: false,
               })}
             </p>
+            </div>
           </div>
         </header>
 

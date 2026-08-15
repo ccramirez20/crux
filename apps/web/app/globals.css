@@ -96,7 +96,29 @@ body {
   animation: crux-draw 7s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
 }
 
+/* El relevo entre gráficas en la pantalla de proyección. Corto y con muy poco
+   desplazamiento: proyectado en una pared, cualquier cosa que se deslice de
+   verdad se lee como un error de video. */
+@keyframes crux-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.crux-fade {
+  animation: crux-fade 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .crux-fade {
+    animation: none;
+  }
+
   .crux-draw {
     animation: none;
     stroke-dashoffset: 0;

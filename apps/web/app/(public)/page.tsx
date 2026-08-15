@@ -151,13 +151,14 @@ export default function HomePage() {
       <section className="flex flex-col gap-7">
         <div className="flex flex-col gap-3">
           <span className={sectionEyebrowClass}>La pantalla del evento</span>
-          <h2 className="max-w-[20ch] font-display text-3xl font-bold leading-tight md:text-4xl">
-            La tabla no es una hoja de cálculo proyectada.
+          <h2 className="max-w-[22ch] font-display text-3xl font-bold leading-tight md:text-4xl">
+            La sala entera sabe quién va ganando, sin preguntarle a nadie.
           </h2>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted">
             Una pantalla fácil de leer desde lejos durante todo el evento, con colores pensados en
-            el páramo y los desempates a la vista, para que nadie tenga que preguntar por qué
-            alguien va adelante.
+            el páramo y los desempates a la vista. La proyectas al empezar la ronda y no la vuelves
+            a tocar: se actualiza sola cada vez que un juez registra un intento, así que nadie
+            interrumpe a quien organiza para preguntar en qué puesto va.
           </p>
         </div>
 

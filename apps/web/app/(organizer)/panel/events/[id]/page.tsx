@@ -221,7 +221,12 @@ export default async function EventDetailPage({
         <ShareLink
           path={`/resultados/${event.slug}`}
           title="Tabla de resultados"
-          description="La pantalla pública, para proyectar el día del evento. Se actualiza sola y no pide cuenta."
+          description="La pantalla pública, la que abre la gente desde el teléfono. Se actualiza sola y no pide cuenta."
+        />
+        <ShareLink
+          path={`/resultados/${event.slug}/proyectar`}
+          title="Pantalla para proyectar"
+          description="La misma competencia en una sola pantalla, sin desplazarse: la tabla, las gráficas turnándose solas y las cifras de la ronda. Ábrela en el computador del proyector y déjala ahí todo el día."
         />
         {event.judgeCode && (
           <div className={`${cardClass} flex flex-col gap-1`}>

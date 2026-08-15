@@ -88,29 +88,57 @@ function Panel({ title, hint, children }: { title: string; hint: string; childre
 
 /* ------------------------------------------------------------------ tiles */
 
-function StatTile({ label, what, value, detail }: { label: string; what: string; value: string; detail: string }) {
+function StatTile({
+  label,
+  what,
+  value,
+  detail,
+  dense = false,
+}: {
+  label: string;
+  what: string;
+  value: string;
+  detail: string;
+  /** En proyección la tarjeta comparte pantalla con la tabla y una gráfica, y
+   *  no puede gastar 190 px de alto. Es la misma tarjeta, más apretada. */
+  dense?: boolean;
+}) {
   return (
-    <div className={`${cardClass} flex flex-col gap-2 py-6`}>
+    <div className={`${cardClass} flex flex-col ${dense ? 'gap-1 !p-4' : 'gap-2 py-6'}`}>
       <span className={eyebrow}>{label}</span>
       {/* The tile says what it is measuring before it says the number. A big
           figure with only a two-word label makes the reader guess the unit. */}
-      <span className="text-sm text-muted">{what}</span>
+      <span className={dense ? 'text-xs leading-snug text-muted' : 'text-sm text-muted'}>{what}</span>
       {/* Los tres del mismo color: son tres hechos del mismo rango, y teñir solo
           uno se leía como que ese importaba más. Pine y no oro — el oro contra
           el hueso de la tarjeta queda en 1.8:1 y se pierde; este da 8:1 y sigue
           siendo acento. */}
       <span
-        className="mt-1 font-display text-[2.75rem] font-bold leading-none tracking-tight tabular-nums sm:text-[3.25rem]"
+        className={`mt-1 font-display font-bold leading-none tracking-tight tabular-nums ${
+          dense ? 'text-[2.25rem]' : 'text-[2.75rem] sm:text-[3.25rem]'
+        }`}
         style={{ color: PINE }}
       >
         {value}
       </span>
-      <span className="text-[15px] text-muted sm:text-base">{detail}</span>
+      <span className={dense ? 'text-xs leading-snug text-muted' : 'text-[15px] text-muted sm:text-base'}>
+        {detail}
+      </span>
     </div>
   );
 }
 
-function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
+export function Headline({
+  round,
+  unit,
+  isHeight,
+  dense = false,
+}: {
+  round: LeaderboardRound;
+  unit: string;
+  isHeight: boolean;
+  dense?: boolean;
+}) {
   const stats = round.problemStats;
   const crux = [...stats].sort((a, b) => a.tops - b.tops)[0];
   const problemName = (id: string) => round.problems.find((p) => p.id === id)?.name;
@@ -128,9 +156,10 @@ function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: st
     .sort((a, b) => b.delta - a.delta)[0];
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+    <div className={`grid grid-cols-1 md:grid-cols-3 ${dense ? 'gap-3' : 'gap-6'}`}>
       {crux && (
         <StatTile
+          dense={dense}
           label={`El ${unit} más duro`}
           what={`Cuál fue el ${unit} que menos gente pudo hacer`}
           value={`${unit.slice(0, 1).toUpperCase()}${crux.number}`}
@@ -139,6 +168,7 @@ function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: st
       )}
       {!isHeight && (
         <StatTile
+          dense={dense}
           label="Flashes de la ronda"
           what="De todos los tops, cuántos salieron al primer intento"
           value={totalTops > 0 ? `${Math.round((totalFlashes / totalTops) * 100)}%` : '—'}
@@ -147,6 +177,7 @@ function Headline({ round, unit, isHeight }: { round: LeaderboardRound; unit: st
       )}
       {bestClimb && bestClimb.delta > 0 && (
         <StatTile
+          dense={dense}
           label="Mayor ascenso en la tabla"
           what={`Quién más puestos ascendió desde el primer ${unit}`}
           value={`+${bestClimb.delta}`}
@@ -254,12 +285,13 @@ function bumpLayout(compact: boolean, fieldSize: number) {
   };
 }
 
-function BumpChart({
+export function BumpChart({
   round,
   unit,
   plural,
   article,
   compact = false,
+  className,
   hovered,
   onHover,
   onSelect,
@@ -269,6 +301,7 @@ function BumpChart({
   plural: string;
   article: string;
   compact?: boolean;
+  className?: string;
 } & HoverProps) {
   // Cuánto mide cada nombre ya dibujado. Un contra-trazo alcanzaba para tapar la
   // guía, pero seguía pasando por debajo de las letras; medir el texto es la
@@ -343,7 +376,11 @@ function BumpChart({
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className={compact ? 'w-full' : 'w-full min-w-[900px]'}
+      // El `min-w` obliga a desplazarse antes que a encoger, que es lo correcto
+      // dentro de una página. En proyección no hay dónde desplazarse: la
+      // pantalla es la que es, así que ahí se pasa `w-full` a secas y el SVG se
+      // escala solo.
+      className={className ?? (compact ? 'w-full' : 'w-full min-w-[900px]')}
       role="img"
       aria-label={`Puesto de cada competidor al cierre de cada ${unit}`}
     >
@@ -623,7 +660,7 @@ interface WallHover {
   kind: 'top' | 'zone' | 'none';
 }
 
-function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
+export function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string; isHeight: boolean }) {
   const [hover, setHover] = useState<WallHover | null>(null);
   // Menos tops es más duro, y con los mismos tops manda el flash: once tops de
   // los cuales seis salieron al primer intento no es el mismo bloque que once
@@ -773,7 +810,7 @@ function Wall({ round, unit, isHeight }: { round: LeaderboardRound; unit: string
  * How many goes each top cost. One axis, sorted, low is good — a scatter asked
  * the reader to decode two dimensions and a diagonal before it said anything.
  */
-function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: LeaderboardRound } & HoverProps) {
+export function AttemptsPerTop({ round, hovered, onHover, onSelect }: { round: LeaderboardRound } & HoverProps) {
   const climbers = round.rows.flatMap((row) =>
     // Two tops minimum. Otherwise a single lucky flash scores 1.0 and outranks
     // someone who sent five, which is the exact opposite of the point.
