@@ -85,12 +85,17 @@ const TABLE_HEADER_PX = 30;
 
 function useRowTier(box: React.RefObject<HTMLElement | null>, rows: number) {
   const [perRow, setPerRow] = useState(0);
+  // Cuánto alto sobra después de la tabla. Con una final de cuatro sobran más
+  // de doscientos píxeles, y ese hueco es el que hay que resolver.
+  const [free, setFree] = useState(0);
 
   useEffect(() => {
     const measure = () => {
       const element = box.current;
       if (element && rows > 0) {
         setPerRow((element.clientHeight - TABLE_HEADER_PX) / rows);
+        const table = element.querySelector('table');
+        setFree(element.clientHeight - (table?.scrollHeight ?? 0));
       }
     };
     measure();
@@ -103,10 +108,11 @@ function useRowTier(box: React.RefObject<HTMLElement | null>, rows: number) {
 
   // Antes de medir se usa un tramo aproximado por cantidad de filas: así el
   // primer pintado ya sale cerca y no se ve el salto de un tamaño a otro.
-  if (perRow === 0) {
-    return TIERS[Math.min(Math.max(Math.floor(rows / 6), 0), TIERS.length - 1)]!;
-  }
-  return TIERS.find((tier) => perRow >= tier.min) ?? TIERS[TIERS.length - 1]!;
+  const tier =
+    perRow === 0
+      ? TIERS[Math.min(Math.max(Math.floor(rows / 6), 0), TIERS.length - 1)]!
+      : (TIERS.find((t) => perRow >= t.min) ?? TIERS[TIERS.length - 1]!);
+  return { ...tier, free };
 }
 
 function ProjectedTable({
@@ -202,6 +208,18 @@ function ProjectedTable({
           })}
         </tbody>
       </table>
+
+      {/* El hueco que deja una final de cuatro no se llena estirando la tabla
+          —las filas quedarían absurdas— ni metiéndole más datos a una pantalla
+          que se mira de lejos. Se llena con la marca: las mismas curvas de
+          nivel del encabezado, en grande y calladas. Solo aparece cuando de
+          verdad sobra espacio, así que en una clasificatoria de veinticinco no
+          existe. */}
+      {scale.free > 150 && (
+        <div className="pointer-events-none mt-10 px-6 opacity-45" aria-hidden="true">
+          <TopographicMotif />
+        </div>
+      )}
     </div>
   );
 }
@@ -316,11 +334,11 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   }, [rotating, shown.length]);
 
   const round = current?.round;
-  // En proyección basta con dos competidoras con un top para que la comparación
-  // diga algo. Los pisos de la página dejarían el segundo turno con una sola
-  // gráfica justo en la final, que es cuando más se mira.
+  // El mismo criterio que la tabla pública, a propósito: que una pantalla
+  // muestre esta gráfica y la otra no, para la misma ronda, es un defecto que
+  // se ve desde el otro lado del salón.
   const hasAttemptsPerTop =
-    (round?.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 1).length ?? 0) >= 2;
+    (round?.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length ?? 0) >= 2;
   // Dos turnos, no tres: la de puestos es la nuestra y se queda con su tiempo;
   // el muro y los intentos al top son la misma pregunta —cómo se comportó la
   // ronda— y juntos se leen en diez segundos.
@@ -346,7 +364,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   const bumpLane = useBumpLane(bumpBox, round?.rows.length ?? 0);
   const chartTitle = {
     bump: `Puesto ${unit.singular} a ${unit.singular}`,
-    detail: `Los ${unit.plural} y los intentos al top`,
+    detail: hasAttemptsPerTop ? `Los ${unit.plural} y los intentos al top` : `¿Qué tan duros estaban los ${unit.plural}?`,
   };
 
   // Nadie interactúa con una pared. Las gráficas piden estos tres porque en la
@@ -497,7 +515,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                         {/* Cuatro y no diez: aquí comparte panel con el muro, y
                             lo que esta gráfica hace —comparar— ya se ve con los
                             cuatro primeros. */}
-                        <AttemptsPerTop round={round} limit={4} fixedWidth={false} minTops={1} minClimbers={2} {...inert} />
+                        <AttemptsPerTop round={round} limit={4} fixedWidth={false} {...inert} />
                       </div>
                     )}
                   </div>

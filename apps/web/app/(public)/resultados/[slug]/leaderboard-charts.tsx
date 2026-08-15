@@ -877,12 +877,15 @@ export function AttemptsPerTop({
   // mínimo, que ahí no tiene a dónde desplazarse.
   limit = 10,
   fixedWidth = true,
-  // Cuántos tops hacen falta para entrar, y cuánta gente para que la gráfica
-  // valga la pena. En una página los pisos son altos porque hay sitio para
-  // esperar a que la ronda dé para más; en una final de cuatro no lo hay, y
-  // dejar el panel vacío es peor que comparar dos barras.
+  // Cuántos tops hacen falta para entrar y cuánta gente para que la gráfica
+  // valga la pena. Los dos tops se quedan: con uno solo, un flash de suerte
+  // promedia 1.0 y le gana a quien envió cinco, que es lo contrario de lo que
+  // esto mide. Dos competidoras sí bastan — en una final de cuatro es lo que
+  // hay, y dos barras ya comparan. Los mismos pisos en las dos pantallas: que
+  // la tabla pública y la de proyección discrepen sobre si esta gráfica existe
+  // es peor que cualquiera de los dos criterios.
   minTops = 2,
-  minClimbers = 3,
+  minClimbers = 2,
   hovered,
   onHover,
   onSelect,
@@ -1003,7 +1006,7 @@ export function LeaderboardCharts({
   }
   const isHeight = round.rows[0]?.result.format === 'max_height';
   const hasAttemptsPerTop =
-    round.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length >= 3;
+    round.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length >= 2;
 
   return (
     <div className="flex flex-col gap-6">
