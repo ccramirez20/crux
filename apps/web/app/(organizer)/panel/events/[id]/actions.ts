@@ -146,6 +146,90 @@ export async function createRound(input: CreateRoundInput): Promise<ActionResult
   return { ok: true };
 }
 
+const removeCategoryInputSchema = z.object({
+  eventId: z.string().uuid(),
+  categoryId: z.string().uuid(),
+});
+type RemoveCategoryInput = z.infer<typeof removeCategoryInputSchema>;
+
+/**
+ * Borra una categoría con sus rondas y sus {unit.plural}.
+ *
+ * Se niega si tiene **algún inscrito**, y no porque no se pudiera borrar en
+ * cascada: quien se inscribió por el enlace no tiene cuenta ni forma de
+ * enterarse, así que desaparecerlo de un evento tiene que ser un acto
+ * deliberado sobre esa persona. Para eso ya están mover y quitar en el listado
+ * de inscritos, que además obligan a mirar a quién le está pasando.
+ *
+ * El conteo de intentos va aparte y no sobra: un intento cuelga del bloque, y
+ * si alguno quedó apuntando aquí sin inscripción viva, borrar lo dejaría
+ * huérfano.
+ */
+export async function removeCategory(input: RemoveCategoryInput): Promise<ActionResult> {
+  const parsed = removeCategoryInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Datos inválidos.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+  }
+
+  const { eventId, categoryId } = parsed.data;
+  const db = getDb();
+  const [row] = await db
+    .select({ ownerId: events.ownerId })
+    .from(categories)
+    .innerJoin(events, eq(categories.eventId, events.id))
+    .where(and(eq(categories.id, categoryId), eq(categories.eventId, eventId)));
+  if (!row || row.ownerId !== session.user.id) {
+    return { ok: false, error: 'Esa categoría no existe o no te pertenece.' };
+  }
+
+  const [enrolled] = await db
+    .select({ total: count(registrations.id) })
+    .from(registrations)
+    .where(eq(registrations.categoryId, categoryId));
+  if ((enrolled?.total ?? 0) > 0) {
+    return {
+      ok: false,
+      error:
+        'Esta categoría tiene inscritos. Muévelos o quítalos desde el listado de inscritos y vuelve a intentar.',
+    };
+  }
+
+  const [tally] = await db
+    .select({ total: count(attempts.id) })
+    .from(attempts)
+    .innerJoin(problems, eq(attempts.problemId, problems.id))
+    .innerJoin(rounds, eq(problems.roundId, rounds.id))
+    .where(eq(rounds.categoryId, categoryId));
+  if ((tally?.total ?? 0) > 0) {
+    return {
+      ok: false,
+      error: 'Esta categoría ya tiene intentos capturados: borrarla borraría el registro de un juez.',
+    };
+  }
+
+  // Tres borrados de abajo hacia arriba y en una sola transacción: ninguna de
+  // las tres tablas tiene cascada, así que el orden es la integridad, y a
+  // medias deja la estructura peor que sin tocar.
+  await db.transaction(async (tx) => {
+    const roundIds = await tx
+      .select({ id: rounds.id })
+      .from(rounds)
+      .where(eq(rounds.categoryId, categoryId));
+    for (const round of roundIds) {
+      await tx.delete(problems).where(eq(problems.roundId, round.id));
+    }
+    await tx.delete(rounds).where(eq(rounds.categoryId, categoryId));
+    await tx.delete(categories).where(eq(categories.id, categoryId));
+  });
+  revalidatePath(`/panel/events/${eventId}`);
+  return { ok: true };
+}
+
 const removeProblemInputSchema = z.object({
   eventId: z.string().uuid(),
   problemId: z.string().uuid(),
