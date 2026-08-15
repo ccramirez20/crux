@@ -103,6 +103,17 @@ aparcados en revendedores, o sea precio de negociación y no de registro. El
 nombre largo además dice **competencias** y no *escalada*, que es lo que hay que
 poder decir el día que el motor sirva a otro deporte.
 
+**Manda el dominio pelado, sin `www`,** y `www` redirige hacia él. Es el que se
+imprime en un QR, el que se dicta por teléfono y el que ya sale en el manual.
+
+El único argumento real a favor de `www` es de galletas: una cookie puesta en el
+dominio pelado **con atributo `Domain=`** viaja a todos sus subdominios, así que
+un subdominio con contenido ajeno vería la sesión. Aquí no aplica hoy —Better
+Auth pone cookies *host-only*, sin ese atributo, y no hay subdominios— pero es lo
+que habría que volver a mirar el día que se monte algo de terceros en uno. El
+otro argumento clásico, que un ápex no puede ser CNAME, lo resuelve Cloudflare
+aplanando el registro.
+
 **Los registros DNS van en gris, «DNS only», no en naranja.** Cloudflare insiste
 con un aviso en que hay que activar el proxy para sus funciones de seguridad y
 caché; aquí no. Vercel ya es el CDN y ya absorbe el pico de la tabla pública, y
