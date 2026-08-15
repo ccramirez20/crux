@@ -36,6 +36,21 @@ export async function GET(
   // la ventana, un sondeo por región espera al origen en vez de recibir la
   // copia vieja. 94 ms de mediana, 447 ms el peor de las 300 muestras, y lo
   // paga uno cada 5 s, no la sala.
+  //
+  // Re-medido contra producción el 2026-08-15, que era lo que faltaba: p50
+  // 4.7 s, p90 5.96, p95 6.01. El techo de 15 s se cumple **mientras alguien
+  // esté sondeando**. Lo que salió de nuevo: tras un rato sin tráfico, las
+  // primeras peticiones reciben una foto tan vieja como el silencio —175 s
+  // exactos tras 175 s de pausa, y ya con `X-Vercel-Cache: MISS`, así que no
+  // es el CDN sino el `unstable_cache` de getLeaderboard sirviendo su copia
+  // vieja mientras revalida por detrás. Duró siete sondeos; las 143 muestras
+  // siguientes cayeron todas bajo el techo.
+  //
+  // No se toca por ahora: el cliente sondea cada 5 s y `use-leaderboard` se
+  // queda con el `updatedAt` más nuevo, así que lo ve quien abre la pantalla
+  // después de una pausa —entre rondas— y se corrige solo al siguiente sondeo.
+  // El día que estorbe, el arreglo es etiquetar la caché y llamar
+  // `revalidateTag` al recibir intentos, en vez de esperar al temporizador.
   return NextResponse.json(leaderboard, {
     headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=5' },
   });
