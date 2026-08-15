@@ -28,7 +28,10 @@ function describe(values: AttemptValues): string {
   if (values.height != null) {
     return `${values.height.toLocaleString('es-CO')} m`;
   }
-  return 'Sin logro';
+  // "Sin logro" calificaba el intento; esto solo lo nombra. Es además la
+  // palabra que ya usa el resto del producto para lo mismo — la tabla pinta ese
+  // bloque como intentado y la pantalla de proyección dice "intentó el B3".
+  return 'Intentado';
 }
 
 export function AttemptCapture({
