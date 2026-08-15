@@ -432,7 +432,7 @@ export function BumpChart({
       role="img"
       aria-label={`Puesto de cada competidor al cierre de cada ${unit}`}
     >
-      {/* Los dos extremos se titulan igual —"puesto tras el bloque N"— porque
+      {/* Los dos extremos se titulan igual —"puesto luego del bloque N"— porque
           son lo mismo medido en dos momentos; "posición final" mentiría
           mientras todavía queden bloques por escalar. El número sale del primer
           y del último punto, así que una ronda de siete dice "bloque 7".
@@ -441,16 +441,16 @@ export function BumpChart({
       {!compact && (
         <>
           <text x={startLabelMid} y={30} textAnchor="middle" {...axis}>
-            PUESTO TRAS
+            PUESTO LUEGO
           </text>
           <text x={startLabelMid} y={48} textAnchor="middle" {...axis}>
-            {article.toUpperCase()} {unit.toUpperCase()} {points[0]!.problemNumber}
+            {article === 'la' ? 'DE LA' : 'DEL'} {unit.toUpperCase()} {points[0]!.problemNumber}
           </text>
           <text x={endLabelMid} y={30} textAnchor="middle" {...axis}>
-            PUESTO TRAS
+            PUESTO LUEGO
           </text>
           <text x={endLabelMid} y={48} textAnchor="middle" {...axis}>
-            {article.toUpperCase()} {unit.toUpperCase()} {points.at(-1)!.problemNumber}
+            {article === 'la' ? 'DE LA' : 'DEL'} {unit.toUpperCase()} {points.at(-1)!.problemNumber}
           </text>
           <text x={deltaX} y={30} textAnchor="end" {...axis}>
             CAMBIO
@@ -877,15 +877,27 @@ export function AttemptsPerTop({
   // mínimo, que ahí no tiene a dónde desplazarse.
   limit = 10,
   fixedWidth = true,
+  // Cuántos tops hacen falta para entrar, y cuánta gente para que la gráfica
+  // valga la pena. En una página los pisos son altos porque hay sitio para
+  // esperar a que la ronda dé para más; en una final de cuatro no lo hay, y
+  // dejar el panel vacío es peor que comparar dos barras.
+  minTops = 2,
+  minClimbers = 3,
   hovered,
   onHover,
   onSelect,
-}: { round: LeaderboardRound; limit?: number; fixedWidth?: boolean } & HoverProps) {
+}: {
+  round: LeaderboardRound;
+  limit?: number;
+  fixedWidth?: boolean;
+  minTops?: number;
+  minClimbers?: number;
+} & HoverProps) {
   const minWidth = fixedWidth ? 'sm:min-w-[33rem]' : '';
   const climbers = round.rows.flatMap((row) =>
     // Two tops minimum. Otherwise a single lucky flash scores 1.0 and outranks
     // someone who sent five, which is the exact opposite of the point.
-    row.result.format === 'classic_tops_zones' && row.result.tops >= 2
+    row.result.format === 'classic_tops_zones' && row.result.tops >= minTops
       ? [{
           id: row.registrationId,
           name: row.athleteName,
@@ -899,7 +911,7 @@ export function AttemptsPerTop({
         }]
       : [],
   );
-  if (climbers.length < 3) {
+  if (climbers.length < minClimbers) {
     return null;
   }
 
@@ -1011,10 +1023,12 @@ export function LeaderboardCharts({
           {round.timeline.length > 1 && (
             <div className={`mb-2 flex items-center justify-between ${eyebrow}`}>
               <span>
-                Tras {unit.article} {unit.singular} {round.timeline[0]!.problemNumber}
+                Luego {unit.article === 'la' ? 'de la' : 'del'} {unit.singular}{' '}
+                {round.timeline[0]!.problemNumber}
               </span>
               <span>
-                Tras {unit.article} {unit.singular} {round.timeline.at(-1)!.problemNumber}
+                Luego {unit.article === 'la' ? 'de la' : 'del'} {unit.singular}{' '}
+                {round.timeline.at(-1)!.problemNumber}
               </span>
             </div>
           )}
@@ -1042,8 +1056,7 @@ export function LeaderboardCharts({
         </div>
         {/* Esto se lee de afán y de pie. Tres frases, no un párrafo. */}
         <p className="mt-4 text-[15px] text-muted sm:text-base">
-          Se lee de izquierda a derecha: arranca con el puesto tras el primer {unit.singular}. La escala
-          vertical es cuántos compiten en la categoría.{' '}
+          Se lee de izquierda a derecha: arranca con el puesto luego del primer {unit.singular}.{' '}
           <span className="sm:hidden">
             Presiona una línea para ver el nombre del competidor al que corresponde; eso resalta su
             posición en la tabla y en las demás gráficas.

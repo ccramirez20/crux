@@ -135,7 +135,7 @@ function ProjectedTable({
   }, 0);
 
   return (
-    <div ref={box} className="h-full overflow-hidden">
+    <div ref={box} className="flex h-full flex-col justify-center overflow-hidden">
       <table className="w-full border-collapse text-left">
         <thead>
           <tr>
@@ -216,8 +216,9 @@ function ProjectedTable({
  * 1250 de ancho.
  *
  * La salida no es estirar —deformaría las curvas— sino separar los carriles
- * hasta que la proporción de la gráfica sea la de su caja. El texto se ve
- * igual; lo que cambia es que el dibujo ocupa el panel.
+ * hasta que la proporción de la gráfica se acerque a la de su caja. Se apunta al
+ * 90% y el carril tiene tope de 170: llenar el 100% con cuatro finalistas deja
+ * las líneas a media pantalla una de otra, que se ve estirado, no lleno.
  */
 const BUMP_VIEWBOX_WIDTH = 1250;
 const BUMP_PAD = 78 + 82;
@@ -231,9 +232,9 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
       if (!element || rows < 2 || element.clientWidth === 0) {
         return;
       }
-      const targetHeight = BUMP_VIEWBOX_WIDTH * (element.clientHeight / element.clientWidth);
+      const targetHeight = BUMP_VIEWBOX_WIDTH * (element.clientHeight / element.clientWidth) * 0.9;
       const ideal = (targetHeight - BUMP_PAD) / (rows - 1);
-      setLane(Math.round(Math.max(22, Math.min(260, ideal))));
+      setLane(Math.round(Math.max(22, Math.min(170, ideal))));
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -261,7 +262,7 @@ function HighlightStrip({ round, unit, isHeight }: { round: LeaderboardRound; un
         // `items-center` y no `items-baseline`: la línea base del número de
         // 36 px se alineaba con el rótulo de 11, y la cifra quedaba montada
         // por encima de su propio texto.
-        <div key={item.key} className="flex min-w-0 items-center gap-4 px-6 py-3">
+        <div key={item.key} className="flex min-w-0 items-center justify-center gap-4 px-6 py-3">
           <span className="shrink-0 font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-pine">
             {item.value}
           </span>
@@ -315,8 +316,11 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   }, [rotating, shown.length]);
 
   const round = current?.round;
+  // En proyección basta con dos competidoras con un top para que la comparación
+  // diga algo. Los pisos de la página dejarían el segundo turno con una sola
+  // gráfica justo en la final, que es cuando más se mira.
   const hasAttemptsPerTop =
-    (round?.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length ?? 0) >= 3;
+    (round?.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 1).length ?? 0) >= 2;
   // Dos turnos, no tres: la de puestos es la nuestra y se queda con su tiempo;
   // el muro y los intentos al top son la misma pregunta —cómo se comportó la
   // ronda— y juntos se leen en diez segundos.
@@ -478,7 +482,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   // en una columna flex los hijos se encogen por debajo de su
                   // contenido, y sin recortar cada uno, el muro se metía encima
                   // del título de los intentos.
-                  <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+                  <div className="flex min-h-0 flex-1 flex-col justify-center gap-8 overflow-hidden">
                     <div className="min-h-0 shrink overflow-hidden">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                         Qué tan duros estaban · del más duro al más fácil
@@ -493,7 +497,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                         {/* Cuatro y no diez: aquí comparte panel con el muro, y
                             lo que esta gráfica hace —comparar— ya se ve con los
                             cuatro primeros. */}
-                        <AttemptsPerTop round={round} limit={4} fixedWidth={false} {...inert} />
+                        <AttemptsPerTop round={round} limit={4} fixedWidth={false} minTops={1} minClimbers={2} {...inert} />
                       </div>
                     )}
                   </div>
