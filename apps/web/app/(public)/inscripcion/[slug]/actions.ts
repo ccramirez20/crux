@@ -1,10 +1,18 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { z } from 'zod';
 import { GENDERS, isEligible, isRegistrationOpen, parseDateOnly } from '@crux/core';
 import { and, athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
+import {
+  REGISTRATION_MAX,
+  REGISTRATION_WINDOW_MS,
+  clientKey,
+  isRateLimited,
+  recordAttempt,
+} from '@/lib/rate-limit';
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -22,6 +30,18 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
   const parsed = registerInputSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: 'Datos de inscripción inválidos.' };
+  }
+
+  // El enlace de inscripción es público a propósito: no hay código que fallar,
+  // así que lo único limitable es cuántas inscripciones caben por IP. Con
+  // prefijo porque el contador es el mismo del código de juez, y una IP puede
+  // ser las dos cosas — la wifi del gimnasio, sin ir más lejos.
+  const key = `reg:${clientKey(await headers())}`;
+  if (isRateLimited(key, REGISTRATION_MAX)) {
+    return {
+      ok: false,
+      error: 'Demasiadas inscripciones desde esta conexión. Espera unos minutos y vuelve a intentar.',
+    };
   }
 
   const db = getDb();
@@ -134,5 +154,9 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
     throw error;
   }
 
+  // Se cuenta la inscripción que sí quedó creada, no el envío. Un rechazo —
+  // categoría que no corresponde, documento repetido— no gasta cupo: quien se
+  // equivoca de casilla dos veces seguidas no es a quien hay que frenar.
+  recordAttempt(key, REGISTRATION_WINDOW_MS);
   return { ok: true };
 }

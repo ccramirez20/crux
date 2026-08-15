@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
-import { clientKey, isRateLimited, recordFailure } from '@/lib/rate-limit';
+import { clientKey, isRateLimited, recordAttempt } from '@/lib/rate-limit';
 
 const inputSchema = z.object({
   slug: z.string().min(1),
@@ -50,14 +50,14 @@ export async function POST(request: Request): Promise<NextResponse<AccessResult>
   // Un código correcto ya nunca toca el limitador; el ataque sigue frenado,
   // porque un código malo jamás llega hasta acá.
   if (!matches) {
-    const key = clientKey(request);
+    const key = clientKey(request.headers);
     if (isRateLimited(key)) {
       return NextResponse.json(
         { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
         { status: 429 },
       );
     }
-    recordFailure(key);
+    recordAttempt(key);
     return NextResponse.json(
       { ok: false, error: 'Ese código no corresponde a este evento.' },
       { status: 403 },

@@ -146,6 +146,123 @@ export async function createRound(input: CreateRoundInput): Promise<ActionResult
   return { ok: true };
 }
 
+const removeProblemInputSchema = z.object({
+  eventId: z.string().uuid(),
+  problemId: z.string().uuid(),
+});
+type RemoveProblemInput = z.infer<typeof removeProblemInputSchema>;
+
+/**
+ * Quita un {unit.singular} de su ronda. Solo antes de que un juez le capture
+ * algo — un intento apunta al bloque, y el intento es el hecho.
+ *
+ * El QR ya impreso deja de servir, que es lo correcto: apuntaba a un bloque que
+ * ya no existe y la pantalla del juez lo dirá.
+ */
+export async function removeProblem(input: RemoveProblemInput): Promise<ActionResult> {
+  const parsed = removeProblemInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Datos inválidos.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+  }
+
+  const { eventId, problemId } = parsed.data;
+  const db = getDb();
+  const [row] = await db
+    .select({ ownerId: events.ownerId })
+    .from(problems)
+    .innerJoin(rounds, eq(problems.roundId, rounds.id))
+    .innerJoin(categories, eq(rounds.categoryId, categories.id))
+    .innerJoin(events, eq(categories.eventId, events.id))
+    .where(and(eq(problems.id, problemId), eq(categories.eventId, eventId)));
+  if (!row || row.ownerId !== session.user.id) {
+    return { ok: false, error: 'Ese bloque no existe o no te pertenece.' };
+  }
+
+  const [tally] = await db
+    .select({ total: count(attempts.id) })
+    .from(attempts)
+    .where(eq(attempts.problemId, problemId));
+  if ((tally?.total ?? 0) > 0) {
+    return {
+      ok: false,
+      error: 'Ya tiene intentos capturados: borrarlo borraría el registro de un juez.',
+    };
+  }
+
+  await db.delete(problems).where(eq(problems.id, problemId));
+  revalidatePath(`/panel/events/${eventId}`);
+  return { ok: true };
+}
+
+const removeRoundInputSchema = z.object({
+  eventId: z.string().uuid(),
+  roundId: z.string().uuid(),
+});
+type RemoveRoundInput = z.infer<typeof removeRoundInputSchema>;
+
+/**
+ * Borra una ronda con los {unit.plural} que tenga dentro.
+ *
+ * El caso real es el error de dedo: se agrega una semifinal que no iba y no
+ * había forma de deshacerlo. Se lleva los bloques por delante a propósito —
+ * un bloque solo existe dentro de su ronda, y sin esto una ronda equivocada
+ * con un bloque adentro quedaba para siempre.
+ *
+ * Misma regla que `removeRegistration`: se niega en cuanto un juez capturó
+ * algo. Un intento apunta al bloque, así que borrarlo lo dejaría huérfano, y
+ * el intento es el hecho — no se borra para arreglar la estructura.
+ */
+export async function removeRound(input: RemoveRoundInput): Promise<ActionResult> {
+  const parsed = removeRoundInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Datos inválidos.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+  }
+
+  const { eventId, roundId } = parsed.data;
+  const db = getDb();
+  const [row] = await db
+    .select({ ownerId: events.ownerId })
+    .from(rounds)
+    .innerJoin(categories, eq(rounds.categoryId, categories.id))
+    .innerJoin(events, eq(categories.eventId, events.id))
+    .where(and(eq(rounds.id, roundId), eq(categories.eventId, eventId)));
+  if (!row || row.ownerId !== session.user.id) {
+    return { ok: false, error: 'Esa ronda no existe o no te pertenece.' };
+  }
+
+  const [tally] = await db
+    .select({ total: count(attempts.id) })
+    .from(attempts)
+    .innerJoin(problems, eq(attempts.problemId, problems.id))
+    .where(eq(problems.roundId, roundId));
+  if ((tally?.total ?? 0) > 0) {
+    return {
+      ok: false,
+      error: 'Esta ronda ya tiene intentos capturados: borrarla borraría el registro de un juez.',
+    };
+  }
+
+  // En transacción porque son dos borrados y el orden importa: si el segundo
+  // falla solo, la ronda queda viva y sin sus bloques, que es peor que no
+  // haber borrado nada.
+  await db.transaction(async (tx) => {
+    await tx.delete(problems).where(eq(problems.roundId, roundId));
+    await tx.delete(rounds).where(eq(rounds.id, roundId));
+  });
+  revalidatePath(`/panel/events/${eventId}`);
+  return { ok: true };
+}
+
 const createProblemInputSchema = z.object({
   eventId: z.string().uuid(),
   roundId: z.string().uuid(),

@@ -105,7 +105,11 @@ function Row({
   }
 
   return (
-    <li className="flex items-center gap-3 border-b border-cardborder/60 py-2 last:border-b-0">
+    // `flex-wrap` con un mínimo para el nombre: en un teléfono el dorsal, el
+    // nombre, el desplegable de categoría y "Quitar" suman más ancho del que
+    // hay, y sin esto el nombre se recortaba a dos letras. Partido en dos
+    // renglones cabe todo. De `sm` para arriba sobra ancho y nunca parte.
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-cardborder/60 py-2 last:border-b-0">
       <input
         aria-label={`Dorsal de ${entry.athleteFullName}`}
         value={value}
@@ -123,7 +127,7 @@ function Row({
         inputMode="numeric"
         className={`${fieldClass} w-20 shrink-0 text-center font-display font-bold`}
       />
-      <span className="min-w-0 flex-1">
+      <span className="min-w-32 flex-1">
         <span className="block truncate text-sm font-medium">{entry.athleteFullName}</span>
         {error && (
           <span role="alert" className="block text-xs font-medium text-red-700">
