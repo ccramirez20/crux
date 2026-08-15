@@ -354,7 +354,10 @@ function BoulderTotals({ totals }: { totals: DisciplineTotals }) {
       <div className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
         <Figure value={String(totals.problems)} label="Bloques intentados" />
         <Figure value={String(totals.tops)} label="Tops" />
-        <Figure value={String(totals.zones)} label="Zonas (incluye tops)" />
+        {/* Sin la aclaración de que la cifra incluye los tops: la barra que va
+            justo debajo ya separa «zona sin top», que es donde se resuelve la
+            duda, y el paréntesis en el rótulo pesaba más que el dato. */}
+        <Figure value={String(totals.zones)} label="Zonas" />
         <Figure value={String(totals.flashes)} label="Flash" />
       </div>
       <ConversionBar
