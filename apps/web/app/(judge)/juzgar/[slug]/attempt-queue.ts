@@ -79,15 +79,39 @@ const DB_NAME = 'crux-judge-queue';
 const DB_VERSION = 1;
 const STORE_NAME = 'pendingAttempts';
 
+// Una conexión para toda la sesión, no una por operación. Antes cada
+// addPending/listPending/removeSynced abría la suya y ninguna se cerraba: el
+// drenaje corre cada 5 s, así que seis horas de evento dejaban miles de
+// conexiones vivas en el teléfono del juez. En un portátil eso se aguanta; en
+// un iPhone con poca memoria es justo lo que hace que Safari descarte la
+// pestaña a media ronda. De paso arregla algo que todavía no ha mordido: una
+// conexión abierta bloquea el `onupgradeneeded` de la próxima versión del
+// esquema, así que subir DB_VERSION con el modelo viejo se habría colgado.
+let dbPromise: Promise<IDBDatabase> | null = null;
+
 function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       request.result.createObjectStore(STORE_NAME, { keyPath: 'clientAttemptId' });
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      // Safari cierra conexiones por su cuenta cuando reclama memoria. Una
+      // conexión muerta guardada aquí dejaría al juez sin cola por el resto
+      // del evento y sin nada en pantalla que lo diga; soltarla hace que la
+      // siguiente operación abra una nueva.
+      request.result.onclose = () => {
+        dbPromise = null;
+      };
+      resolve(request.result);
+    };
+    request.onerror = () => {
+      // Un fallo tampoco se queda cacheado: reintentar tiene que poder abrir.
+      dbPromise = null;
+      reject(request.error);
+    };
   });
+  return dbPromise;
 }
 
 export async function addPending(attempt: PendingAttempt): Promise<void> {
