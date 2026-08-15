@@ -259,6 +259,11 @@ const BUMP_PAD = 78 + 82;
 
 function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
   const [lane, setLane] = useState<number | undefined>(undefined);
+  // Lo que le sobra al panel después de dibujar. El carril tiene tope, así que
+  // con cuatro finalistas la gráfica llega hasta donde llega y debajo queda un
+  // hueco — el mismo problema de la tabla, y aquí sí lo cierran las olas,
+  // porque en este panel no compiten con nada.
+  const [leftover, setLeftover] = useState(0);
 
   useEffect(() => {
     const measure = () => {
@@ -268,7 +273,10 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
       }
       const targetHeight = BUMP_VIEWBOX_WIDTH * (element.clientHeight / element.clientWidth) * 0.9;
       const ideal = (targetHeight - BUMP_PAD) / (rows - 1);
-      setLane(Math.round(Math.max(22, Math.min(170, ideal))));
+      const chosen = Math.round(Math.max(22, Math.min(170, ideal)));
+      setLane(chosen);
+      const drawn = BUMP_PAD + (rows - 1) * chosen;
+      setLeftover(element.clientHeight - (element.clientWidth * drawn) / BUMP_VIEWBOX_WIDTH);
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -278,7 +286,7 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
     return () => observer.disconnect();
   }, [box, rows]);
 
-  return lane;
+  return { lane, leftover };
 }
 
 /**
@@ -398,7 +406,10 @@ function PanelFill({
     pieces.push(<Pulse key="pulse" round={round} unit={unit} now={now} />);
     left -= FILL.pulse;
   }
-  if (left >= FILL.motif) {
+  // Las olas solo si no entró nada más. Con el podio y la última captura
+  // encima, la tarjeta ya tiene tres cosas y se siente cargada — y las olas son
+  // justamente lo único de las tres que no dice nada.
+  if (pieces.length === 0 && left >= FILL.motif) {
     pieces.push(
       <div key="motif" className="pointer-events-none px-6 opacity-45" aria-hidden="true">
         <TopographicMotif />
@@ -510,7 +521,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
 
   const date = formatEventDate(data.event.date);
   const isPodiumRound = round?.type === 'final';
-  const bumpLane = useBumpLane(bumpBox, round?.rows.length ?? 0);
+  const { lane: bumpLane, leftover: bumpLeftover } = useBumpLane(bumpBox, round?.rows.length ?? 0);
   const chartTitle = {
     bump: `Puesto ${unit.singular} a ${unit.singular}`,
     detail: hasAttemptsPerTop ? `Los ${unit.plural} y los intentos al top` : `¿Qué tan duros estaban los ${unit.plural}?`,
@@ -629,7 +640,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   nuevo y la animación de entrada vuelve a correr. */}
               <div key={activeSlide} className="crux-fade flex min-h-0 flex-1 flex-col overflow-hidden">
                 {activeSlide === 'bump' && (
-                  <div ref={bumpBox} className="flex min-h-0 flex-1 items-center">
+                  <div ref={bumpBox} className="flex min-h-0 flex-1 flex-col justify-center">
                     {/* `w-full max-h-full` y no `h-full`: con `h-full` el SVG se
                         ajusta al alto y deja franjas de aire a los lados —
                         pequeño en el centro de un panel ancho. Así usa todo el
@@ -643,6 +654,11 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                       {...(bumpLane === undefined ? {} : { laneOverride: bumpLane })}
                       {...inert}
                     />
+                    {bumpLeftover > 130 && (
+                      <div className="pointer-events-none mt-6 px-10 opacity-45" aria-hidden="true">
+                        <TopographicMotif />
+                      </div>
+                    )}
                   </div>
                 )}
                 {activeSlide === 'detail' && (
