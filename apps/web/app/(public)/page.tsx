@@ -43,7 +43,7 @@ const STEPS = [
   },
   {
     title: 'Los jueces puntúan desde el celular',
-    body: 'Cada juez registra tops, zonas e intentos. Si el wifi se cae sigue funcionando, y sincroniza cuando vuelve.',
+    body: 'Cada juez registra tops, zonas e intentos. Si el wifi se cae, la app sigue funcionando y el juez puede seguir puntuando. Lo que quedó pendiente se sincroniza solo cuando vuelve la señal.',
   },
   {
     title: 'La tabla se actualiza sola',
@@ -155,8 +155,9 @@ export default function HomePage() {
             La tabla no es una hoja de cálculo proyectada.
           </h2>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted">
-            Se lee desde el fondo del gimnasio, enseña su propio código de colores y deja los
-            desempates a la vista, para que nadie tenga que preguntar por qué alguien va adelante.
+            Una pantalla fácil de leer desde lejos durante todo el evento, con colores pensados en
+            el páramo y los desempates a la vista, para que nadie tenga que preguntar por qué
+            alguien va adelante.
           </p>
         </div>
 
