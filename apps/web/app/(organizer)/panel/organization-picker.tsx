@@ -13,7 +13,7 @@ export function OrganizationPicker({
   organizations,
   selectedId,
 }: {
-  organizations: { id: string; name: string }[];
+  organizations: { id: string; name: string; location: string }[];
   selectedId: string;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -32,9 +32,12 @@ export function OrganizationPicker({
         }}
         className={`${fieldClass} disabled:opacity-60`}
       >
+        {/* Con la ciudad, no solo el nombre: es la misma información que ve
+            quien tiene una sola organización, y es lo que distingue dos sedes
+            de la misma marca. */}
         {organizations.map((organization) => (
           <option key={organization.id} value={organization.id}>
-            {organization.name}
+            {organization.name} · {organization.location}
           </option>
         ))}
       </select>
