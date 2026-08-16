@@ -1,7 +1,17 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { and, athletes, categories, eq, events, problems, registrations, rounds } from '@crux/db';
+import {
+  and,
+  athletes,
+  categories,
+  eq,
+  events,
+  organizations,
+  problems,
+  registrations,
+  rounds,
+} from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
@@ -12,7 +22,7 @@ import {
   labelFor,
   problemUnit,
 } from '@/lib/labels';
-import { cardClass } from '@/lib/ui';
+import { cardClass, eyebrowClass } from '@/lib/ui';
 import { EventStructure } from './event-structure';
 import { EventForm } from './event-form';
 import { Roster, type RosterCategory } from './roster';
@@ -48,8 +58,10 @@ export default async function EventDetailPage({
       slug: events.slug,
       judgeCode: events.judgeCode,
       timezone: events.timezone,
+      organizationName: organizations.name,
     })
     .from(events)
+    .innerJoin(organizations, eq(organizations.id, events.organizationId))
     .where(and(eq(events.id, eventId), eq(events.ownerId, session.user.id)));
   if (!event) {
     redirect('/panel');
@@ -196,6 +208,7 @@ export default async function EventDetailPage({
         <Link href="/panel" className="text-sm font-medium text-pine underline">
           ← Tus eventos
         </Link>
+        <span className={eyebrowClass}>{event.organizationName}</span>
         <h1 className="font-display text-3xl font-bold">{event.name}</h1>
         <p className="text-sm text-muted">
           {labelFor(DISCIPLINE_LABEL, event.discipline)}
@@ -212,35 +225,49 @@ export default async function EventDetailPage({
         />
       </div>
 
-      <div className="flex w-full max-w-2xl flex-col gap-3">
-        <ShareLink
-          path={`/inscripcion/${event.slug}`}
-          title="Enlace de inscripción"
-          description="Compártelo por WhatsApp o redes. Quien lo abra se inscribe sin crear cuenta."
-        />
-        <ShareLink
-          path={`/resultados/${event.slug}`}
-          title="Tabla de resultados"
-          description="La pantalla pública, la que abre la gente desde el teléfono. Se actualiza sola y no pide cuenta."
-        />
-        <ShareLink
-          path={`/resultados/${event.slug}/proyectar`}
-          title="Pantalla para proyectar"
-          description="La misma competencia en una sola pantalla, sin desplazarse: la tabla, las gráficas turnándose solas y las cifras de la ronda. Ábrela en el computador del proyector y déjala ahí todo el día."
-        />
-        {event.judgeCode && (
-          <div className={`${cardClass} flex flex-col gap-1`}>
-            <span className="font-display font-semibold">Código para los jueces</span>
-            <p className="text-sm text-muted">
-              Quien escanee un QR tendrá que escribirlo antes de registrar intentos. Dáselo solo a
-              tus jueces, no lo pegues junto al QR.
-            </p>
-            <code className="mt-1 w-fit rounded bg-stone px-3 py-2 font-display text-xl font-bold tracking-widest">
-              {event.judgeCode}
-            </code>
+      {/* Cerrado por defecto. Estas cuatro tarjetas se usan una vez —copias el
+          enlace, lo pegas y no vuelves— y ocupaban 600 px por delante de las dos
+          secciones de uso diario, que en un teléfono son 600 px de bajar antes
+          de poder armar la competencia. `details` nativo, el mismo gesto que ya
+          usan el formulario del evento, los inscritos y la estructura. */}
+      <details className="w-full max-w-2xl">
+        <summary className={`${cardClass} cursor-pointer font-display font-semibold marker:text-muted`}>
+          Enlaces para compartir
+        </summary>
+        <div className="mt-3 flex flex-col gap-3">
+          <ShareLink
+            path={`/inscripcion/${event.slug}`}
+            title="Enlace de inscripción"
+            description="Compártelo por WhatsApp o redes. Quien lo abra se inscribe sin crear cuenta."
+          />
+          <ShareLink
+            path={`/resultados/${event.slug}`}
+            title="Tabla de resultados"
+            description="La pantalla pública, la que abre la gente desde el teléfono. Se actualiza sola y no pide cuenta."
+          />
+          {/* Igual que el enlace "Proyectar →" de la tabla pública: proyectar
+              desde un teléfono no existe. Una tablet en horizontal sí lo ve. */}
+          <div className="hidden lg:block">
+            <ShareLink
+              path={`/resultados/${event.slug}/proyectar`}
+              title="Pantalla para proyectar"
+              description="La misma competencia en una sola pantalla, sin desplazarse: la tabla, las gráficas turnándose solas y las cifras de la ronda. Ábrela en el computador del proyector y déjala ahí todo el día."
+            />
           </div>
-        )}
-      </div>
+          {event.judgeCode && (
+            <div className={`${cardClass} flex flex-col gap-1`}>
+              <span className="font-display font-semibold">Código para los jueces</span>
+              <p className="text-sm text-muted">
+                Quien escanee un QR tendrá que escribirlo antes de registrar intentos. Dáselo solo a
+                tus jueces, no lo pegues junto al QR.
+              </p>
+              <code className="mt-1 w-fit rounded bg-stone px-3 py-2 font-display text-xl font-bold tracking-widest">
+                {event.judgeCode}
+              </code>
+            </div>
+          )}
+        </div>
+      </details>
 
       <div className="w-full max-w-2xl">
         <h2 className="font-display text-xl font-bold">Inscritos</h2>
