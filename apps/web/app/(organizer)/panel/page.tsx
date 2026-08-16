@@ -1,22 +1,40 @@
 import Link from 'next/link';
-import { headers } from 'next/headers';
-import { count, eq, events, registrations, sql } from '@crux/db';
+import { cookies, headers } from 'next/headers';
+import { and, count, eq, events, organizations, registrations, sql } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
+import { AdminBadge } from '@/components/admin-badge';
 import { cardClass, primaryButtonClass } from '@/lib/ui';
 import { isAdmin } from '@/lib/admin';
 import { DISCIPLINE_LABEL, formatEventDate, labelFor } from '@/lib/labels';
+import { ORGANIZATION_COOKIE, resolveSelectedOrganization } from '@/lib/organizations';
+import { OrganizationPicker } from './organization-picker';
 import { SignOutButton } from './sign-out-button';
 
 export default async function OrganizerHomePage() {
   const session = await getAuth().api.getSession({ headers: await headers() });
   const ownerId = session?.user.id ?? '';
+  const db = getDb();
+
+  const myOrganizations = await db
+    .select({ id: organizations.id, name: organizations.name, location: organizations.location })
+    .from(organizations)
+    .where(eq(organizations.ownerId, ownerId))
+    .orderBy(organizations.createdAt);
+  const selected = resolveSelectedOrganization(
+    myOrganizations,
+    (await cookies()).get(ORGANIZATION_COOKIE)?.value,
+  );
 
   // Scoped to the signed-in organizer. Without this every organizer sees every
   // other gym's events — invisible today with a single account, a data leak the
   // moment there are two.
-  const myEvents = await getDb()
+  //
+  // El filtro por organización va **encima** de ese, no en su lugar: es
+  // comodidad de vista para la cuenta que lleva dos (la de producción y la de
+  // pruebas), y quien decide qué puede verse sigue siendo `ownerId`.
+  const myEvents = await db
     .select({
       id: events.id,
       name: events.name,
@@ -27,7 +45,11 @@ export default async function OrganizerHomePage() {
     })
     .from(events)
     .leftJoin(registrations, eq(registrations.eventId, events.id))
-    .where(eq(events.ownerId, ownerId))
+    .where(
+      selected
+        ? and(eq(events.ownerId, ownerId), eq(events.organizationId, selected.id))
+        : eq(events.ownerId, ownerId),
+    )
     .groupBy(events.id)
     .orderBy(sql`${events.date} desc nulls last`);
 
@@ -51,12 +73,30 @@ export default async function OrganizerHomePage() {
           </div>
         </div>
 
+        {/* Solo para quien administra la plataforma, igual que el enlace de
+            invitaciones de arriba. Para el resto no existe. */}
+        {isAdmin(session?.user.email) && <AdminBadge />}
+
         <div>
           <h1 className="font-display text-3xl font-bold">Tus eventos</h1>
           <p className="mt-1 text-sm text-muted">
             Crea un evento, arma sus categorías y bloques, y comparte el enlace de inscripción.
           </p>
         </div>
+
+        {/* Quién organiza, en pantalla. Con una organización —el caso de un
+            gimnasio— basta con nombrarla; con dos hay que poder cambiar, y eso
+            solo le pasa a la cuenta que administra la plataforma. */}
+        {myOrganizations.length > 1 && selected ? (
+          <OrganizationPicker organizations={myOrganizations} selectedId={selected.id} />
+        ) : (
+          selected && (
+            <p className="text-sm text-muted">
+              <span className="font-display font-semibold text-pine">{selected.name}</span> ·{' '}
+              {selected.location}
+            </p>
+          )
+        )}
 
         {myEvents.length > 0 ? (
           <ul className="flex flex-col gap-3">
