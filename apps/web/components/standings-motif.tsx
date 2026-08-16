@@ -22,6 +22,10 @@ const LINES = [
 export function StandingsMotif() {
   return (
     <svg viewBox="0 0 800 190" className="block w-full" aria-hidden="true">
+      {/* El desfase entre líneas va a la par de la duración del trazo: con 0.1s
+          contra 3s las cinco salen casi encimadas y se pierde el arranque
+          escalonado. Los dos trazos de una misma línea comparten delay o el
+          contra-trazo se despega del color. */}
       {LINES.map((line, index) => (
         <g key={line.color}>
           {/* Contra-trazo del color del fondo: en un cruce una línea tiene que
@@ -34,7 +38,7 @@ export function StandingsMotif() {
             strokeWidth={line.width + 6}
             strokeLinecap="round"
             className="crux-draw"
-            style={{ animationDelay: `${index * 0.1}s` }}
+            style={{ animationDelay: `${index * 0.2}s` }}
           />
           <path
             d={line.d}
@@ -43,7 +47,7 @@ export function StandingsMotif() {
             strokeWidth={line.width}
             strokeLinecap="round"
             className="crux-draw"
-            style={{ animationDelay: `${index * 0.1}s` }}
+            style={{ animationDelay: `${index * 0.2}s` }}
           />
           <circle cx={770} cy={line.endY} r={line.width * 1.7} fill={line.color} />
           {/* El puesto al final, como en la tabla: esto es un tablero, no un
