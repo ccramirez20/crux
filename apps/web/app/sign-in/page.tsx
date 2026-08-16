@@ -29,8 +29,12 @@ export default function SignInPage() {
     router.push('/panel');
   }
 
+  // py-12 y no solo px-4: con `justify-center`, en cuanto el contenido no cabe
+  // —un mensaje de error, un teléfono corto— el último enlace queda contra el
+  // borde inferior y cuesta tocarlo. Es el mismo relleno que usan las demás
+  // pantallas de alto completo.
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-12">
       <div className="w-full max-w-sm">
         <TopographicMotif />
       </div>

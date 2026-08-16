@@ -823,12 +823,17 @@ function ProjectionControls({
     timer.current = setTimeout(() => setVisible(false), CONTROLS_MS);
   }, []);
 
+  // `pointerdown` además de `pointermove`: un dedo no mueve el puntero antes de
+  // tocar, así que en una pantalla táctil la barra se escondía a los tres
+  // segundos y ya no había manera de traerla de vuelta.
   useEffect(() => {
     wake();
     window.addEventListener('pointermove', wake);
+    window.addEventListener('pointerdown', wake);
     window.addEventListener('keydown', wake);
     return () => {
       window.removeEventListener('pointermove', wake);
+      window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
       if (timer.current) {
         clearTimeout(timer.current);
@@ -858,7 +863,13 @@ function ProjectionControls({
         visible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-full border border-cardborder bg-card px-3 py-2 shadow-lg">
+      {/* Escondida solo bajaba la opacidad: la barra seguía ahí, invisible, y se
+          tragaba el toque con el que ibas a despertarla. */}
+      <div
+        className={`flex flex-wrap items-center gap-2 rounded-full border border-cardborder bg-card px-3 py-2 shadow-lg ${
+          visible ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
+      >
         {categories.map((name, index) => (
           <button
             key={name}

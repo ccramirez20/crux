@@ -70,6 +70,22 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
     }
     organizationId = org.id;
   } else {
+    // La organización nace con la cuenta. Esta rama queda solo como red: una
+    // cuenta creada antes de que el registro la pidiera, o un alta a la que le
+    // falló el insert. Sin esta comprobación, cada evento podía estrenar
+    // organización y la cuenta terminaba con cinco — que es de donde viene todo
+    // esto. Es del servidor a propósito: el formulario ya no ofrece la opción,
+    // pero la server action se puede llamar directamente.
+    const owned = await db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.ownerId, session.user.id));
+    if (owned.length > 0) {
+      return {
+        ok: false,
+        error: 'Tu cuenta ya tiene organización. Escógela en la lista en vez de crear otra.',
+      };
+    }
     const [org] = await db
       .insert(organizations)
       .values({

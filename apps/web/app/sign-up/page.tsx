@@ -16,6 +16,8 @@ export default function SignUpPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
+  const [organizationLocation, setOrganizationLocation] = useState('');
   const [accessCode, setAccessCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,7 +29,14 @@ export default function SignUpPage() {
     const response = await fetch('/api/auth/sign-up/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, accessCode }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        accessCode,
+        organizationName,
+        organizationLocation,
+      }),
     });
     setIsSubmitting(false);
     if (!response.ok) {
@@ -45,7 +54,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-12">
       <div className="w-full max-w-sm">
         <TopographicMotif />
       </div>
@@ -94,6 +103,38 @@ export default function SignUpPage() {
           autoComplete="new-password"
           hint="Mínimo 8 caracteres."
         />
+        <div className="flex flex-col gap-1">
+          <label htmlFor="organization-name" className="text-sm font-medium text-bark">
+            Tu organización
+          </label>
+          <input
+            id="organization-name"
+            type="text"
+            autoComplete="organization"
+            value={organizationName}
+            onChange={(event) => setOrganizationName(event.target.value)}
+            required
+            className={fieldClass}
+          />
+          <p className="text-xs text-muted">
+            El gimnasio, club o liga que organiza. Es el nombre que ve la gente en la tabla
+            pública, y tu cuenta tiene una sola.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="organization-location" className="text-sm font-medium text-bark">
+            Ciudad o sede
+          </label>
+          <input
+            id="organization-location"
+            type="text"
+            autoComplete="address-level2"
+            value={organizationLocation}
+            onChange={(event) => setOrganizationLocation(event.target.value)}
+            required
+            className={fieldClass}
+          />
+        </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="access-code" className="text-sm font-medium text-bark">
             Código de acceso

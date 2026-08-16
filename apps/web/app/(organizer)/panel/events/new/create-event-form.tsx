@@ -52,9 +52,6 @@ export function CreateEventForm({
 }: {
   organizations: { id: string; name: string }[];
 }) {
-  const [organizationMode, setOrganizationMode] = useState<'existing' | 'new'>(
-    organizations.length > 0 ? 'existing' : 'new',
-  );
   const [organizationId, setOrganizationId] = useState(organizations[0]?.id ?? '');
   const [orgName, setOrgName] = useState('');
   const [orgLocation, setOrgLocation] = useState('');
@@ -87,7 +84,7 @@ export function CreateEventForm({
     setIsSubmitting(true);
     const result = await createEvent({
       organization:
-        organizationMode === 'existing'
+        organizations.length > 0
           ? { mode: 'existing', organizationId }
           : { mode: 'new', name: orgName, location: orgLocation },
       name,
@@ -113,44 +110,13 @@ export function CreateEventForm({
         </p>
       </div>
 
+      {/* Ya no se puede estrenar organización aquí: es la que traes de tu
+          cuenta. Con más de una hay que escoger —solo la cuenta que administra
+          la plataforma llega a tener dos—, y los campos solo salen si no tienes
+          ninguna, que hoy es una cuenta anterior a que el registro la pidiera. */}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium text-bark">Organización</legend>
-        {organizations.length > 0 && (
-          <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                checked={organizationMode === 'existing'}
-                onChange={() => setOrganizationMode('existing')}
-                className="accent-pine"
-              />
-              Usar una existente
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                checked={organizationMode === 'new'}
-                onChange={() => setOrganizationMode('new')}
-                className="accent-pine"
-              />
-              Crear nueva
-            </label>
-          </div>
-        )}
-        {organizationMode === 'existing' ? (
-          <select
-            value={organizationId}
-            onChange={(event) => setOrganizationId(event.target.value)}
-            required
-            className={fieldClass}
-          >
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </select>
-        ) : (
+        {organizations.length === 0 ? (
           <>
             <input
               type="text"
@@ -169,6 +135,21 @@ export function CreateEventForm({
               className={fieldClass}
             />
           </>
+        ) : organizations.length === 1 ? (
+          <p className="font-display font-semibold text-pine">{organizations[0]?.name}</p>
+        ) : (
+          <select
+            value={organizationId}
+            onChange={(event) => setOrganizationId(event.target.value)}
+            required
+            className={fieldClass}
+          >
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </select>
         )}
       </fieldset>
 
