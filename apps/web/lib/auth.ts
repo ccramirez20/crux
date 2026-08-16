@@ -3,12 +3,17 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { z } from 'zod';
-import { account, session, user, verification } from '@crux/db';
+import { account, organizations, session, user, verification } from '@crux/db';
 import { getDb } from './db';
 import { claimInvite, recordInviteUser } from './invites';
 
+// La organización nace con la cuenta. Antes solo existía la rama "organización
+// nueva" del formulario de crear evento, que se podía usar en cada evento y
+// dejaba a un organizador con cinco. Aquí es una y no hay dónde pedir otra.
 const signUpBodySchema = z.object({
   accessCode: z.string().optional(),
+  organizationName: z.string().trim().min(1).optional(),
+  organizationLocation: z.string().trim().min(1).optional(),
 });
 
 // A judge's phone reaches the dev server by LAN IP, not localhost, and Better
@@ -83,6 +88,14 @@ function createAuth() {
           // that surfaces as a 500 instead of the intended 400.
           const parsed = signUpBodySchema.safeParse(ctx.body);
           const accessCode = parsed.success ? parsed.data.accessCode : undefined;
+          // Antes de `claimInvite`, no después: un formulario incompleto no
+          // puede quemar una invitación que solo sirve una vez. Y aquí y no en
+          // el hook `after`, para que no quede una cuenta sin organización.
+          if (!parsed.success || !parsed.data.organizationName || !parsed.data.organizationLocation) {
+            throw new APIError('BAD_REQUEST', {
+              message: 'Falta el nombre o la sede de tu organización.',
+            });
+          }
           // Fail closed: no code, no lookup. An empty string would otherwise
           // reach the query and match a row someone managed to insert blank.
           const claimed = accessCode ? await claimInvite(getDb(), accessCode) : [];
@@ -107,6 +120,17 @@ function createAuth() {
           const newUser = ctx.context.newSession?.user;
           if (accessCode && newUser) {
             await recordInviteUser(getDb(), accessCode, newUser.id);
+          }
+          // El hook `before` ya garantizó que los dos vienen. Si aun así el
+          // insert fallara, la cuenta queda sin organización y la recupera el
+          // formulario de crear evento, que sigue pidiéndola cuando no hay
+          // ninguna.
+          if (newUser && parsed.success && parsed.data.organizationName && parsed.data.organizationLocation) {
+            await getDb().insert(organizations).values({
+              ownerId: newUser.id,
+              name: parsed.data.organizationName,
+              location: parsed.data.organizationLocation,
+            });
           }
         }
       }),
