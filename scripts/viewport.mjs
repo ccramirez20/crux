@@ -13,7 +13,8 @@
 //   node scripts/viewport.mjs http://localhost:3000/resultados/liga-paramo 390
 //   node scripts/viewport.mjs http://localhost:3000/ 1440 --shot /tmp/portada.png
 //
-// Sale con código 1 si algo se sale del ancho, para poder encadenarlo.
+// Sale con código 1 si algo se sale del ancho, y con 2 si la URL no respondió
+// 200 — medir una pantalla de error y darla por buena es peor que no medir.
 
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -101,8 +102,35 @@ await send('Emulation.setDeviceMetricsOverride', {
   mobile: width < 700,
 });
 await send('Page.enable');
+await send('Network.enable');
+
+// El código de estado, y no solo el dibujo. Una pantalla de 404 maqueta
+// perfecto: la de Next son dos renglones centrados, así que nunca desborda y
+// esto informaba "sin desbordo horizontal" con toda la razón — sobre una
+// pantalla que no era la que se creía estar midiendo. Pasó el 2026-08-15 con
+// /resultados, /competidor y /juzgar, que no existen sin segmento, y dio por
+// auditadas tres pantallas que nadie miró.
+let status = null;
+ws.addEventListener('message', (e) => {
+  const msg = JSON.parse(e.data);
+  if (msg.method === 'Network.responseReceived' && msg.params.type === 'Document' && status === null) {
+    status = msg.params.response.status;
+  }
+});
+
 await send('Page.navigate', { url });
 await new Promise((r) => setTimeout(r, 4000));
+
+if (status !== null && status !== 200) {
+  console.error(`\n${url} respondió ${status}, no 200.`);
+  console.error('Lo que se midió es la pantalla de error, no la pantalla.');
+  if (status === 404) {
+    console.error('¿Falta el segmento? /resultados/<slug>, /competidor/<id>, /juzgar/<slug>.');
+  }
+  ws.close();
+  chrome?.kill();
+  process.exit(2);
+}
 
 const { result } = await send('Runtime.evaluate', {
   returnByValue: true,
@@ -136,7 +164,9 @@ const { result } = await send('Runtime.evaluate', {
 });
 
 const { vw, scrollWidth, offenders } = result.value;
-console.log(`${url} @ ${width}px → viewport ${vw}, scrollWidth ${scrollWidth}`);
+console.log(
+  `${url} @ ${width}px → ${status ?? '???'} · viewport ${vw}, scrollWidth ${scrollWidth}`,
+);
 if (offenders.length === 0) {
   console.log('Sin desbordo horizontal.');
 } else {
