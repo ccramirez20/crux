@@ -13,7 +13,7 @@ repite lo que ya dice el panel es una cosa más que se desincroniza.
    `pnpm-workspace.yaml` e instala desde la raíz por su cuenta.
 3. **Framework: Next.js.** Lo detecta solo. No hay que tocar los comandos de
    build ni de instalación.
-4. **Variables de entorno** (las cuatro, antes del primer despliegue — ver
+4. **Variables de entorno** (las cinco, antes del primer despliegue — ver
    abajo).
 5. **Aplicar migraciones** contra la base de producción antes del primer
    tráfico: `pnpm db:migrate` con `DATABASE_URL` apuntando allá. Nada en el
@@ -65,6 +65,14 @@ repite lo que ya dice el panel es una cosa más que se desincroniza.
 | `BETTER_AUTH_SECRET` | Firma de sesiones | **Better Auth lanza excepción y no arranca.** En producción rechaza el secreto por defecto a propósito |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | Orígenes válidos para autenticación | **Nadie puede entrar.** En producción `trustedOrigins()` devuelve *solo* esta lista, así que vacía significa que todo intento de sign-in es "Invalid origin" |
 | `ADMIN_EMAIL` | Correo de la cuenta que emite invitaciones | Nadie ve `/panel/invites` (devuelve 404), así que nadie puede emitir códigos y nadie nuevo puede registrarse. Falla cerrado a propósito (`apps/web/lib/admin.ts`) |
+| `BLOB_READ_WRITE_TOKEN` | Subida del logo del gimnasio (Vercel Blob) | La subida en `/panel/organization` falla con un mensaje de error; el resto de la aplicación sigue igual — el logo es opcional en la tarjeta compartible |
+
+`BLOB_READ_WRITE_TOKEN` se crea desde el dashboard de Vercel: pestaña
+**Storage** del proyecto → *Create Database* → **Blob**. Al crearlo desde ahí
+se conecta solo y agrega la variable a producción; para desarrollo local hay
+que copiar el mismo valor a `apps/web/.env.local` a mano, desde **Settings →
+Environment Variables**. Tiene tier gratis (1 GB, plan Hobby) — un logo pesa
+unos KB, así que a esta escala no genera costo.
 
 ## Invitaciones de organizador
 

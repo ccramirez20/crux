@@ -69,6 +69,9 @@ export default async function OrganizerHomePage() {
                 Invitaciones
               </Link>
             )}
+            <a href="/manual.html" target="_blank" rel="noreferrer" className="text-sm font-medium text-pine underline">
+              Manual
+            </a>
             <SignOutButton />
           </div>
         </div>
@@ -87,15 +90,20 @@ export default async function OrganizerHomePage() {
         {/* Quién organiza, en pantalla. Con una organización —el caso de un
             gimnasio— basta con nombrarla; con dos hay que poder cambiar, y eso
             solo le pasa a la cuenta que administra la plataforma. */}
-        {myOrganizations.length > 1 && selected ? (
-          <OrganizationPicker organizations={myOrganizations} selectedId={selected.id} />
-        ) : (
-          selected && (
-            <p className="text-sm text-muted">
-              <span className="font-display font-semibold text-pine">{selected.name}</span> ·{' '}
-              {selected.location}
-            </p>
-          )
+        {selected && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {myOrganizations.length > 1 ? (
+              <OrganizationPicker organizations={myOrganizations} selectedId={selected.id} />
+            ) : (
+              <p className="text-sm text-muted">
+                <span className="font-display font-semibold text-pine">{selected.name}</span> ·{' '}
+                {selected.location}
+              </p>
+            )}
+            <Link href="/panel/organization" className="text-sm font-medium text-pine underline">
+              Logo del gimnasio
+            </Link>
+          </div>
         )}
 
         {myEvents.length > 0 ? (

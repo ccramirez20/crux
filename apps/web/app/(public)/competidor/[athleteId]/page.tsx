@@ -440,8 +440,20 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
           camuflaba. */}
       <section className={`${cardClass} relative overflow-hidden`}>
         <span className="absolute inset-x-0 top-0 h-1 bg-gold" aria-hidden />
-        <div className="mt-1">
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
           <SectionTitle>Trayectoria</SectionTitle>
+          {/* El evento más reciente, no el mejor: es lo que un competidor
+              acaba de vivir y lo que va a querer compartir apenas termine. La
+              página de destino es la que decide si hay tarjeta (bloquea
+              menores de edad). */}
+          {profile.events[0] && (
+            <a
+              href={`/competidor/${athleteId}/tarjeta?evento=${profile.events[0].eventSlug}`}
+              className="font-display text-sm font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
+            >
+              Compartir →
+            </a>
+          )}
         </div>
         {/* Las tres en pine, no una en oro: son tres hechos del mismo rango, y
             el oro sobre el hueso de la tarjeta queda en 1.8:1 y se pierde a esta

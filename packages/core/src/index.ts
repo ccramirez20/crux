@@ -42,7 +42,7 @@ export interface Attempt {
   createdAt: Date;
 }
 
-export { isEligible, parseDateOnly } from './eligibility';
+export { ageInYears, isEligible, isMinor, parseDateOnly } from './eligibility';
 export { isRegistrationOpen, todayIn } from './registration-window';
 export type { EligibilityCategory } from './eligibility';
 

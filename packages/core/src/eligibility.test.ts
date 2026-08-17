@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isEligible, parseDateOnly, type EligibilityCategory } from './eligibility';
+import { isEligible, isMinor, parseDateOnly, type EligibilityCategory } from './eligibility';
 
 const TODAY = new Date(2026, 7, 6); // 2026-08-06, fixed so age math isn't flaky
 
@@ -54,6 +54,22 @@ describe('isEligible', () => {
   it('defaults to the current date when today is omitted', () => {
     const category: EligibilityCategory = { gender: null, minAge: null, maxAge: null };
     expect(isEligible(category, parseDateOnly('1990-01-01'), 'male')).toBe(true);
+  });
+});
+
+describe('isMinor', () => {
+  it('treats a missing birth date as a minor, fail-safe', () => {
+    expect(isMinor(null, TODAY)).toBe(true);
+  });
+
+  it('is exact at the boundary, counting a birthday today as reached', () => {
+    expect(isMinor('2008-08-06', TODAY)).toBe(false); // turns 18 today
+    expect(isMinor('2008-08-07', TODAY)).toBe(true); // turns 18 tomorrow
+  });
+
+  it('is true for a clear minor and false for a clear adult', () => {
+    expect(isMinor('2015-01-01', TODAY)).toBe(true);
+    expect(isMinor('1990-01-01', TODAY)).toBe(false);
   });
 });
 
