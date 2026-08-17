@@ -18,42 +18,52 @@ import { brandWordClass } from '@/lib/ui';
  * La primera versión era un pico lejano con la figura en la cumbre y no se leía:
  * a este tamaño una persona de cinco píxeles es una mancha. Lo que la hace
  * reconocible no es más detalle, es ocupar más del cuadro.
+ *
+ * Segunda pasada, después de revisión con CR: la roca es gris — el pine
+ * quedaba como bosque, no piedra — y sus presas en un gris más claro, no
+ * doradas, para que no compitan con el sol. El escalador tiene casco negro,
+ * camiseta pine, pantalón bark y zapatos en el dorado de Crux; un brazo sube
+ * a una presa y el otro queda cerca del cuerpo, una pierna alta y la otra
+ * estirada a un apoyo más lejano — no los dos brazos simétricos de antes.
  */
 const PIXELS = [
   '............pppppppppppppppppppppppp',
   '....ooo.....pppppppppppppppppppppppp',
-  '...ooooo....ppppppppppppoppppppppppp',
-  '..ooooooo...ppppppppppppppoopppppppp',
-  '..ooooooo....ppppppppppccppppppppppp',
-  '..ooooooo....ppppppppccccooppppppppp',
-  '...ooooo.....pppppppcccccppppppppppp',
-  '....ooo.......pppopcccccpppppppppppp',
-  '..............pppppppcccpppppppppopp',
-  '..............pppppppcccpppppppppppp',
-  '...............pppoppcccpppppppppppp',
-  '...............ppppppcccpppppppppppp',
-  '...............pppppcccccppppppppppp',
-  '................pppccpppccpppppppppp',
-  '................pccpppppppccpppppppp',
-  '................oopppppppppooppppppp',
-  '.................ppppppppppppppppppp',
-  '.................ppppppppppppppppppp',
-  '.................pppoppppppppopppppp',
+  '...ooooo....ppppppppppppppppppwppppp',
+  '..ooooooo...ppppppppppppppcwpppppppp',
+  '..ooooooo....pppppppppkkpspppppppppp',
+  '..ooooooo....ppppppppssssppppppppppp',
+  '...ooooo.....ppppppcsssspppppppppppp',
+  '....ooo.......pppppppssspppppppppppp',
+  '..............pppppprrrrrpppppppwppp',
+  '..............ppppprpppprrpppppppppp',
+  '...............ppprpppppppowpppppppp',
+  '...............pwopppppppppppppppppp',
+  '...............ppppppppppppppppppppp',
+  '................ppppppppppppppwppppp',
+  '................pppppppppppppppppppp',
   '..................pppppppppppppppppp',
-  '....llll..........pppppppppppppppppp',
-  '.....ll...........ppppppppppppppoppp',
-  '.....ll............ppppppppppppppppp',
-  'rrrrrrrrrrrrrrrrrrrpppoppppppppppppp',
+  '...l.l...........ppppppppppppppppppp',
+  '..lllll..........ppppppppppppppppppp',
+  '..lllll....ll....ppppppppwpppppppppp',
+  '...lll....llll....pppppppppppppppppp',
+  '....l......ll.....pppppppppppppppppp',
+  '....l.......l.....pppppppppppppppwpp',
+  '....l.......l......ppppppppppppppppp',
+  'rrrrrrrrrrrrrrrrrrrppppppppppppppppp',
   'rrrrrrrrrrrrrrrrrrrppppppppppppppppp',
   'rrrrrrrrrrrrrrrrrrrppppppppppppppppp',
 ];
 
 const PALETTE: Record<string, string> = {
-  p: '#2f4a3e', // el muro desplomado — pine
-  c: '#fbf8f0', // quien escala — card, para que resalte contra la roca
-  o: '#e3a83b', // el sol y las presas — gold
-  r: '#6b4a34', // el suelo del páramo — bark
-  l: '#b9c4ac', // un frailejón — sage
+  p: '#a39a8c', // la roca — piedra gris del páramo
+  s: '#2f4a3e', // camiseta — pine
+  r: '#6b4a34', // pantalón, y el suelo del páramo — bark
+  c: '#fbf8f0', // manos — crema, para que resalten contra la roca
+  o: '#e3a83b', // el sol y los zapatos — gold
+  l: '#b9c4ac', // los frailejones — sage
+  w: '#c7c0b4', // presas — un gris más claro que la roca
+  k: '#241f19', // el casco — ink
 };
 
 export function AdminBadge() {
