@@ -31,6 +31,8 @@ export const organizations = pgTable('organizations', {
     .references(() => user.id),
   name: text('name').notNull(),
   location: text('location').notNull(),
+  // URL de Vercel Blob. Null = sin logo, no se muestra en tarjeta ni panel.
+  logo: text('logo'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -58,6 +60,10 @@ export const events = pgTable('events', {
   // hasta que el organizador ponga una fecha, que es como quedaron los eventos
   // creados antes de que esta columna existiera.
   registrationDeadline: date('registration_deadline'),
+  // Con qué paleta se recolorea el pixel art de la tarjeta compartible. Hoy
+  // solo existe una paleta real (Páramo); se generaliza el día que haya una
+  // segunda de verdad, no antes.
+  paletaTema: text('paleta_tema').notNull().default('paramo'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
