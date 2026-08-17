@@ -184,7 +184,6 @@ function ResultCard({
   open,
   dimmed,
   onToggle,
-  slug,
 }: {
   row: LeaderboardRow;
   round: LeaderboardRound;
@@ -195,7 +194,6 @@ function ResultCard({
   open: boolean;
   dimmed: boolean;
   onToggle: () => void;
-  slug: string;
 }) {
   const podium = podiumStyle(row.result.rank, isPodiumRound);
   // El filete de la tarjeta usa el mismo color de la medalla que la fila de la
@@ -285,7 +283,7 @@ function ResultCard({
           </div>
         )}
       </button>
-      {open && <RowDetail round={round} row={row} unit={unit.singular} isHeight={isHeight} slug={slug} />}
+      {open && <RowDetail round={round} row={row} unit={unit.singular} isHeight={isHeight} />}
     </li>
   );
 }
@@ -295,13 +293,11 @@ function RowDetail({
   row,
   unit,
   isHeight,
-  slug,
 }: {
   round: LeaderboardRound;
   row: LeaderboardRow;
   unit: string;
   isHeight: boolean;
-  slug: string;
 }) {
   return (
     <ul className="flex flex-wrap items-center gap-3 px-6 pb-6 pt-5">
@@ -327,19 +323,6 @@ function RowDetail({
             className="font-display text-lg font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
           >
             Ver historial de {row.athleteName} →
-          </a>
-        </li>
-      )}
-      {/* El enlace siempre se pinta, sin calcular elegibilidad aquí — la
-          página de destino es la que decide si hay tarjeta (bloquea menores
-          de edad, `isMinor` de `share-card.ts`). */}
-      {row.athleteId && (
-        <li>
-          <a
-            href={`/competidor/${row.athleteId}/tarjeta?evento=${slug}`}
-            className="font-display text-lg font-semibold text-pine underline decoration-gold decoration-2 underline-offset-4"
-          >
-            Compartir →
           </a>
         </li>
       )}
@@ -570,7 +553,6 @@ export function LeaderboardScreen({
                       open={openRow === row.registrationId}
                       dimmed={focused !== null && focused !== row.registrationId}
                       onToggle={() => toggleRow(row.registrationId)}
-                      slug={slug}
                     />
                   ))}
                 </ul>
@@ -711,7 +693,7 @@ export function LeaderboardScreen({
                           {open && (
                             <tr className="border-b border-cardborder/60 bg-stone">
                               <td colSpan={2 + round.problems.length + headers.length}>
-                                <RowDetail round={round} row={row} unit={unit.singular} isHeight={isHeight} slug={slug} />
+                                <RowDetail round={round} row={row} unit={unit.singular} isHeight={isHeight} />
                               </td>
                             </tr>
                           )}

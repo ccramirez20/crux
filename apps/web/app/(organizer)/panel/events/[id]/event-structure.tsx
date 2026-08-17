@@ -70,10 +70,6 @@ function SpineNode({ tone }: { tone: 'round' | 'problem' }) {
   );
 }
 
-function countPhrase(count: number, singular: string, plural: string): string {
-  return count === 1 ? `su ${singular}` : `sus ${count} ${plural}`;
-}
-
 export function EventStructure({
   eventId,
   categories,
@@ -252,7 +248,7 @@ export function EventStructure({
                                   label="Borrar ronda"
                                   takesWith={
                                     round.problems.length > 0
-                                      ? `Se borran también ${countPhrase(round.problems.length, unit.singular, unit.plural)}.`
+                                      ? `Se borran también ${countLabel(round.problems.length, unit.singular, unit.plural)}.`
                                       : null
                                   }
                                   onConfirm={() => removeRound({ eventId, roundId: round.id })}
@@ -271,9 +267,9 @@ export function EventStructure({
                         label="Borrar categoría"
                         takesWith={
                           category.rounds.length > 0
-                            ? `Se borran también ${countPhrase(category.rounds.length, 'ronda', 'rondas')}${
+                            ? `Se borran también ${countLabel(category.rounds.length, 'ronda', 'rondas')}${
                                 totalProblems > 0
-                                  ? ` y ${countPhrase(totalProblems, unit.singular, unit.plural)}`
+                                  ? ` y ${countLabel(totalProblems, unit.singular, unit.plural)}`
                                   : ''
                               }.`
                             : null
