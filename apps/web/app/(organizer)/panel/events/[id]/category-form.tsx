@@ -12,7 +12,7 @@ function isGender(value: string): value is Gender {
 
 export function CategoryForm({ eventId }: { eventId: string }) {
   const [name, setName] = useState('');
-  const [gender, setGender] = useState<Gender | ''>('');
+  const [gender, setGender] = useState<Gender>('mixed');
   const [minAge, setMinAge] = useState('');
   const [maxAge, setMaxAge] = useState('');
   const [level, setLevel] = useState('');
@@ -26,7 +26,7 @@ export function CategoryForm({ eventId }: { eventId: string }) {
     const result = await createCategory({
       eventId,
       name,
-      gender: gender || undefined,
+      gender,
       minAge: minAge ? Number(minAge) : undefined,
       maxAge: maxAge ? Number(maxAge) : undefined,
       level: level || undefined,
@@ -37,7 +37,7 @@ export function CategoryForm({ eventId }: { eventId: string }) {
       return;
     }
     setName('');
-    setGender('');
+    setGender('mixed');
     setMinAge('');
     setMaxAge('');
     setLevel('');
@@ -72,13 +72,12 @@ export function CategoryForm({ eventId }: { eventId: string }) {
               value={gender}
               onChange={(event) => {
                 const value = event.target.value;
-                if (value === '' || isGender(value)) {
+                if (isGender(value)) {
                   setGender(value);
                 }
               }}
               className={fieldClass}
             >
-              <option value="">Cualquiera</option>
               <option value="male">Masculino</option>
               <option value="female">Femenino</option>
               <option value="mixed">Mixto</option>

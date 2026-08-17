@@ -449,6 +449,76 @@ export async function updateEvent(input: UpdateEventInput): Promise<ActionResult
   return { ok: true };
 }
 
+const deleteEventInputSchema = z.object({
+  eventId: z.string().uuid(),
+});
+type DeleteEventInput = z.infer<typeof deleteEventInputSchema>;
+
+// A diferencia de `removeCategory`, esta acción no revisa por separado si hay
+// inscritos: borrar el evento entero se los lleva a propósito, es el punto de
+// la acción. Solo el guard de intentos aplica — con intentos capturados no se
+// borra nada, sin excepción.
+export async function deleteEvent(input: DeleteEventInput): Promise<ActionResult> {
+  const parsed = deleteEventInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Datos inválidos.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+  }
+
+  const { eventId } = parsed.data;
+  const db = getDb();
+  const [owned] = await db
+    .select({ ownerId: events.ownerId })
+    .from(events)
+    .where(and(eq(events.id, eventId), eq(events.ownerId, session.user.id)));
+  if (!owned) {
+    return { ok: false, error: 'Ese evento no existe o no te pertenece.' };
+  }
+
+  const [tally] = await db
+    .select({ total: count(attempts.id) })
+    .from(attempts)
+    .innerJoin(problems, eq(attempts.problemId, problems.id))
+    .innerJoin(rounds, eq(problems.roundId, rounds.id))
+    .innerJoin(categories, eq(rounds.categoryId, categories.id))
+    .where(eq(categories.eventId, eventId));
+  if ((tally?.total ?? 0) > 0) {
+    return {
+      ok: false,
+      error: 'Este evento ya tiene intentos capturados: borrarlo borraría el registro de un juez.',
+    };
+  }
+
+  // De abajo hacia arriba y en una sola transacción: ninguna de estas tablas
+  // tiene cascada.
+  await db.transaction(async (tx) => {
+    const categoryIds = await tx
+      .select({ id: categories.id })
+      .from(categories)
+      .where(eq(categories.eventId, eventId));
+    for (const category of categoryIds) {
+      const roundIds = await tx
+        .select({ id: rounds.id })
+        .from(rounds)
+        .where(eq(rounds.categoryId, category.id));
+      for (const round of roundIds) {
+        await tx.delete(problems).where(eq(problems.roundId, round.id));
+      }
+      await tx.delete(rounds).where(eq(rounds.categoryId, category.id));
+    }
+    await tx.delete(registrations).where(eq(registrations.eventId, eventId));
+    await tx.delete(categories).where(eq(categories.eventId, eventId));
+    await tx.delete(events).where(eq(events.id, eventId));
+  });
+
+  revalidatePath('/panel');
+  return { ok: true };
+}
+
 const updateProblemInputSchema = z.object({
   eventId: z.string().uuid(),
   problemId: z.string().uuid(),

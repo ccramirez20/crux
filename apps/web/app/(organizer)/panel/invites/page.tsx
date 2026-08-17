@@ -52,9 +52,14 @@ export default async function InvitesPage() {
         <TopographicMotif />
       </div>
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <Link href="/panel" className="font-display text-lg font-bold tracking-wide text-pine">
-          CRUX
-        </Link>
+        <div className="flex flex-col gap-2">
+          <Link href="/panel" className="text-sm font-medium text-pine underline">
+            ← Panel
+          </Link>
+          <Link href="/panel" className="font-display text-lg font-bold tracking-wide text-pine">
+            CRUX
+          </Link>
+        </div>
 
         <div>
           <span className={eyebrowClass}>Administración</span>

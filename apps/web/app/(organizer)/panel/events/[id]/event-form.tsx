@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
-import { updateEvent } from './actions';
+import { ConfirmDeleteButton } from '@/components/confirm-delete-button';
+import { deleteEvent, updateEvent } from './actions';
 import { generateCode } from '@/lib/codes';
 
 const COMMON_TIMEZONES = [
@@ -21,6 +23,8 @@ export function EventForm({
   registrationDeadline: initialDeadline,
   timezone: initialTimezone,
   judgeCode: initialJudgeCode,
+  hasAttempts,
+  registrationCount,
 }: {
   eventId: string;
   name: string;
@@ -28,7 +32,10 @@ export function EventForm({
   registrationDeadline: string | null;
   timezone: string;
   judgeCode: string | null;
+  hasAttempts: boolean;
+  registrationCount: number;
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(initialName);
   const [date, setDate] = useState(initialDate ?? '');
@@ -191,17 +198,48 @@ export function EventForm({
         </p>
       )}
 
-      <div className="flex gap-2">
-        <button type="submit" disabled={isSubmitting} className={secondaryButtonClass}>
-          {isSubmitting ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsOpen(false)}
-          className="rounded px-3 py-1.5 text-sm font-medium text-muted underline"
-        >
-          Cancelar
-        </button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <button type="submit" disabled={isSubmitting} className={secondaryButtonClass}>
+            {isSubmitting ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="rounded px-3 py-1.5 text-sm font-medium text-muted underline"
+          >
+            Cancelar
+          </button>
+        </div>
+
+        {hasAttempts ? (
+          <span className="flex max-w-[240px] items-center gap-2 text-right text-xs text-muted">
+            <button
+              type="button"
+              disabled
+              className="shrink-0 text-xs font-medium text-muted underline decoration-dotted underline-offset-4 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Borrar evento
+            </button>
+            Ya tiene intentos capturados: no se puede borrar.
+          </span>
+        ) : (
+          <ConfirmDeleteButton
+            label="Borrar evento"
+            takesWith={
+              registrationCount > 0
+                ? `Se borran también ${registrationCount} inscrito${registrationCount === 1 ? '' : 's'}.`
+                : null
+            }
+            onConfirm={async () => {
+              const result = await deleteEvent({ eventId });
+              if (result.ok) {
+                router.push('/panel');
+              }
+              return result;
+            }}
+          />
+        )}
       </div>
     </form>
   );

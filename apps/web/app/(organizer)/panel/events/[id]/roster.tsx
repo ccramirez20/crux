@@ -2,12 +2,22 @@
 
 import { useState, useTransition } from 'react';
 import { eyebrowClass, fieldClass } from '@/lib/ui';
+import { ConfirmDeleteButton } from '@/components/confirm-delete-button';
 import { moveRegistration, numberCategory, removeRegistration, setBibNumber } from './actions';
+
+export interface CategoryOption {
+  id: string;
+  name: string;
+}
 
 export interface RosterEntry {
   registrationId: string;
   athleteFullName: string;
   bibNumber: string | null;
+  /** Solo las categorías a las que su edad y género le permiten moverse. */
+  eligibleCategories: CategoryOption[];
+  /** Un juez ya le capturó algo: no se puede mover ni quitar. */
+  hasAttempts: boolean;
 }
 export interface RosterCategory {
   id: string;
@@ -15,41 +25,29 @@ export interface RosterCategory {
   entries: RosterEntry[];
 }
 
-/**
- * Todas las categorías del evento, tengan inscritos o no.
- *
- * Va aparte de `RosterCategory` porque el listado se agrupa por las que sí
- * tienen gente, y a la que uno mueve a alguien es justo la que está vacía: el
- * caso típico es que se inscribió en Intermedio cuando iba a Avanzado, y en
- * Avanzado todavía no hay nadie.
- */
-export interface CategoryOption {
-  id: string;
-  name: string;
-}
-
 /** Desde dónde empieza a numerar una categoría que no tiene ningún dorsal. */
 const DEFAULT_START = 101;
 
-// Una fila por inscrito, y el dorsal es el único campo editable. Se guarda al
-// salir del campo y no con un botón: son veinte filas y un botón por fila es
-// veinte clics de más para algo que el organizador hace de corrido, mirando una
-// lista en papel.
+// Una fila por inscrito, y el dorsal es el único campo editable de entrada. Se
+// guarda al salir del campo y no con un botón: son veinte filas y un botón por
+// fila es veinte clics de más para algo que el organizador hace de corrido,
+// mirando una lista en papel. Mover de categoría y quitar sí van detrás de un
+// botón "Editar", igual que el bloque en `problem-qr.tsx`: son las dos
+// acciones que un intento capturado bloquea, y hay que verlo antes de tocar
+// nada, no después de un clic rechazado.
 function Row({
   eventId,
   entry,
   categoryId,
-  categories,
 }: {
   eventId: string;
   entry: RosterEntry;
   categoryId: string;
-  categories: CategoryOption[];
 }) {
   const [value, setValue] = useState(entry.bibNumber ?? '');
   const [saved, setSaved] = useState<string | null>(entry.bibNumber ?? '');
   const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function move(next: string) {
@@ -63,24 +61,6 @@ function Row({
         categoryId: next,
       });
       setError(result.ok ? null : result.error);
-    });
-  }
-
-  // Dos pasos y no un `confirm()`: quitar a alguien no lo puede deshacer el
-  // organizador —no hay forma de inscribir a mano, la persona tendría que
-  // volver a entrar por el enlace— y un diálogo del navegador bloquea la
-  // pestaña entera para preguntar algo que cabe en el propio botón.
-  function remove() {
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
-    startTransition(async () => {
-      const result = await removeRegistration({ eventId, registrationId: entry.registrationId });
-      if (!result.ok) {
-        setError(result.error);
-        setConfirming(false);
-      }
     });
   }
 
@@ -106,66 +86,80 @@ function Row({
 
   return (
     // `flex-wrap` con un mínimo para el nombre: en un teléfono el dorsal, el
-    // nombre, el desplegable de categoría y "Quitar" suman más ancho del que
-    // hay, y sin esto el nombre se recortaba a dos letras. Partido en dos
-    // renglones cabe todo. De `sm` para arriba sobra ancho y nunca parte.
+    // nombre y "Editar" suman más ancho del que hay, y sin esto el nombre se
+    // recortaba a dos letras. Partido en dos renglones cabe todo. De `sm` para
+    // arriba sobra ancho y nunca parte.
     <li className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-cardborder/60 py-2 last:border-b-0">
-      <input
-        aria-label={`Dorsal de ${entry.athleteFullName}`}
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.currentTarget.blur();
-          }
-        }}
-        placeholder="—"
-        maxLength={12}
-        // Sin `type="number"`: el dorsal es texto ("A-12" existe) y en es-CO un
-        // campo numérico además se come el separador decimal sin avisar.
-        inputMode="numeric"
-        className={`${fieldClass} w-20 shrink-0 text-center font-display font-bold`}
-      />
-      <span className="min-w-32 flex-1">
-        <span className="block truncate text-sm font-medium">{entry.athleteFullName}</span>
-        {error && (
-          <span role="alert" className="block text-xs font-medium text-red-700">
-            {error}
-          </span>
-        )}
-      </span>
-      {isPending && <span className="shrink-0 text-xs text-muted">Guardando…</span>}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <input
+          aria-label={`Dorsal de ${entry.athleteFullName}`}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.currentTarget.blur();
+            }
+          }}
+          placeholder="—"
+          maxLength={12}
+          // Sin `type="number"`: el dorsal es texto ("A-12" existe) y en es-CO un
+          // campo numérico además se come el separador decimal sin avisar.
+          inputMode="numeric"
+          className={`${fieldClass} w-20 shrink-0 text-center font-display font-bold`}
+        />
+        <span className="min-w-32 flex-1">
+          <span className="block truncate text-sm font-medium">{entry.athleteFullName}</span>
+          {error && (
+            <span role="alert" className="block text-xs font-medium text-red-700">
+              {error}
+            </span>
+          )}
+        </span>
+        {isPending && <span className="shrink-0 text-xs text-muted">Guardando…</span>}
+      </div>
 
-      {/* Solo se ofrece mover si hay a dónde: con una sola categoría el
-          desplegable no tendría más opción que la actual. */}
-      {categories.length > 1 && (
-        <select
-          aria-label={`Categoría de ${entry.athleteFullName}`}
-          value={categoryId}
-          disabled={isPending}
-          onChange={(event) => move(event.target.value)}
-          className={`${fieldClass} shrink-0 max-w-40 px-2 py-1.5 text-xs`}
+      {entry.hasAttempts ? (
+        <span className="ml-auto shrink-0 text-xs text-muted">
+          Ya tiene intentos capturados: no se puede mover ni quitar.
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsEditing((prev) => !prev)}
+          aria-expanded={isEditing}
+          className="ml-auto shrink-0 rounded px-2 py-1.5 text-xs font-semibold text-muted underline transition hover:text-pine"
         >
-          {categories.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </select>
+          {isEditing ? 'Cancelar' : 'Editar'}
+        </button>
       )}
 
-      <button
-        type="button"
-        onClick={remove}
-        onBlur={() => setConfirming(false)}
-        disabled={isPending}
-        className={`shrink-0 text-xs font-medium underline decoration-dotted underline-offset-4 ${
-          confirming ? 'text-red-700' : 'text-muted hover:text-bark'
-        }`}
-      >
-        {confirming ? '¿Seguro?' : 'Quitar'}
-      </button>
+      {isEditing && !entry.hasAttempts && (
+        <div className="flex w-full flex-wrap items-center justify-end gap-3 rounded-lg border border-cardborder bg-stone/40 p-2">
+          {/* Solo se ofrece mover si hay a dónde: con una sola categoría el
+              desplegable no tendría más opción que la actual. */}
+          {entry.eligibleCategories.length > 1 && (
+            <select
+              aria-label={`Categoría de ${entry.athleteFullName}`}
+              value={categoryId}
+              disabled={isPending}
+              onChange={(event) => move(event.target.value)}
+              className={`${fieldClass} shrink-0 max-w-40 px-2 py-1.5 text-xs`}
+            >
+              {entry.eligibleCategories.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <ConfirmDeleteButton
+            label="Quitar"
+            disabled={isPending}
+            onConfirm={() => removeRegistration({ eventId, registrationId: entry.registrationId })}
+          />
+        </div>
+      )}
     </li>
   );
 }
@@ -173,11 +167,9 @@ function Row({
 export function Roster({
   eventId,
   categories,
-  allCategories,
 }: {
   eventId: string;
   categories: RosterCategory[];
-  allCategories: CategoryOption[];
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
@@ -277,7 +269,6 @@ export function Roster({
                         eventId={eventId}
                         entry={entry}
                         categoryId={category.id}
-                        categories={allCategories}
                       />
                     ))}
                   </ul>

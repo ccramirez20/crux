@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { cardClass, eyebrowClass } from '@/lib/ui';
 import { GENDER_LABEL, ROUND_TYPE_LABEL, labelFor, problemUnit } from '@/lib/labels';
+import { ConfirmDeleteButton } from '@/components/confirm-delete-button';
 import { removeCategory, removeRound } from './actions';
 import { CategoryForm } from './category-form';
 import { RoundForm } from './round-form';
@@ -66,62 +67,6 @@ function SpineNode({ tone }: { tone: 'round' | 'problem' }) {
       aria-hidden="true"
       className={`absolute -left-[7px] top-3 h-3 w-3 rounded-full border-2 ${color}`}
     />
-  );
-}
-
-// Dos pasos y no un `confirm()`, igual que quitar a un inscrito: el diálogo del
-// navegador bloquea la pestaña para preguntar algo que cabe en el propio botón.
-// Va dentro del nivel abierto y no en su encabezado, que ya es un <button>.
-function RemoveNode({
-  label,
-  takesWith,
-  remove,
-}: {
-  label: string;
-  /** Qué más se lleva por delante. Se dice al confirmar, no antes. */
-  takesWith: string | null;
-  remove: () => Promise<{ ok: true } | { ok: false; error: string }>;
-}) {
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function click() {
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
-    startTransition(async () => {
-      const result = await remove();
-      if (!result.ok) {
-        setError(result.error);
-        setConfirming(false);
-      }
-    });
-  }
-
-  return (
-    <div className="mt-1 flex flex-wrap items-center justify-end gap-2">
-      {error && (
-        <span role="alert" className="flex-1 text-xs font-medium text-red-700">
-          {error}
-        </span>
-      )}
-      {/* Qué se lleva por delante, junto al botón: una confirmación que no dice
-          qué más desaparece no está confirmando nada. */}
-      {confirming && takesWith && <span className="text-xs text-muted">{takesWith}</span>}
-      <button
-        type="button"
-        onClick={click}
-        onBlur={() => setConfirming(false)}
-        disabled={isPending}
-        className={`text-xs font-medium underline decoration-dotted underline-offset-4 ${
-          confirming ? 'text-red-700' : 'text-muted hover:text-bark'
-        }`}
-      >
-        {isPending ? 'Borrando…' : confirming ? '¿Seguro?' : label}
-      </button>
-    </div>
   );
 }
 
@@ -302,15 +247,17 @@ export function EventStructure({
                                 unit={unit}
                               />
 
-                              <RemoveNode
-                                label="Borrar ronda"
-                                takesWith={
-                                  round.problems.length > 0
-                                    ? `Se borran también ${countPhrase(round.problems.length, unit.singular, unit.plural)}.`
-                                    : null
-                                }
-                                remove={() => removeRound({ eventId, roundId: round.id })}
-                              />
+                              <div className="mt-1 flex justify-end">
+                                <ConfirmDeleteButton
+                                  label="Borrar ronda"
+                                  takesWith={
+                                    round.problems.length > 0
+                                      ? `Se borran también ${countPhrase(round.problems.length, unit.singular, unit.plural)}.`
+                                      : null
+                                  }
+                                  onConfirm={() => removeRound({ eventId, roundId: round.id })}
+                                />
+                              </div>
                             </div>
                           )}
                         </div>
@@ -319,19 +266,21 @@ export function EventStructure({
 
                     <RoundForm eventId={eventId} categoryId={category.id} />
 
-                    <RemoveNode
-                      label="Borrar categoría"
-                      takesWith={
-                        category.rounds.length > 0
-                          ? `Se borran también ${countPhrase(category.rounds.length, 'ronda', 'rondas')}${
-                              totalProblems > 0
-                                ? ` y ${countPhrase(totalProblems, unit.singular, unit.plural)}`
-                                : ''
-                            }.`
-                          : null
-                      }
-                      remove={() => removeCategory({ eventId, categoryId: category.id })}
-                    />
+                    <div className="flex justify-end">
+                      <ConfirmDeleteButton
+                        label="Borrar categoría"
+                        takesWith={
+                          category.rounds.length > 0
+                            ? `Se borran también ${countPhrase(category.rounds.length, 'ronda', 'rondas')}${
+                                totalProblems > 0
+                                  ? ` y ${countPhrase(totalProblems, unit.singular, unit.plural)}`
+                                  : ''
+                              }.`
+                            : null
+                        }
+                        onConfirm={() => removeCategory({ eventId, categoryId: category.id })}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

@@ -4,7 +4,9 @@ import { redirect } from 'next/navigation';
 import {
   and,
   athletes,
+  attempts,
   categories,
+  count,
   eq,
   events,
   organizations,
@@ -12,6 +14,7 @@ import {
   registrations,
   rounds,
 } from '@crux/db';
+import { isEligible, parseDateOnly } from '@crux/core';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { TopographicMotif } from '@/components/topographic-motif';
@@ -103,6 +106,8 @@ export default async function EventDetailPage({
       categoryName: categories.name,
       bibNumber: registrations.bibNumber,
       athleteFullName: athletes.fullName,
+      athleteGender: athletes.gender,
+      athleteBirthDate: athletes.birthDate,
     })
     .from(registrations)
     .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
@@ -112,10 +117,35 @@ export default async function EventDetailPage({
 
   // Todas las del evento, no solo las que tienen inscritos: son los destinos a
   // los que el organizador puede mover a alguien, y la categoría correcta suele
-  // ser precisamente la que está vacía.
-  const allCategories = [...new Map(treeRows.map((r) => [r.categoryId, r.categoryName])).entries()]
-    .map(([id, name]) => ({ id, name }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  // ser precisamente la que está vacía. Con género y edad para filtrar por
+  // elegibilidad, no solo el nombre.
+  const categoryOptions = [
+    ...new Map(
+      treeRows.map((r) => [
+        r.categoryId,
+        {
+          id: r.categoryId,
+          name: r.categoryName,
+          gender: r.categoryGender,
+          minAge: r.categoryMinAge,
+          maxAge: r.categoryMaxAge,
+        },
+      ]),
+    ).values(),
+  ].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+  // Quién ya tiene un intento capturado: mover o quitar deja de ser posible, y
+  // el organizador tiene que verlo antes de tocar nada, no después de un
+  // rechazo del servidor.
+  const attemptRows = await db
+    .select({ registrationId: attempts.registrationId, total: count(attempts.id) })
+    .from(attempts)
+    .innerJoin(registrations, eq(attempts.registrationId, registrations.id))
+    .where(eq(registrations.eventId, eventId))
+    .groupBy(attempts.registrationId);
+  const hasAttemptsSet = new Set(attemptRows.map((r) => r.registrationId));
+
+  const referenceDate = event.date ? parseDateOnly(event.date) : undefined;
 
   const rosterCategories: RosterCategory[] = [];
   for (const row of rosterRows) {
@@ -124,10 +154,26 @@ export default async function EventDetailPage({
       category = { id: row.categoryId, name: row.categoryName, entries: [] };
       rosterCategories.push(category);
     }
+    // Sin fecha o sin género no hay con qué comprobar elegibilidad: se deja
+    // pasar el listado completo, misma indulgencia que `moveRegistration`.
+    const eligibleCategories =
+      row.athleteBirthDate && row.athleteGender
+        ? categoryOptions.filter((option) =>
+            isEligible(option, parseDateOnly(row.athleteBirthDate!), row.athleteGender!, referenceDate),
+          )
+        : categoryOptions;
+    // La categoría actual siempre va incluida, aunque haya quedado fuera de
+    // la elegibilidad: si no, el <select> pierde su propio valor.
+    const eligibleWithCurrent = eligibleCategories.some((c) => c.id === row.categoryId)
+      ? eligibleCategories
+      : [...eligibleCategories, categoryOptions.find((c) => c.id === row.categoryId)!];
+
     category.entries.push({
       registrationId: row.registrationId,
       athleteFullName: row.athleteFullName,
       bibNumber: row.bibNumber,
+      eligibleCategories: eligibleWithCurrent,
+      hasAttempts: hasAttemptsSet.has(row.registrationId),
     });
   }
 
@@ -196,6 +242,18 @@ export default async function EventDetailPage({
     });
   }
 
+  // Si el evento entero ya tiene algún intento, borrarlo no se ofrece ni con
+  // confirmación de por medio — se decide antes de mostrar el botón, no
+  // después de un clic rechazado.
+  const [eventTally] = await db
+    .select({ total: count(attempts.id) })
+    .from(attempts)
+    .innerJoin(problems, eq(attempts.problemId, problems.id))
+    .innerJoin(rounds, eq(problems.roundId, rounds.id))
+    .innerJoin(categories, eq(rounds.categoryId, categories.id))
+    .where(eq(categories.eventId, eventId));
+  const eventHasAttempts = (eventTally?.total ?? 0) > 0;
+
   const date = formatEventDate(event.date);
 
   return (
@@ -222,6 +280,8 @@ export default async function EventDetailPage({
           registrationDeadline={event.registrationDeadline}
           timezone={event.timezone}
           judgeCode={event.judgeCode}
+          hasAttempts={eventHasAttempts}
+          registrationCount={rosterRows.length}
         />
       </div>
 
@@ -245,15 +305,11 @@ export default async function EventDetailPage({
             title="Tabla de resultados"
             description="La pantalla pública, la que abre la gente desde el teléfono. Se actualiza sola y no pide cuenta."
           />
-          {/* Igual que el enlace "Proyectar →" de la tabla pública: proyectar
-              desde un teléfono no existe. Una tablet en horizontal sí lo ve. */}
-          <div className="hidden lg:block">
-            <ShareLink
-              path={`/resultados/${event.slug}/proyectar`}
-              title="Pantalla para proyectar"
-              description="La misma competencia en una sola pantalla, sin desplazarse: la tabla, las gráficas turnándose solas y las cifras de la ronda. Ábrela en el computador del proyector y déjala ahí todo el día."
-            />
-          </div>
+          <ShareLink
+            path={`/resultados/${event.slug}/proyectar`}
+            title="Pantalla para proyectar"
+            description="La misma competencia en una sola pantalla, sin desplazarse: la tabla, las gráficas turnándose solas y las cifras de la ronda. Ábrela en el computador del proyector y déjala ahí todo el día."
+          />
           {event.judgeCode && (
             <div className={`${cardClass} flex flex-col gap-1`}>
               <span className="font-display font-semibold">Código para los jueces</span>
@@ -278,7 +334,7 @@ export default async function EventDetailPage({
       </div>
 
       <div className="w-full max-w-2xl">
-        <Roster eventId={event.id} categories={rosterCategories} allCategories={allCategories} />
+        <Roster eventId={event.id} categories={rosterCategories} />
       </div>
 
       <div className="w-full max-w-2xl">

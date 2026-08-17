@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import QRCode from 'qrcode';
 import { eyebrowClass, fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
+import { ConfirmDeleteButton } from '@/components/confirm-delete-button';
 import { removeProblem, updateProblem } from './actions';
 
 // La ficha del bloque tiene dos acciones y ninguna cabe en otra pantalla: sacar
@@ -40,7 +41,30 @@ export function ProblemCard({
   const [zoneValue, setZoneValue] = useState(zonePoints === null ? '' : String(zonePoints));
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmingRemove, setConfirmingRemove] = useState(false);
+
+  function printQr() {
+    if (!dataUrl) return;
+    const title = `${unit.singular} ${number}${name ? ` · ${name}` : ''}`;
+    const win = window.open('', '_blank', 'width=400,height=520');
+    if (!win) return;
+    win.document.title = title;
+    const style = win.document.createElement('style');
+    style.textContent = `
+      body { display:flex; flex-direction:column; align-items:center; justify-content:center;
+             gap:12px; font-family:sans-serif; margin:0; padding:24px; }
+      img { width:280px; height:280px; }
+    `;
+    win.document.head.appendChild(style);
+    const heading = win.document.createElement('h1');
+    heading.style.fontSize = '18px';
+    heading.style.margin = '0';
+    heading.textContent = title;
+    const img = win.document.createElement('img');
+    img.alt = 'QR';
+    img.onload = () => win.print();
+    img.src = dataUrl;
+    win.document.body.append(heading, img);
+  }
 
   async function toggle() {
     if (dataUrl) {
@@ -73,24 +97,6 @@ export function ProblemCard({
       return;
     }
     setIsEditing(false);
-  }
-
-  // Dos pasos y no un `confirm()`, igual que en el resto del panel. Vive dentro
-  // del panel de edición: es la misma corrección de un dato mal puesto, solo que
-  // el dato de más es el bloque entero.
-  async function remove() {
-    if (!confirmingRemove) {
-      setConfirmingRemove(true);
-      return;
-    }
-    setError(null);
-    setIsSubmitting(true);
-    const result = await removeProblem({ eventId, problemId });
-    setIsSubmitting(false);
-    if (!result.ok) {
-      setError(result.error);
-      setConfirmingRemove(false);
-    }
   }
 
   return (
@@ -144,7 +150,7 @@ export function ProblemCard({
                 className={`${fieldClass} text-center font-display font-bold`}
               />
             </div>
-            <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <label htmlFor={`edit-name-${problemId}`} className={labelClass}>
                 Nombre
               </label>
@@ -160,8 +166,8 @@ export function ProblemCard({
 
           {isLeaguePoints && (
             <>
-              <div className="flex gap-3">
-                <div className="flex flex-1 flex-col gap-1.5">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <label htmlFor={`edit-top-${problemId}`} className={labelClass}>
                     Puntos por top
                   </label>
@@ -174,7 +180,7 @@ export function ProblemCard({
                     className={fieldClass}
                   />
                 </div>
-                <div className="flex flex-1 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <label htmlFor={`edit-zone-${problemId}`} className={labelClass}>
                     Puntos por zona
                   </label>
@@ -211,17 +217,11 @@ export function ProblemCard({
             >
               {isSubmitting ? 'Guardando…' : 'Guardar'}
             </button>
-            <button
-              type="button"
-              onClick={() => void remove()}
-              onBlur={() => setConfirmingRemove(false)}
+            <ConfirmDeleteButton
+              label={`Borrar ${unit.singular}`}
               disabled={isSubmitting}
-              className={`text-xs font-medium underline decoration-dotted underline-offset-4 ${
-                confirmingRemove ? 'text-red-700' : 'text-muted hover:text-bark'
-              }`}
-            >
-              {confirmingRemove ? '¿Seguro?' : `Borrar ${unit.singular}`}
-            </button>
+              onConfirm={() => removeProblem({ eventId, problemId })}
+            />
           </div>
         </div>
       )}
@@ -236,6 +236,13 @@ export function ProblemCard({
             height={240}
             className="rounded bg-white p-2"
           />
+          <button
+            type="button"
+            onClick={printQr}
+            className="shrink-0 rounded border-[1.5px] border-pine px-3 py-1.5 text-xs font-semibold text-pine transition hover:bg-pine hover:text-white"
+          >
+            Imprimir
+          </button>
           <p className="max-w-[280px] text-center text-xs text-muted">
             Imprímelo y pégalo junto {unit.singular === 'ruta' ? 'a la ruta' : 'al bloque'}. El juez
             lo escanea, escribe el código del evento y entra directo a puntuar.
