@@ -27,8 +27,10 @@ export function ConfirmDeleteButton({
     startTransition(async () => {
       const result = await onConfirm();
       if (!result.ok) {
+        // No se colapsa a la vista de un botón: el `<span role="alert">` del
+        // error solo existe en la rama `confirming`, y cerrarla lo escondía
+        // hasta que el usuario reabriera el confirm.
         setError(result.error);
-        setConfirming(false);
       }
     });
   }

@@ -549,6 +549,9 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
  */
 export const getLeaderboard = unstable_cache(loadLeaderboard, ['leaderboard'], {
   revalidate: 5,
+  // Tagged so /api/attempts can force a fresh read on write instead of
+  // waiting out `revalidate` — see the comment in that route.
+  tags: ['leaderboard'],
 });
 
 export interface SiblingEvent {

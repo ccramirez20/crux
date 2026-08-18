@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { attempts, categories, eq, events, problems, registrations, rounds, type Db } from '@crux/db';
 import { resolveCurrentAttempts } from '@crux/scoring';
@@ -153,6 +154,11 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
     }
     // Same clientAttemptId already synced — idempotent re-delivery, not an error.
   }
+
+  // Forces getLeaderboard to recompute on the next read instead of serving
+  // the pre-attempt snapshot until `revalidate` catches up — see route.ts
+  // for /api/resultados for why that gap mattered.
+  revalidateTag('leaderboard');
 
   return NextResponse.json({ ok: true });
 }
