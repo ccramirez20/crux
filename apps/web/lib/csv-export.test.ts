@@ -14,6 +14,7 @@ function payload(overrides: Partial<LeaderboardPayload> = {}): LeaderboardPayloa
     },
     categories: [],
     updatedAt: '2026-08-18T00:00:00.000Z',
+    lastActivityAt: null,
     ...overrides,
   };
 }

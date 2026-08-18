@@ -76,6 +76,7 @@ function payload(rounds: LeaderboardRound[], category: Partial<LeaderboardCatego
     },
     categories: [{ id: 'cat-1', name: 'Open Femenina', rounds, ...category }],
     updatedAt: '2026-08-12T00:00:00Z',
+    lastActivityAt: null,
   };
 }
 

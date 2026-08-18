@@ -20,6 +20,7 @@ import type {
   LeaderboardRow,
   SiblingEvents,
 } from '@/lib/leaderboard';
+import { isLive } from '@/lib/live-status';
 import { brandWordClass } from '@/lib/ui';
 import { useLeaderboard } from '@/lib/use-leaderboard';
 import { LeaderboardCharts, hoverHandlers } from './leaderboard-charts';
@@ -428,20 +429,34 @@ export function LeaderboardScreen({
                 Proyectar →
               </Link>
             <p className="flex items-center gap-2.5 font-display text-lg font-semibold text-pine">
-              <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
-              {/* Dos cosas, las dos necesarias para que el reloj no mienta.
-                  `timeZone`: sin él, el render de servidor cae en UTC y tras un
-                  refresh duro la hora sale 5h adelante (el servidor de Vercel no
-                  está en Bogotá). `hour12: false`: con a. m./p. m., el ICU de
-                  Node y el de Chrome usan distinto carácter de espacio antes del
-                  rótulo, y la hidratación falla por un texto que a la vista es
-                  idéntico — eso era lo que silenciaba el `suppressHydrationWarning`
-                  que vivía aquí. Sin rótulo no hay espacio que discrepar. */}
-              En vivo ·{' '}
-              {new Date(data.updatedAt).toLocaleTimeString('es-CO', {
-                timeZone: data.event.timezone,
-                hour12: false,
-              })}
+              {/* Sin un estado de evento explícito en el modelo, "en vivo" se
+                  infiere de si alguien capturó algo hace poco (ver
+                  lib/live-status.ts) — si no, dice que son resultados finales
+                  en vez de mentir con un punto pulsando sobre un evento que ya
+                  terminó hace meses. */}
+              {isLive(data.lastActivityAt, new Date(data.updatedAt)) ? (
+                <>
+                  <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
+                  {/* Dos cosas, las dos necesarias para que el reloj no mienta.
+                      `timeZone`: sin él, el render de servidor cae en UTC y tras un
+                      refresh duro la hora sale 5h adelante (el servidor de Vercel no
+                      está en Bogotá). `hour12: false`: con a. m./p. m., el ICU de
+                      Node y el de Chrome usan distinto carácter de espacio antes del
+                      rótulo, y la hidratación falla por un texto que a la vista es
+                      idéntico — eso era lo que silenciaba el `suppressHydrationWarning`
+                      que vivía aquí. Sin rótulo no hay espacio que discrepar. */}
+                  En vivo ·{' '}
+                  {new Date(data.updatedAt).toLocaleTimeString('es-CO', {
+                    timeZone: data.event.timezone,
+                    hour12: false,
+                  })}
+                </>
+              ) : (
+                <>
+                  <span className="h-3 w-3 rounded-full bg-cardborder" aria-hidden />
+                  Resultados finales
+                </>
+              )}
             </p>
             </div>
           </div>

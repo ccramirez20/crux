@@ -11,6 +11,7 @@ import {
   problemUnit,
 } from '@/lib/labels';
 import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound } from '@/lib/leaderboard';
+import { isLive } from '@/lib/live-status';
 import { brandWordClass } from '@/lib/ui';
 import { useLeaderboard } from '@/lib/use-leaderboard';
 import { AttemptsPerTop, BumpChart, Wall, roundHighlights } from './leaderboard-charts';
@@ -611,7 +612,11 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
             </span>
           )}
           <span className="flex items-center gap-2 font-display text-lg font-semibold text-pine tabular-nums">
-            <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
+            {isLive(data.lastActivityAt, new Date(data.updatedAt)) ? (
+              <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
+            ) : (
+              <span className="h-3 w-3 rounded-full bg-cardborder" aria-hidden />
+            )}
             {new Date(data.updatedAt).toLocaleTimeString('es-CO', {
               timeZone: data.event.timezone,
               hour12: false,

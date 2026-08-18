@@ -205,6 +205,8 @@ export interface LeaderboardPayload {
   event: LeaderboardEventInfo;
   categories: LeaderboardCategory[];
   updatedAt: string;
+  /** El `capturedAt` más reciente entre todas las rondas, o null si nadie ha capturado nada. */
+  lastActivityAt: string | null;
 }
 
 type RoundPoints = Record<string, { topPoints: number; zonePoints: number | null }>;
@@ -448,7 +450,14 @@ export function buildLeaderboard(
     return { id: category.id, name: category.name, rounds };
   });
 
-  return { event, categories, updatedAt: new Date().toISOString() };
+  // El más reciente entre todas las rondas — es lo que decide si la pantalla
+  // dice "En vivo" o "Resultados finales" (ver apps/web/lib/live-status.ts).
+  const lastActivityAt = categories
+    .flatMap((c) => c.rounds)
+    .flatMap((r) => (r.lastAttempts[0] ? [r.lastAttempts[0].capturedAt] : []))
+    .reduce<string | null>((max, ts) => (max === null || ts > max ? ts : max), null);
+
+  return { event, categories, updatedAt: new Date().toISOString(), lastActivityAt };
 }
 
 async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null> {
