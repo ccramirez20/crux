@@ -20,7 +20,7 @@ import type {
   LeaderboardRow,
   SiblingEvents,
 } from '@/lib/leaderboard';
-import { isLive } from '@/lib/live-status';
+import { liveState } from '@/lib/live-status';
 import { brandWordClass } from '@/lib/ui';
 import { useLeaderboard } from '@/lib/use-leaderboard';
 import { LeaderboardCharts, hoverHandlers } from './leaderboard-charts';
@@ -429,12 +429,13 @@ export function LeaderboardScreen({
                 Proyectar →
               </Link>
             <p className="flex items-center gap-2.5 font-display text-lg font-semibold text-pine">
-              {/* Sin un estado de evento explícito en el modelo, "en vivo" se
-                  infiere de si alguien capturó algo hace poco (ver
-                  lib/live-status.ts) — si no, dice que son resultados finales
-                  en vez de mentir con un punto pulsando sobre un evento que ya
-                  terminó hace meses. */}
-              {isLive(data.lastActivityAt, new Date(data.updatedAt)) ? (
+              {/* Sin un estado de evento explícito en el modelo, esto se
+                  infiere de cuándo se capturó algo por última vez (ver
+                  lib/live-status.ts): nadie ha capturado nada todavía, alguien
+                  capturó hace poco, o ya pasó rato sin que nadie capture — en
+                  vez de mentir con un punto pulsando sobre un evento que no ha
+                  empezado o que ya terminó hace meses. */}
+              {liveState(data.lastActivityAt, new Date(data.updatedAt)) === 'live' ? (
                 <>
                   <span className="h-3 w-3 animate-pulse rounded-full bg-gold" aria-hidden />
                   {/* Dos cosas, las dos necesarias para que el reloj no mienta.
@@ -454,7 +455,9 @@ export function LeaderboardScreen({
               ) : (
                 <>
                   <span className="h-3 w-3 rounded-full bg-cardborder" aria-hidden />
-                  Resultados finales
+                  {liveState(data.lastActivityAt, new Date(data.updatedAt)) === 'not-started'
+                    ? 'Aún no comienza'
+                    : 'Resultados listos'}
                 </>
               )}
             </p>

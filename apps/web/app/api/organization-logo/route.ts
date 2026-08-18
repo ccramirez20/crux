@@ -46,8 +46,16 @@ export async function POST(request: Request): Promise<NextResponse<Result>> {
     return NextResponse.json({ ok: false, error: 'Esa organización no existe o no te pertenece.' }, { status: 403 });
   }
 
-  const blob = await put(file.name, file, { access: 'public', addRandomSuffix: true });
-  await db.update(organizations).set({ logo: blob.url }).where(eq(organizations.id, org.id));
-
-  return NextResponse.json({ ok: true, url: blob.url });
+  try {
+    const blob = await put(file.name, file, { access: 'public', addRandomSuffix: true });
+    await db.update(organizations).set({ logo: blob.url }).where(eq(organizations.id, org.id));
+    return NextResponse.json({ ok: true, url: blob.url });
+  } catch (error) {
+    // Sin este `catch`, un `put()` que falla (típicamente
+    // `BLOB_READ_WRITE_TOKEN` ausente o inválido) tira una excepción sin
+    // capturar: Next responde con su página de error genérica en vez de JSON,
+    // `response.json()` truena en el cliente, y lo único que ve quien sube el
+    // logo es "No se pudo subir el logo" sin ninguna pista de por qué.
+    return NextResponse.json({ ok: false, error: (error as Error).message }, { status: 500 });
+  }
 }
