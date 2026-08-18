@@ -18,7 +18,12 @@ export default async function OrganizerHomePage() {
   const db = getDb();
 
   const myOrganizations = await db
-    .select({ id: organizations.id, name: organizations.name, location: organizations.location })
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      location: organizations.location,
+      logo: organizations.logo,
+    })
     .from(organizations)
     .where(eq(organizations.ownerId, ownerId))
     .orderBy(organizations.createdAt);
@@ -92,14 +97,24 @@ export default async function OrganizerHomePage() {
             solo le pasa a la cuenta que administra la plataforma. */}
         {selected && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {myOrganizations.length > 1 ? (
-              <OrganizationPicker organizations={myOrganizations} selectedId={selected.id} />
-            ) : (
-              <p className="text-sm text-muted">
-                <span className="font-display font-semibold text-pine">{selected.name}</span> ·{' '}
-                {selected.location}
-              </p>
-            )}
+            <div className="flex items-center gap-3">
+              {selected.logo && (
+                // eslint-disable-next-line @next/next/no-img-element -- logo remoto de Vercel Blob, no un asset que next/image pueda optimizar
+                <img
+                  src={selected.logo}
+                  alt=""
+                  className="h-9 w-9 shrink-0 rounded-lg object-contain"
+                />
+              )}
+              {myOrganizations.length > 1 ? (
+                <OrganizationPicker organizations={myOrganizations} selectedId={selected.id} />
+              ) : (
+                <p className="text-sm text-muted">
+                  <span className="font-display font-semibold text-pine">{selected.name}</span> ·{' '}
+                  {selected.location}
+                </p>
+              )}
+            </div>
             <Link href="/panel/organization" className="text-sm font-medium text-pine underline">
               Logo del gimnasio
             </Link>

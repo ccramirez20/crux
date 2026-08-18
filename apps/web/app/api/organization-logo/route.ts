@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { eq, organizations } from '@crux/db';
@@ -49,6 +50,11 @@ export async function POST(request: Request): Promise<NextResponse<Result>> {
   try {
     const blob = await put(file.name, file, { access: 'public', addRandomSuffix: true });
     await db.update(organizations).set({ logo: blob.url }).where(eq(organizations.id, org.id));
+    // A diferencia de las Server Actions del panel, esta ruta no revalidaba
+    // nada — el logo nuevo podía quedar escondido detrás del caché de rutas
+    // del cliente en /panel y en cada /panel/events/[id] hasta un refresco
+    // duro. 'layout' invalida todo lo que cuelga de /panel de una sola vez.
+    revalidatePath('/panel', 'layout');
     return NextResponse.json({ ok: true, url: blob.url });
   } catch (error) {
     // Sin este `catch`, un `put()` que falla (típicamente
