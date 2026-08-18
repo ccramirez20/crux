@@ -1,3 +1,7 @@
+// Redeploy nudge 2026-08-18: el push del try/catch de abajo no dejó registro
+// de despliegue en Vercel (webhook perdido), y un commit vacío no sirve para
+// forzarlo — Vercel lo marca "Skipped - Not affected" al no ver diff. Este
+// comentario es el diff real que hace falta para que sí construya.
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
