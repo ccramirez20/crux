@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { translateAuthError } from '@/lib/auth-error-messages';
 import { TopographicMotif } from '@/components/topographic-motif';
 import { PasswordField } from '@/components/password-field';
+import { PrivacyNotice } from '@/components/privacy-notice';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 
 const errorBodySchema = z.object({ code: z.string(), message: z.string() }).partial();
@@ -152,6 +153,7 @@ export default function SignUpPage() {
             pide otro.
           </p>
         </div>
+        <PrivacyNotice variant="organizador" />
         {error && (
           <p role="alert" className="text-sm font-medium text-red-700">
             {error}

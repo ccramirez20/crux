@@ -133,6 +133,10 @@ export const registrations = pgTable(
       .notNull()
       .references(() => categories.id),
     bibNumber: text('bib_number'),
+    // Nombre de quien autorizó el tratamiento de datos, solo cuando el atleta
+    // era menor de edad al inscribirse (Ley 1581 de 2012, art. 7). Null para
+    // adultos — no hay nada que autorizar aparte de su propio dato.
+    minorAuthorizedBy: text('minor_authorized_by'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

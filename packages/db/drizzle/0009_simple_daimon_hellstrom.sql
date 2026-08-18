@@ -1,0 +1,1 @@
+ALTER TABLE "registrations" ADD COLUMN "minor_authorized_by" text;

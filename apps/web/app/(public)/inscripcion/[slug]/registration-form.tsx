@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { GENDERS, isEligible, parseDateOnly, type Gender } from '@crux/core';
+import { GENDERS, isEligible, isMinor, parseDateOnly, type Gender } from '@crux/core';
 import { registerAthlete } from './actions';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
+import { PrivacyNotice } from '@/components/privacy-notice';
 
 type Category = {
   id: string;
@@ -31,9 +32,14 @@ export function RegistrationForm({
   const [birthDate, setBirthDate] = useState('');
   const [gender, setGender] = useState<Gender | ''>('');
   const [categoryId, setCategoryId] = useState('');
+  const [minorAuthorizedBy, setMinorAuthorizedBy] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edad legal real, hoy — no la del evento: es sobre si alguien puede
+  // autorizar sus propios datos ahora mismo, no en qué categoría compite.
+  const minor = birthDate ? isMinor(birthDate) : false;
 
   const referenceDate = eventDate ? parseDateOnly(eventDate) : undefined;
   const eligibleCategories =
@@ -58,6 +64,7 @@ export function RegistrationForm({
         documentId,
         birthDate,
         gender,
+        minorAuthorizedBy: minor ? minorAuthorizedBy : undefined,
       });
       if (!result.ok) {
         setError(result.error);
@@ -201,12 +208,39 @@ export function RegistrationForm({
         </p>
       )}
 
+      {minor && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="minor-authorized-by" className="text-sm font-medium text-bark">
+            Nombre de quien autoriza (padre, madre o acudiente)
+          </label>
+          <input
+            id="minor-authorized-by"
+            type="text"
+            autoComplete="name"
+            value={minorAuthorizedBy}
+            onChange={(event) => setMinorAuthorizedBy(event.target.value)}
+            required
+            className={fieldClass}
+          />
+          <p className="text-xs text-muted">
+            El competidor es menor de edad: quien lo inscribe debe ser su padre, madre o
+            acudiente, y autoriza el tratamiento de sus datos al escribir su nombre aquí.
+          </p>
+        </div>
+      )}
+
+      <PrivacyNotice variant="inscripcion" />
+
       {error && (
         <p role="alert" className="text-sm font-medium text-red-700">
           {error}
         </p>
       )}
-      <button type="submit" disabled={isSubmitting || !categoryId} className={primaryButtonClass}>
+      <button
+        type="submit"
+        disabled={isSubmitting || !categoryId || (minor && !minorAuthorizedBy.trim())}
+        className={primaryButtonClass}
+      >
         {isSubmitting ? 'Inscribiendo…' : 'Inscribirme'}
       </button>
     </form>

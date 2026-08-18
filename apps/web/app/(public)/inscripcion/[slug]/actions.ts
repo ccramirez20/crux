@@ -6,6 +6,7 @@ import { GENDERS, isEligible, isRegistrationOpen, parseDateOnly } from '@crux/co
 import { and, athletes, categories, eq, events, registrations } from '@crux/db';
 import { getDb } from '@/lib/db';
 import { isUniqueViolation } from '@/lib/db-errors';
+import { authorizationSatisfied } from '@/lib/minor-authorization';
 import {
   REGISTRATION_MAX,
   REGISTRATION_WINDOW_MS,
@@ -16,20 +17,29 @@ import {
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
-const registerInputSchema = z.object({
-  eventId: z.string().uuid(),
-  categoryId: z.string().uuid(),
-  fullName: z.string().min(1),
-  documentId: z.string().min(1),
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  gender: z.enum(GENDERS),
-});
+const registerInputSchema = z
+  .object({
+    eventId: z.string().uuid(),
+    categoryId: z.string().uuid(),
+    fullName: z.string().min(1),
+    documentId: z.string().min(1),
+    birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    gender: z.enum(GENDERS),
+    minorAuthorizedBy: z.string().trim().min(1).optional(),
+  })
+  // Ley 1581 de 2012, art. 7: sin este nombre no hay quién responda por la
+  // autorización de un menor, así que la inscripción no se puede crear.
+  .refine((data) => authorizationSatisfied(data.birthDate, data.minorAuthorizedBy), {
+    message: 'Falta el nombre de quien autoriza, porque el competidor es menor de edad.',
+    path: ['minorAuthorizedBy'],
+  });
 type RegisterAthleteInput = z.infer<typeof registerInputSchema>;
 
 export async function registerAthlete(input: RegisterAthleteInput): Promise<ActionResult> {
   const parsed = registerInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos de inscripción inválidos.' };
+    const minorIssue = parsed.error.issues.find((issue) => issue.path[0] === 'minorAuthorizedBy');
+    return { ok: false, error: minorIssue?.message ?? 'Datos de inscripción inválidos.' };
   }
 
   // El enlace de inscripción es público a propósito: no hay código que fallar,
@@ -45,7 +55,8 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
   }
 
   const db = getDb();
-  const { eventId, categoryId, fullName, documentId, birthDate, gender } = parsed.data;
+  const { eventId, categoryId, fullName, documentId, birthDate, gender, minorAuthorizedBy } =
+    parsed.data;
 
   const [category] = await db
     .select({
@@ -132,7 +143,9 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
   }
 
   try {
-    await db.insert(registrations).values({ athleteId, eventId, categoryId });
+    await db
+      .insert(registrations)
+      .values({ athleteId, eventId, categoryId, minorAuthorizedBy: minorAuthorizedBy ?? null });
   } catch (error) {
     if (isUniqueViolation(error)) {
       // Se dice en qué categoría quedó y qué hacer, porque el caso real no es
