@@ -11,6 +11,7 @@ function payload(overrides: Partial<LeaderboardPayload> = {}): LeaderboardPayloa
       scoringFormat: 'classic_tops_zones',
       date: '2026-08-22',
       timezone: 'America/Bogota',
+      organizationLogo: null,
     },
     categories: [],
     updatedAt: '2026-08-18T00:00:00.000Z',

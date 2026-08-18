@@ -108,6 +108,7 @@ const event = {
   scoringFormat: 'classic_tops_zones',
   date: '2026-08-15',
   timezone: 'America/Bogota',
+  organizationLogo: null,
 };
 
 // Two rounds in one category: qualification has blocks 1 and 2, the final has

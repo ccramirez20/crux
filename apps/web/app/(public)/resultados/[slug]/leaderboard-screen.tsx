@@ -409,12 +409,22 @@ export function LeaderboardScreen({
               sala y la que más gente ve, y era la única sin nombrarnos. */}
           <span className="font-display text-lg font-bold tracking-[0.2em] text-pine">CRUX</span>
           <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <h1 className="font-display text-6xl font-bold leading-none">{data.event.name}</h1>
-              <p className="mt-2 text-xl text-muted">
-                {labelFor(DISCIPLINE_LABEL, data.event.discipline)}
-                {date ? ` · ${date}` : ''}
-              </p>
+            <div className="flex items-center gap-5">
+              {data.event.organizationLogo && (
+                // eslint-disable-next-line @next/next/no-img-element -- logo remoto de Vercel Blob, no un asset que next/image pueda optimizar
+                <img
+                  src={data.event.organizationLogo}
+                  alt=""
+                  className="h-16 w-16 shrink-0 rounded-lg object-contain"
+                />
+              )}
+              <div>
+                <h1 className="font-display text-6xl font-bold leading-none">{data.event.name}</h1>
+                <p className="mt-2 text-xl text-muted">
+                  {labelFor(DISCIPLINE_LABEL, data.event.discipline)}
+                  {date ? ` · ${date}` : ''}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-5">
               {/* El modo proyección se ofrece desde aquí y no solo desde el

@@ -28,6 +28,7 @@ export interface LeaderboardEventInfo {
   scoringFormat: string;
   date: string | null;
   timezone: string;
+  organizationLogo: string | null;
 }
 
 export interface TreeRow {
@@ -472,8 +473,10 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
       scoringFormat: events.scoringFormat,
       date: events.date,
       timezone: events.timezone,
+      organizationLogo: organizations.logo,
     })
     .from(events)
+    .innerJoin(organizations, eq(organizations.id, events.organizationId))
     .where(eq(events.slug, slug));
   if (!event) {
     return null;
@@ -544,6 +547,7 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
       scoringFormat: event.scoringFormat,
       date: event.date,
       timezone: event.timezone,
+      organizationLogo: event.organizationLogo,
     },
     treeRows,
     eventRegistrations,

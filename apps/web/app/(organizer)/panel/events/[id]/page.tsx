@@ -62,6 +62,7 @@ export default async function EventDetailPage({
       judgeCode: events.judgeCode,
       timezone: events.timezone,
       organizationName: organizations.name,
+      organizationLogo: organizations.logo,
     })
     .from(events)
     .innerJoin(organizations, eq(organizations.id, events.organizationId))
@@ -266,7 +267,13 @@ export default async function EventDetailPage({
         <Link href="/panel" className="text-sm font-medium text-pine underline">
           ← Tus eventos
         </Link>
-        <span className={eyebrowClass}>{event.organizationName}</span>
+        <div className="flex items-center gap-2">
+          {event.organizationLogo && (
+            // eslint-disable-next-line @next/next/no-img-element -- logo remoto de Vercel Blob, no un asset que next/image pueda optimizar
+            <img src={event.organizationLogo} alt="" className="h-5 w-5 rounded object-contain" />
+          )}
+          <span className={eyebrowClass}>{event.organizationName}</span>
+        </div>
         <h1 className="font-display text-3xl font-bold">{event.name}</h1>
         <p className="text-sm text-muted">
           {labelFor(DISCIPLINE_LABEL, event.discipline)}

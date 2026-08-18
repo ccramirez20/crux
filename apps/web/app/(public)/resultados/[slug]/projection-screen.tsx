@@ -589,6 +589,14 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
     <main className="flex h-screen flex-col gap-3 overflow-hidden bg-stone px-6 py-4">
       <header className="flex shrink-0 items-center gap-6">
         <PeakMark />
+        {data.event.organizationLogo && (
+          // eslint-disable-next-line @next/next/no-img-element -- logo remoto de Vercel Blob, no un asset que next/image pueda optimizar
+          <img
+            src={data.event.organizationLogo}
+            alt=""
+            className="h-11 w-11 shrink-0 rounded-lg object-contain"
+          />
+        )}
         <div className="min-w-0 shrink-0">
           <span className={`${brandWordClass} text-sm`}>CRUX</span>
           <h1 className="truncate font-display text-4xl font-bold leading-tight">{data.event.name}</h1>
