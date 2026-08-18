@@ -8,5 +8,10 @@ export type LiveState = 'not-started' | 'live' | 'settled';
 
 export function liveState(lastActivityAt: string | null, now: Date = new Date()): LiveState {
   if (!lastActivityAt) return 'not-started';
-  return now.getTime() - Date.parse(lastActivityAt) <= LIVE_WINDOW_MS ? 'live' : 'settled';
+  const elapsed = now.getTime() - Date.parse(lastActivityAt);
+  // Una captura "en el futuro" no es reciente, aunque la resta salga negativa
+  // y negativa siempre sea <= la ventana. Pasa con datos de siembra fechados
+  // adelante, y podría pasar con el reloj de un teléfono mal puesto.
+  if (elapsed < 0) return 'settled';
+  return elapsed <= LIVE_WINDOW_MS ? 'live' : 'settled';
 }

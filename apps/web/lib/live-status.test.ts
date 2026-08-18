@@ -20,4 +20,10 @@ describe('liveState', () => {
   it('is settled for an event finished long ago', () => {
     expect(liveState('2026-06-13T10:00:00.000Z', NOW)).toBe('settled');
   });
+
+  it('is settled, not live, when the last capture is in the future', () => {
+    // Pasa con datos de siembra fechados adelante (el evento demo "Fecha 2"
+    // vive en 2026-08-22) — la resta negativa no puede colarse como "reciente".
+    expect(liveState('2026-08-22T20:52:57.000Z', NOW)).toBe('settled');
+  });
 });
