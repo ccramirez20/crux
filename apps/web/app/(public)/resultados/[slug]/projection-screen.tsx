@@ -588,7 +588,6 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   return (
     <main className="flex h-screen flex-col gap-3 overflow-hidden bg-stone px-6 py-4">
       <header className="flex shrink-0 items-center gap-6">
-        <PeakMark />
         {data.event.organizationLogo && (
           // eslint-disable-next-line @next/next/no-img-element -- logo remoto de Vercel Blob, no un asset que next/image pueda optimizar
           <img
@@ -614,6 +613,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
+          <PeakMark />
           {current && (
             <span className="rounded-full bg-pine px-4 py-1.5 font-display text-lg font-semibold text-white">
               {current.category.name}
