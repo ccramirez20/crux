@@ -326,7 +326,15 @@ export default async function EventDetailPage({
       </details>
 
       <div className="w-full max-w-2xl">
-        <h2 className="font-display text-xl font-bold">Inscritos</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-xl font-bold">Inscritos</h2>
+          <a
+            href={`/panel/events/${event.id}/export.csv`}
+            className="text-xs font-medium text-pine underline decoration-dotted underline-offset-4 hover:text-bark"
+          >
+            Descargar CSV de la competencia
+          </a>
+        </div>
         <p className="mt-1 text-sm text-muted">
           Quién se inscribió y con qué dorsal. El dorsal es opcional: si lo dejas vacío, los jueces
           buscan por nombre, que también funciona.
