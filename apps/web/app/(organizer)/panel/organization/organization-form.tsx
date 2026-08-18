@@ -1,9 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
 import { labelClass } from '@/lib/ui';
-import { updateOrganizationLogo } from './actions';
 
 export function OrganizationLogoForm({
   organizationId,
@@ -30,18 +28,17 @@ export function OrganizationLogoForm({
     localPreviewRef.current = localUrl;
     setPreview(localUrl);
     try {
-      const blob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/organization-logo',
-        clientPayload: organizationId,
-      });
-      const result = await updateOrganizationLogo({ organizationId, logoUrl: blob.url });
+      const body = new FormData();
+      body.set('file', file);
+      body.set('organizationId', organizationId);
+      const response = await fetch('/api/organization-logo', { method: 'POST', body });
+      const result: { ok: true; url: string } | { ok: false; error: string } = await response.json();
       if (!result.ok) {
         setError(result.error);
         setPreview(logo);
         return;
       }
-      setPreview(blob.url);
+      setPreview(result.url);
     } catch {
       setError('No se pudo subir el logo. Inténtalo de nuevo.');
       setPreview(logo);
