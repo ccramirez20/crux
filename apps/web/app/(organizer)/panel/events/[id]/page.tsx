@@ -280,16 +280,24 @@ export default async function EventDetailPage({
           {date ? ` · ${date}` : ' · sin fecha'} ·{' '}
           {labelFor(SCORING_FORMAT_LABEL, event.scoringFormat)}
         </p>
-        <EventForm
-          eventId={event.id}
-          name={event.name}
-          date={event.date}
-          registrationDeadline={event.registrationDeadline}
-          timezone={event.timezone}
-          judgeCode={event.judgeCode}
-          hasAttempts={eventHasAttempts}
-          registrationCount={rosterRows.length}
-        />
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <EventForm
+            eventId={event.id}
+            name={event.name}
+            date={event.date}
+            registrationDeadline={event.registrationDeadline}
+            timezone={event.timezone}
+            judgeCode={event.judgeCode}
+            hasAttempts={eventHasAttempts}
+            registrationCount={rosterRows.length}
+          />
+          <a
+            href={`/panel/events/${event.id}/export.csv`}
+            className="text-xs font-medium text-pine underline decoration-dotted underline-offset-4 hover:text-bark"
+          >
+            Descargar CSV de la competencia
+          </a>
+        </div>
       </div>
 
       {/* Cerrado por defecto. Estas cuatro tarjetas se usan una vez —copias el
@@ -333,15 +341,7 @@ export default async function EventDetailPage({
       </details>
 
       <div className="w-full max-w-2xl">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-xl font-bold">Inscritos</h2>
-          <a
-            href={`/panel/events/${event.id}/export.csv`}
-            className="text-xs font-medium text-pine underline decoration-dotted underline-offset-4 hover:text-bark"
-          >
-            Descargar CSV de la competencia
-          </a>
-        </div>
+        <h2 className="font-display text-xl font-bold">Inscritos</h2>
         <p className="mt-1 text-sm text-muted">
           Quién se inscribió y con qué dorsal. El dorsal es opcional: si lo dejas vacío, los jueces
           buscan por nombre, que también funciona.
