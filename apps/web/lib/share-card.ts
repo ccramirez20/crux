@@ -8,7 +8,7 @@ import { DISCIPLINE_LABEL, formatEventDate, labelFor, ordinal } from './labels';
 // existen — el perfil del atleta, que ya pasó por getLeaderboard/scoreRound —
 // nada se recalcula ni se guarda aparte.
 
-export type ShareCardVariant = 'podium' | 'progress' | 'debut';
+type ShareCardVariant = 'podium' | 'progress' | 'debut';
 
 export interface ShareCard {
   variant: ShareCardVariant;

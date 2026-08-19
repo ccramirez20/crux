@@ -18,7 +18,6 @@ import {
 } from '@crux/db';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
-import { isUniqueViolation } from '@/lib/db-errors';
 import { leagueBlockNeedsPoints } from '@/lib/problem-points';
 
 type ActionResult = { ok: true } | { ok: false; error: string };

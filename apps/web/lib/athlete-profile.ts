@@ -69,7 +69,7 @@ export interface DisciplineTotals {
   attemptsPerTop: number | null;
 }
 
-export interface CareerTotals {
+interface CareerTotals {
   events: number;
   /** Fecha del evento más antiguo: desde cuándo compite. */
   since: string | null;

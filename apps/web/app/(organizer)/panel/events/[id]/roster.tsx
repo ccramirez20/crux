@@ -5,12 +5,12 @@ import { eyebrowClass, fieldClass } from '@/lib/ui';
 import { ConfirmDeleteButton } from '@/components/confirm-delete-button';
 import { moveRegistration, numberCategory, removeRegistration, setBibNumber } from './actions';
 
-export interface CategoryOption {
+interface CategoryOption {
   id: string;
   name: string;
 }
 
-export interface RosterEntry {
+interface RosterEntry {
   registrationId: string;
   athleteFullName: string;
   bibNumber: string | null;

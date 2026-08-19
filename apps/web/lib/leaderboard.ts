@@ -97,7 +97,7 @@ export interface LeaderboardRow {
  * attempt 70. Blocks are the common yardstick, so a point is "the round scored
  * over blocks 1..n", and the attempt count rides along as real volume.
  */
-export interface TimelinePoint {
+interface TimelinePoint {
   /** The block this point closes. The tick on screen. */
   problemNumber: number;
   /** Attempts judged on blocks 1..n across the category — secondary information. */
@@ -106,7 +106,7 @@ export interface TimelinePoint {
 }
 
 /** How hard a block turned out to be, which is only knowable from the wall. */
-export interface ProblemStats {
+interface ProblemStats {
   problemId: string;
   number: number;
   tops: number;
@@ -125,7 +125,7 @@ export interface ProblemStats {
  * que una pared proyectada se sienta viva entre actualizaciones: alguien acaba
  * de escalar y la sala lo ve. Va por ronda porque es lo que se proyecta.
  */
-export interface LastAttempt {
+interface LastAttempt {
   athleteName: string;
   problemNumber: number;
   top: boolean;
@@ -567,7 +567,7 @@ export const getLeaderboard = unstable_cache(loadLeaderboard, ['leaderboard'], {
   tags: ['leaderboard'],
 });
 
-export interface SiblingEvent {
+interface SiblingEvent {
   slug: string;
   name: string;
   date: string | null;

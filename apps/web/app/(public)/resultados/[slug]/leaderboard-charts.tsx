@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { SCORE_TERM } from '@/lib/labels';
-import { roundHighlights, type Highlight } from '@/lib/round-highlights';
+import { roundHighlights } from '@/lib/round-highlights';
 import { brandWordClass } from '@/lib/ui';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 
@@ -129,7 +129,7 @@ function StatTile({
   );
 }
 
-export function Headline({
+function Headline({
   round,
   unit,
   isHeight,
@@ -149,7 +149,6 @@ export function Headline({
   );
 }
 
-export type { Highlight };
 export { roundHighlights };
 
 /* ------------------------------------------------------------- bump chart */

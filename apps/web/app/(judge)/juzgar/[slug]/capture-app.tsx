@@ -7,7 +7,7 @@ import { BlockPicker } from './block-picker';
 import { JudgeCodeGate } from './judge-code-gate';
 
 export type JudgeProblem = { id: string; number: number; name: string | null };
-export type JudgeRound = { id: string; type: string; order: number; problems: JudgeProblem[] };
+type JudgeRound = { id: string; type: string; order: number; problems: JudgeProblem[] };
 export type JudgeCategory = { id: string; name: string; rounds: JudgeRound[] };
 export type JudgeRegistration = {
   id: string;
