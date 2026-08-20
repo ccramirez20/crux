@@ -70,9 +70,17 @@ export default async function OrganizerHomePage() {
             {/* Solo para quien administra la plataforma. Para el resto el enlace
                 no existe, igual que la ruta. */}
             {isAdmin(session?.user.email) && (
-              <Link href="/panel/invites" className="text-sm font-medium text-pine underline">
-                Invitaciones
-              </Link>
+              <>
+                <Link href="/panel/invites" className="text-sm font-medium text-pine underline">
+                  Invitaciones
+                </Link>
+                <Link
+                  href="/panel/admin/organizations"
+                  className="text-sm font-medium text-pine underline"
+                >
+                  Organizaciones
+                </Link>
+              </>
             )}
             <a href="/manual.html" target="_blank" rel="noreferrer" className="text-sm font-medium text-pine underline">
               Manual
@@ -88,7 +96,7 @@ export default async function OrganizerHomePage() {
         <div>
           <h1 className="font-display text-3xl font-bold">Tus eventos</h1>
           <p className="mt-1 text-sm text-muted">
-            Crea un evento, arma sus categorías y bloques, y comparte el enlace de inscripción.
+            Crea un evento, define sus categorías y bloques, y comparte el enlace de inscripción.
           </p>
         </div>
 
@@ -150,8 +158,8 @@ export default async function OrganizerHomePage() {
           <div className={`${cardClass} flex flex-col items-start gap-3`}>
             <p className="font-display text-lg font-semibold">Aún no tienes eventos</p>
             <p className="text-sm text-muted">
-              Un evento agrupa las categorías, las rondas y los bloques de una competencia. Crea el
-              primero para poder abrir inscripciones.
+              Un evento reúne las categorías, rondas y bloques de una competencia. Crea el primero
+              para poder abrir las inscripciones.
             </p>
           </div>
         )}
