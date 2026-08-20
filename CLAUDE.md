@@ -62,6 +62,7 @@ Código en inglés, UI en español (es-CO).
 | Puntaje | `Score` | **Siempre derivado**, nunca capturado a mano |
 | Zona | `Zone` | Presa intermedia puntuable |
 | Tabla de resultados | `Leaderboard` | Vista pública |
+| Liga | `League` | Agrupa varias fechas (`Event`) de una `Organization`; acumula puntos entre ellas. Diseño en `docs/04-evolutivo-ligas.md`, sin construir aún |
 
 La jerga de pantalla (Boulder / Bloque, bloque vs ruta) está en
 `apps/web/CLAUDE.md`; se carga sola al trabajar ahí.
