@@ -20,6 +20,10 @@ const MONTH_NAMES = [
 ];
 const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
+function yearsPageStart(year: number): number {
+  return year - (((year % 12) + 12) % 12);
+}
+
 function todayIso(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -47,7 +51,7 @@ export function DateField({
   className?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'days' | 'months'>('days');
+  const [viewMode, setViewMode] = useState<'days' | 'months' | 'years'>('days');
   const [viewYear, setViewYear] = useState(() => parseIsoDate(value)?.year ?? new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => parseIsoDate(value)?.month ?? new Date().getMonth());
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -104,15 +108,22 @@ export function DateField({
         required={required}
         className={`${className ?? fieldClass} pr-10 [&::-webkit-calendar-picker-indicator]:hidden`}
       />
-      <button
-        type="button"
-        onClick={() => (isOpen ? setIsOpen(false) : openCalendar())}
-        aria-label="Abrir calendario"
-        aria-expanded={isOpen}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-pine"
-      >
-        📅
-      </button>
+      {/* Firefox y Safari dibujan su propio ícono de calendario dentro del
+          input y no tienen el pseudo-elemento `::-webkit-...` que lo esconde
+          en Chrome — sin esto, ahí se veían dos calendarios superpuestos. Este
+          bloque tapa esa esquina con el mismo fondo del campo y encima va el
+          botón propio, así que no importa qué dibuje el navegador debajo. */}
+      <div className="absolute inset-y-px right-px flex w-9 items-center justify-center rounded-r-lg bg-card">
+        <button
+          type="button"
+          onClick={() => (isOpen ? setIsOpen(false) : openCalendar())}
+          aria-label="Abrir calendario"
+          aria-expanded={isOpen}
+          className="text-muted hover:text-pine"
+        >
+          📅
+        </button>
+      </div>
 
       {isOpen && (
         <div className="absolute z-10 mt-1 w-72 rounded-lg border border-cardborder bg-card p-3 shadow-lg">
@@ -171,7 +182,7 @@ export function DateField({
                 )}
               </div>
             </>
-          ) : (
+          ) : viewMode === 'months' ? (
             <>
               <div className="flex items-center justify-between pb-2">
                 <button
@@ -182,7 +193,13 @@ export function DateField({
                 >
                   ‹
                 </button>
-                <span className="font-display text-sm font-semibold text-ink">{viewYear}</span>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('years')}
+                  className="font-display text-sm font-semibold text-ink hover:text-pine"
+                >
+                  {viewYear}
+                </button>
                 <button
                   type="button"
                   onClick={() => setViewYear((y) => y + 1)}
@@ -206,6 +223,50 @@ export function DateField({
                     }`}
                   >
                     {name.slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Página de 12 años, centrada en la que se estaba viendo — es lo
+                  que hacía falta para no tener que darle a "año anterior" una
+                  por una hasta llegar, por ejemplo, a una fecha de nacimiento. */}
+              <div className="flex items-center justify-between pb-2">
+                <button
+                  type="button"
+                  onClick={() => setViewYear((y) => y - 12)}
+                  aria-label="12 años atrás"
+                  className="rounded px-2 py-1 text-ink hover:bg-stone"
+                >
+                  ‹
+                </button>
+                <span className="font-display text-sm font-semibold text-ink">
+                  {yearsPageStart(viewYear)}–{yearsPageStart(viewYear) + 11}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setViewYear((y) => y + 12)}
+                  aria-label="12 años adelante"
+                  className="rounded px-2 py-1 text-ink hover:bg-stone"
+                >
+                  ›
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {Array.from({ length: 12 }, (_, i) => yearsPageStart(viewYear) + i).map((year) => (
+                  <button
+                    key={year}
+                    type="button"
+                    onClick={() => {
+                      setViewYear(year);
+                      setViewMode('months');
+                    }}
+                    className={`rounded-lg py-2 text-sm transition ${
+                      year === viewYear ? 'bg-pine text-white' : 'text-ink hover:bg-stone'
+                    }`}
+                  >
+                    {year}
                   </button>
                 ))}
               </div>
