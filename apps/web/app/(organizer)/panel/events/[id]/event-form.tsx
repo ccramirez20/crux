@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
 import { ConfirmDeleteButton } from '@/components/confirm-delete-button';
+import { DateField } from '@/components/date-field';
 import { deleteEvent, updateEvent } from './actions';
 import { generateCode } from '@/lib/codes';
 
@@ -105,13 +106,7 @@ export function EventForm({
         <label htmlFor="event-date" className={labelClass}>
           Fecha del evento
         </label>
-        <input
-          id="event-date"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-          className={fieldClass}
-        />
+        <DateField id="event-date" value={date} onChange={setDate} />
         <p className="text-xs text-muted">
           Esta fecha define las categorías de los competidores. Si la cambias después, no afecta a
           quienes ya se inscribieron: su categoría se definió con la fecha que estaba vigente al
@@ -123,13 +118,7 @@ export function EventForm({
         <label htmlFor="event-deadline" className={labelClass}>
           Inscripciones hasta
         </label>
-        <input
-          id="event-deadline"
-          type="date"
-          value={deadline}
-          onChange={(event) => setDeadline(event.target.value)}
-          className={fieldClass}
-        />
+        <DateField id="event-deadline" value={deadline} onChange={setDeadline} />
         <p className="text-xs text-muted">
           Último día en que el enlace acepta inscripciones, según la zona horaria del evento.
           Déjalo vacío para que las inscripciones no se cierren. Si alguien llega tarde y quieres

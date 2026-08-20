@@ -5,6 +5,7 @@ import { GENDERS, isEligible, isMinor, parseDateOnly, type Gender } from '@crux/
 import { registerAthlete } from './actions';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 import { PrivacyNotice } from '@/components/privacy-notice';
+import { DateField } from '@/components/date-field';
 
 type Category = {
   id: string;
@@ -137,16 +138,14 @@ export function RegistrationForm({
         <label htmlFor="birth-date" className="text-sm font-medium text-bark">
           Fecha de nacimiento
         </label>
-        <input
+        <DateField
           id="birth-date"
-          type="date"
           value={birthDate}
-          onChange={(event) => {
-            setBirthDate(event.target.value);
+          onChange={(value) => {
+            setBirthDate(value);
             setCategoryId('');
           }}
           required
-          className={fieldClass}
         />
       </div>
 
