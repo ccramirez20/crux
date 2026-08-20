@@ -109,7 +109,7 @@ export function ProblemCard({
         </span>
         <span className="min-w-0 flex-1">
           <span className={`${eyebrowClass} block`}>{unit.singular}</span>
-          <span className="block truncate text-sm font-medium">{name ?? 'Sin nombre'}</span>
+          {name && <span className="block truncate text-sm font-medium">{name}</span>}
           {isLeaguePoints && (
             <span className="block text-xs text-bark">
               {topPoints === null ? 'Sin puntos' : `${topPoints} · ${zonePoints ?? '—'}`}

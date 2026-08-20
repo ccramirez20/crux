@@ -108,7 +108,7 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
     if (athleteMismatch(existingAthlete)) {
       return {
         ok: false,
-        error: 'Ese documento ya está registrado con una fecha de nacimiento o género diferente.',
+        error: 'Ese documento ya está registrado.',
       };
     }
     athleteId = existingAthlete.id;
@@ -135,7 +135,7 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
       if (athleteMismatch(racedAthlete)) {
         return {
           ok: false,
-          error: 'Ese documento ya está registrado con una fecha de nacimiento o género diferente.',
+          error: 'Ese documento ya está registrado.',
         };
       }
       athleteId = racedAthlete.id;
