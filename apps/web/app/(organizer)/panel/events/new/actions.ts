@@ -30,7 +30,6 @@ const createEventInputSchema = z.object({
   // enseña una vista previa, y ese texto va impreso en los QR de la pared —
   // no puede venir de lo que mande el cliente.
   judgeCode: z.string().min(4).max(32),
-  timezone: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
@@ -106,6 +105,11 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
       slug,
       organizationId,
       ownerId: session.user.id,
+      // Colombia es el único mercado real hoy — se dejó de pedir en el
+      // formulario para no ofrecer una elección que hoy no tiene otra
+      // respuesta. `event-form.tsx` (editar) sigue dejando cambiarla a mano
+      // para el día en que haga falta.
+      timezone: 'America/Bogota',
     });
   } catch (error) {
     if (isUniqueViolation(error)) {

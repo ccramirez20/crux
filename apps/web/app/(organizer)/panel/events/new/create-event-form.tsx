@@ -3,7 +3,6 @@
 import { useState, type FormEvent } from 'react';
 import { createEvent } from './actions';
 import { DateField } from '@/components/date-field';
-import { buildTimezoneOptions } from '@/lib/timezones';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 import { DISCIPLINE_LABEL, labelFor } from '@/lib/labels';
 import { generateCode } from '@/lib/codes';
@@ -36,10 +35,6 @@ const DEFAULT_SCORING_FORMAT: Record<Discipline, ScoringFormat> = {
   lead: 'max_height',
 };
 
-const TIMEZONE_OPTIONS = buildTimezoneOptions();
-const TIMEZONE_LABEL_TO_VALUE = new Map(TIMEZONE_OPTIONS.map((tz) => [tz.label, tz.value]));
-const TIMEZONE_VALUE_TO_LABEL = new Map(TIMEZONE_OPTIONS.map((tz) => [tz.value, tz.label]));
-
 export function CreateEventForm({
   organizations,
 }: {
@@ -55,32 +50,7 @@ export function CreateEventForm({
     DEFAULT_SCORING_FORMAT.boulder,
   );
   const [judgeCode, setJudgeCode] = useState(generateCode);
-  const [timezone, setTimezone] = useState('America/Bogota');
-  const [timezoneQuery, setTimezoneQuery] = useState(
-    () => TIMEZONE_VALUE_TO_LABEL.get('America/Bogota') ?? 'America/Bogota',
-  );
-  const [isTimezoneOpen, setIsTimezoneOpen] = useState(false);
-  const [hasTypedTimezone, setHasTypedTimezone] = useState(false);
-  const [timezoneHighlight, setTimezoneHighlight] = useState(0);
   const [date, setDate] = useState('');
-
-  // Sin haber escrito nada, `timezoneQuery` sigue siendo la zona ya elegida,
-  // y filtrar por ese texto completo solo encuentra esa misma fila — el
-  // desplegable se abría con un único resultado y nada que scrollear. Sin
-  // escribir, se navega la lista completa (ordenada por huso); al escribir,
-  // se filtra de verdad.
-  const timezoneMatches = hasTypedTimezone
-    ? TIMEZONE_OPTIONS.filter((tz) =>
-        tz.label.toLowerCase().includes(timezoneQuery.trim().toLowerCase()),
-      )
-    : TIMEZONE_OPTIONS;
-
-  function selectTimezone(tz: { value: string; label: string }) {
-    setTimezone(tz.value);
-    setTimezoneQuery(tz.label);
-    setHasTypedTimezone(false);
-    setIsTimezoneOpen(false);
-  }
 
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,7 +77,6 @@ export function CreateEventForm({
       discipline,
       scoringFormat,
       judgeCode,
-      timezone,
       date: date || undefined,
     });
     setIsSubmitting(false);
@@ -288,89 +257,6 @@ export function CreateEventForm({
           Quien escanee el QR de un bloque necesitará este código para poder registrar intentos.
           Compártelo solo con tus jueces.
         </p>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="event-timezone" className="text-sm font-medium text-bark">
-          Zona horaria
-        </label>
-        <div className="relative">
-          <input
-            id="event-timezone"
-            value={timezoneQuery}
-            onChange={(event) => {
-              setTimezoneQuery(event.target.value);
-              setHasTypedTimezone(true);
-              setTimezoneHighlight(0);
-              setIsTimezoneOpen(true);
-            }}
-            onFocus={(event) => {
-              setIsTimezoneOpen(true);
-              setHasTypedTimezone(false);
-              // Con texto ya escrito, un clic deja el cursor a la mitad y
-              // teclear inserta ahí en vez de reemplazar — seleccionar todo
-              // hace que escribir empiece siempre de cero.
-              event.target.select();
-            }}
-            onBlur={() => {
-              setIsTimezoneOpen(false);
-              // Si lo que quedó escrito no es una zona real, vuelve a la
-              // última válida — lo que se ve en el campo es lo que se manda.
-              if (!TIMEZONE_LABEL_TO_VALUE.has(timezoneQuery)) {
-                setTimezoneQuery(TIMEZONE_VALUE_TO_LABEL.get(timezone) ?? timezone);
-              }
-            }}
-            onKeyDown={(event) => {
-              if (!isTimezoneOpen || timezoneMatches.length === 0) {
-                return;
-              }
-              if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                setTimezoneHighlight((i) => Math.min(i + 1, timezoneMatches.length - 1));
-              } else if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                setTimezoneHighlight((i) => Math.max(i - 1, 0));
-              } else if (event.key === 'Enter') {
-                event.preventDefault();
-                const match = timezoneMatches[timezoneHighlight];
-                if (match) {
-                  selectTimezone(match);
-                }
-              } else if (event.key === 'Escape') {
-                setIsTimezoneOpen(false);
-              }
-            }}
-            placeholder="Escribe un país o ciudad…"
-            autoComplete="off"
-            role="combobox"
-            aria-expanded={isTimezoneOpen}
-            aria-controls="event-timezone-options"
-            required
-            className={fieldClass}
-          />
-          {isTimezoneOpen && timezoneMatches.length > 0 && (
-            <ul
-              id="event-timezone-options"
-              role="listbox"
-              className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-cardborder bg-card shadow-lg"
-            >
-              {timezoneMatches.map((tz, index) => (
-                <li key={tz.value} role="option" aria-selected={index === timezoneHighlight}>
-                  <button
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => selectTimezone(tz)}
-                    className={`block w-full px-4 py-2 text-left text-sm ${
-                      index === timezoneHighlight ? 'bg-stone text-ink' : 'text-ink hover:bg-stone'
-                    }`}
-                  >
-                    {tz.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
