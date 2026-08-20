@@ -46,7 +46,7 @@ export async function createCategory(input: CreateCategoryInput): Promise<Action
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const db = getDb();
@@ -57,7 +57,7 @@ export async function createCategory(input: CreateCategoryInput): Promise<Action
     .from(events)
     .where(eq(events.id, eventId));
   if (!event || event.ownerId !== session.user.id) {
-    return { ok: false, error: 'Ese evento no existe o no te pertenece.' };
+    return { ok: false, error: 'Ese evento no existe o no está asociado a tu cuenta.' };
   }
 
   await db.insert(categories).values({ ...categoryInput, eventId });
@@ -85,12 +85,12 @@ type SetRoundAdvancesInput = z.infer<typeof setRoundAdvancesInputSchema>;
 export async function setRoundAdvances(input: SetRoundAdvancesInput): Promise<ActionResult> {
   const parsed = setRoundAdvancesInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Cupo inválido.' };
+    return { ok: false, error: 'Ese número no es válido.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, roundId, advances } = parsed.data;
@@ -102,7 +102,7 @@ export async function setRoundAdvances(input: SetRoundAdvancesInput): Promise<Ac
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(and(eq(rounds.id, roundId), eq(categories.eventId, eventId)));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa ronda no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa ronda no existe o no está asociada a tu cuenta.' };
   }
 
   await db.update(rounds).set({ advances }).where(eq(rounds.id, roundId));
@@ -120,12 +120,12 @@ type CreateRoundInput = z.infer<typeof createRoundInputSchema>;
 export async function createRound(input: CreateRoundInput): Promise<ActionResult> {
   const parsed = createRoundInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos de la ronda inválidos.' };
+    return { ok: false, error: 'Los datos de la ronda no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const db = getDb();
@@ -137,7 +137,7 @@ export async function createRound(input: CreateRoundInput): Promise<ActionResult
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(eq(categories.id, categoryId));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa categoría no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa categoría no existe o no está asociada a tu cuenta.' };
   }
 
   await db.insert(rounds).values({ categoryId, type, order: ROUND_ORDER[type] });
@@ -167,12 +167,12 @@ type RemoveCategoryInput = z.infer<typeof removeCategoryInputSchema>;
 export async function removeCategory(input: RemoveCategoryInput): Promise<ActionResult> {
   const parsed = removeCategoryInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos inválidos.' };
+    return { ok: false, error: 'Los datos no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, categoryId } = parsed.data;
@@ -183,7 +183,7 @@ export async function removeCategory(input: RemoveCategoryInput): Promise<Action
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(and(eq(categories.id, categoryId), eq(categories.eventId, eventId)));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa categoría no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa categoría no existe o no está asociada a tu cuenta.' };
   }
 
   const [enrolled] = await db
@@ -194,7 +194,7 @@ export async function removeCategory(input: RemoveCategoryInput): Promise<Action
     return {
       ok: false,
       error:
-        'Esta categoría tiene inscritos. Muévelos o quítalos desde el listado de inscritos y vuelve a intentar.',
+        'Esta categoría tiene inscritos. Muévelos a otra categoría o retíralos de esta y vuelve a intentarlo.',
     };
   }
 
@@ -207,7 +207,8 @@ export async function removeCategory(input: RemoveCategoryInput): Promise<Action
   if ((tally?.total ?? 0) > 0) {
     return {
       ok: false,
-      error: 'Esta categoría ya tiene intentos capturados: borrarla borraría el registro de un juez.',
+      error:
+        'Esta categoría ya tiene intentos registrados y no se puede borrar, porque también se perderían los registros de los jueces.',
     };
   }
 
@@ -245,12 +246,12 @@ type RemoveProblemInput = z.infer<typeof removeProblemInputSchema>;
 export async function removeProblem(input: RemoveProblemInput): Promise<ActionResult> {
   const parsed = removeProblemInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos inválidos.' };
+    return { ok: false, error: 'Los datos no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, problemId } = parsed.data;
@@ -263,7 +264,7 @@ export async function removeProblem(input: RemoveProblemInput): Promise<ActionRe
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(and(eq(problems.id, problemId), eq(categories.eventId, eventId)));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Ese bloque no existe o no te pertenece.' };
+    return { ok: false, error: 'Ese bloque no existe o no está asociado a tu cuenta.' };
   }
 
   const [tally] = await db
@@ -273,7 +274,8 @@ export async function removeProblem(input: RemoveProblemInput): Promise<ActionRe
   if ((tally?.total ?? 0) > 0) {
     return {
       ok: false,
-      error: 'Ya tiene intentos capturados: borrarlo borraría el registro de un juez.',
+      error:
+        'Ya tiene intentos registrados y no se puede borrar, porque también se perderían los registros de los jueces.',
     };
   }
 
@@ -303,12 +305,12 @@ type RemoveRoundInput = z.infer<typeof removeRoundInputSchema>;
 export async function removeRound(input: RemoveRoundInput): Promise<ActionResult> {
   const parsed = removeRoundInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos inválidos.' };
+    return { ok: false, error: 'Los datos no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, roundId } = parsed.data;
@@ -320,7 +322,7 @@ export async function removeRound(input: RemoveRoundInput): Promise<ActionResult
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(and(eq(rounds.id, roundId), eq(categories.eventId, eventId)));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa ronda no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa ronda no existe o no está asociada a tu cuenta.' };
   }
 
   const [tally] = await db
@@ -331,7 +333,8 @@ export async function removeRound(input: RemoveRoundInput): Promise<ActionResult
   if ((tally?.total ?? 0) > 0) {
     return {
       ok: false,
-      error: 'Esta ronda ya tiene intentos capturados: borrarla borraría el registro de un juez.',
+      error:
+        'Esta ronda ya tiene intentos registrados. No se puede borrar porque también se perderían los registros de los jueces.',
     };
   }
 
@@ -359,12 +362,12 @@ type CreateProblemInput = z.infer<typeof createProblemInputSchema>;
 export async function createProblem(input: CreateProblemInput): Promise<ActionResult> {
   const parsed = createProblemInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos del bloque inválidos.' };
+    return { ok: false, error: 'Los datos del bloque no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const db = getDb();
@@ -377,10 +380,10 @@ export async function createProblem(input: CreateProblemInput): Promise<ActionRe
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(eq(rounds.id, roundId));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa ronda no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa ronda no existe o no está asociada a tu cuenta.' };
   }
   if (leagueBlockNeedsPoints(row.scoringFormat, problemInput.topPoints)) {
-    return { ok: false, error: 'Este evento puntúa por bloque: falta cuántos puntos vale su top.' };
+    return { ok: false, error: 'Este evento puntúa por bloque: falta definir cuántos puntos vale el top.' };
   }
 
   await db.insert(problems).values({ ...problemInput, roundId });
@@ -422,12 +425,12 @@ type UpdateEventInput = z.infer<typeof updateEventInputSchema>;
 export async function updateEvent(input: UpdateEventInput): Promise<ActionResult> {
   const parsed = updateEventInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos del evento inválidos.' };
+    return { ok: false, error: 'Los datos del evento no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, ...eventInput } = parsed.data;
@@ -437,7 +440,7 @@ export async function updateEvent(input: UpdateEventInput): Promise<ActionResult
     .from(events)
     .where(and(eq(events.id, eventId), eq(events.ownerId, session.user.id)));
   if (!owned) {
-    return { ok: false, error: 'Ese evento no existe o no te pertenece.' };
+    return { ok: false, error: 'Ese evento no existe o no está asociado a tu cuenta.' };
   }
 
   await db
@@ -465,7 +468,7 @@ export async function deleteEvent(input: DeleteEventInput): Promise<ActionResult
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId } = parsed.data;
@@ -475,7 +478,7 @@ export async function deleteEvent(input: DeleteEventInput): Promise<ActionResult
     .from(events)
     .where(and(eq(events.id, eventId), eq(events.ownerId, session.user.id)));
   if (!owned) {
-    return { ok: false, error: 'Ese evento no existe o no te pertenece.' };
+    return { ok: false, error: 'Ese evento no existe o no está asociado a tu cuenta.' };
   }
 
   const [tally] = await db
@@ -488,7 +491,8 @@ export async function deleteEvent(input: DeleteEventInput): Promise<ActionResult
   if ((tally?.total ?? 0) > 0) {
     return {
       ok: false,
-      error: 'Este evento ya tiene intentos capturados: borrarlo borraría el registro de un juez.',
+      error:
+        'Este evento ya tiene intentos registrados y no se puede borrar, porque también se perderían los registros de los jueces.',
     };
   }
 
@@ -535,12 +539,12 @@ type UpdateProblemInput = z.infer<typeof updateProblemInputSchema>;
 export async function updateProblem(input: UpdateProblemInput): Promise<ActionResult> {
   const parsed = updateProblemInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos del bloque inválidos.' };
+    return { ok: false, error: 'Los datos del bloque no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, problemId, ...problemInput } = parsed.data;
@@ -553,12 +557,12 @@ export async function updateProblem(input: UpdateProblemInput): Promise<ActionRe
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(eq(problems.id, problemId));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Ese bloque no existe o no te pertenece.' };
+    return { ok: false, error: 'Ese bloque no existe o no tienes acceso a él.' };
   }
   // Mismo borde que al crear: un bloque de liga sin puntos vale cero para todos
   // y deja la tabla entera empatada sin un solo error en pantalla.
   if (leagueBlockNeedsPoints(row.scoringFormat, problemInput.topPoints ?? undefined)) {
-    return { ok: false, error: 'Este evento puntúa por bloque: falta cuántos puntos vale su top.' };
+    return { ok: false, error: 'Este evento puntúa por bloque: falta definir cuántos puntos vale el top.' };
   }
 
   await db.update(problems).set(problemInput).where(eq(problems.id, problemId));
@@ -578,12 +582,12 @@ type SetBibInput = z.infer<typeof setBibInputSchema>;
 export async function setBibNumber(input: SetBibInput): Promise<ActionResult> {
   const parsed = setBibInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Dorsal inválido.' };
+    return { ok: false, error: 'El dorsal no es válido.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, registrationId, bibNumber } = parsed.data;
@@ -594,7 +598,7 @@ export async function setBibNumber(input: SetBibInput): Promise<ActionResult> {
     .innerJoin(events, eq(registrations.eventId, events.id))
     .where(and(eq(registrations.id, registrationId), eq(registrations.eventId, eventId)));
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa inscripción no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa inscripción no existe o no tienes acceso a ella.' };
   }
 
   await db
@@ -618,12 +622,12 @@ type NumberCategoryInput = z.infer<typeof numberCategoryInputSchema>;
 export async function numberCategory(input: NumberCategoryInput): Promise<ActionResult> {
   const parsed = numberCategoryInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos inválidos.' };
+    return { ok: false, error: 'Algunos datos no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, categoryId, start } = parsed.data;
@@ -639,7 +643,7 @@ export async function numberCategory(input: NumberCategoryInput): Promise<Action
     .where(and(eq(registrations.eventId, eventId), eq(registrations.categoryId, categoryId)))
     .orderBy(registrations.createdAt);
   if (rows.length === 0 || rows[0]!.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa categoría no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa categoría no existe o no tienes acceso a ella.' };
   }
 
   const taken = new Set(rows.map((r) => r.bibNumber).filter((b): b is string => b !== null));
@@ -712,25 +716,25 @@ type MoveRegistrationInput = z.infer<typeof moveRegistrationInputSchema>;
 export async function moveRegistration(input: MoveRegistrationInput): Promise<ActionResult> {
   const parsed = moveRegistrationInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos inválidos.' };
+    return { ok: false, error: 'Algunos datos no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, registrationId, categoryId } = parsed.data;
   const db = getDb();
   const row = await registrationOwner(db, eventId, registrationId);
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa inscripción no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa inscripción no existe o no tienes acceso a ella.' };
   }
 
   if ((await attemptCount(db, registrationId)) > 0) {
     return {
       ok: false,
-      error: 'Ya tiene intentos capturados: cambiarlo de categoría dejaría esos intentos sin sentido.',
+      error: 'No se puede cambiar de categoría porque ya tiene intentos registrados en la categoría actual.',
     };
   }
 
@@ -758,7 +762,7 @@ export async function moveRegistration(input: MoveRegistrationInput): Promise<Ac
   if (athlete?.birthDate && athlete.gender) {
     const referenceDate = row.eventDate ? parseDateOnly(row.eventDate) : undefined;
     if (!isEligible(target, parseDateOnly(athlete.birthDate), athlete.gender, referenceDate)) {
-      return { ok: false, error: 'Esa categoría no corresponde a su edad o género.' };
+      return { ok: false, error: 'Esa categoría no corresponde a tu edad o género.' };
     }
   }
 
@@ -779,25 +783,25 @@ type RemoveRegistrationInput = z.infer<typeof registrationRefSchema>;
 export async function removeRegistration(input: RemoveRegistrationInput): Promise<ActionResult> {
   const parsed = registrationRefSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos inválidos.' };
+    return { ok: false, error: 'Algunos datos no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const { eventId, registrationId } = parsed.data;
   const db = getDb();
   const row = await registrationOwner(db, eventId, registrationId);
   if (!row || row.ownerId !== session.user.id) {
-    return { ok: false, error: 'Esa inscripción no existe o no te pertenece.' };
+    return { ok: false, error: 'Esa inscripción no existe o no tienes acceso a ella.' };
   }
 
   if ((await attemptCount(db, registrationId)) > 0) {
     return {
       ok: false,
-      error: 'Ya tiene intentos capturados: quitarlo borraría el registro de un juez.',
+      error: 'Ya tiene intentos registrados, no se puede retirar porque también se perderían los registros de los jueces.',
     };
   }
 

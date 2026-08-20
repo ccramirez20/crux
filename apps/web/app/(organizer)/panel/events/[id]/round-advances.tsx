@@ -69,8 +69,8 @@ export function RoundAdvances({
         {isPending && <span className="text-xs text-muted">Guardando…</span>}
       </div>
       <p className="text-xs text-muted">
-        La ronda siguiente se corre solo con ellos. Déjalo vacío si pasan todos. Si el corte cae en
-        mitad de un empate, pasan todos los empatados.
+        Define cuántos competidores pasan a la siguiente ronda. Déjalo vacío para que pasen todos.
+        Si el corte cae en mitad de un empate, pasan todos los empatados.
       </p>
       {error && (
         <p role="alert" className="text-xs font-medium text-red-700">

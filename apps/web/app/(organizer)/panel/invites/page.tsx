@@ -65,8 +65,8 @@ export default async function InvitesPage() {
           <span className={eyebrowClass}>Administración</span>
           <h1 className="mt-1 font-display text-3xl font-bold">Invitaciones</h1>
           <p className="mt-2 leading-relaxed text-muted">
-            Cada código sirve para crear una cuenta de organizador, una sola vez. Genera uno por
-            persona y compártelo directo; el código muere al usarse.
+            Cada código sirve para crear una cuenta de organizador. Genera uno por persona y
+            compártelo directamente: después de usarlo, queda invalidado.
           </p>
         </div>
 

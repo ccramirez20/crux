@@ -4,7 +4,7 @@ import { CONTACTO_DATOS, RESPONSABLE_NOMBRE } from '@/lib/privacy';
 const COPY = {
   // Inscripción pública: datos del competidor, capturados por quien organiza.
   inscripcion:
-    'para organizar esta competencia y las siguientes en las que compitas: armar categorías, calcular resultados y guardar tu historial entre eventos',
+    'para organizar esta competencia y las próximas en las que participes: crear categorías, calcular resultados y guardar tu historial entre eventos',
   // Cuenta de organizador: sus propios datos, para usar el panel.
   organizador:
     'para darte acceso al panel y mostrar el nombre de tu organización en tus eventos',
@@ -18,10 +18,11 @@ const COPY = {
 export function PrivacyNotice({ variant }: { variant: keyof typeof COPY }) {
   return (
     <p className="text-xs text-muted">
-      Estos datos los trata <span className="font-medium text-bark">{RESPONSABLE_NOMBRE}</span>,
-      responsable de CRUX, únicamente {COPY[variant]}. No se usan para publicidad ni se comparten
-      con nadie fuera de CRUX y estas competencias de escalada. Puedes conocer, corregir o pedir
-      que se borren tus datos escribiendo a {CONTACTO_DATOS}. Política completa:{' '}
+      Estos datos son tratados por{' '}
+      <span className="font-medium text-bark">{RESPONSABLE_NOMBRE}</span>, responsable de CRUX,
+      únicamente {COPY[variant]}. No se usan para publicidad ni se comparten con nadie fuera de
+      CRUX y estas competencias de escalada. Puedes conocer, corregir o pedir que se eliminen tus
+      datos escribiendo a {CONTACTO_DATOS}. Política completa:{' '}
       <Link href="/privacidad" className="underline hover:text-bark">
         cruxcompetencias.com/privacidad
       </Link>

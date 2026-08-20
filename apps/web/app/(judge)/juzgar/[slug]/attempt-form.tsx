@@ -209,8 +209,8 @@ export function AttemptForm({
 
       {alreadyJudged && (
         <p className="rounded bg-stone px-3 py-2 text-xs text-bark">
-          Ya tiene un resultado en este bloque. Si guardas, queda el nuevo — el anterior no se
-          borra, se conserva para poder auditar el evento.
+          Ya tiene un resultado en este bloque. Si guardas, el nuevo reemplaza al anterior, pero
+          el anterior se conserva para poder auditar el evento.
         </p>
       )}
 

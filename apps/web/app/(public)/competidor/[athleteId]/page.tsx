@@ -541,7 +541,7 @@ export default async function CompetidorPage({ params }: { params: Promise<{ ath
       </section>
 
       <p className="border-t border-cardborder pt-6 text-base text-muted">
-        Este historial lo lleva{' '}
+        Este historial lo gestiona{' '}
         <a href="/" className={`${brandWordClass} underline decoration-gold decoration-2 underline-offset-4`}>
           CRUX
         </a>

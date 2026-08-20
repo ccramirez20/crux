@@ -787,7 +787,7 @@ export function LeaderboardScreen({
                 está el dueño del gimnasio de al lado. */}
             {round && (
               <p className="border-t border-cardborder pt-6 text-base text-muted">
-                Esta tabla la corre{' '}
+                Esta tabla la gestiona{' '}
                 <a
                   href="/"
                   className={`${brandWordClass} underline decoration-gold decoration-2 underline-offset-4`}

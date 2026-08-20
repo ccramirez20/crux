@@ -313,24 +313,24 @@ export default async function EventDetailPage({
           <ShareLink
             path={`/inscripcion/${event.slug}`}
             title="Enlace de inscripción"
-            description="Compártelo por WhatsApp o redes. Quien lo abra se inscribe sin crear cuenta."
+            description="Compártelo por WhatsApp o redes sociales. Quien abra el enlace puede inscribirse sin crear una cuenta."
           />
           <ShareLink
             path={`/resultados/${event.slug}`}
             title="Tabla de resultados"
-            description="La pantalla pública, la que abre la gente desde el teléfono. Se actualiza sola y no pide cuenta."
+            description="La pantalla pública que la gente puede abrir desde el teléfono. Se actualiza sola y no pide cuenta."
           />
           <ShareLink
             path={`/resultados/${event.slug}/proyectar`}
             title="Pantalla para proyectar"
-            description="La misma competencia en una sola pantalla, sin desplazarse: la tabla, las gráficas turnándose solas y las cifras de la ronda. Ábrela en el computador del proyector y déjala ahí todo el día."
+            description="Toda la competencia en una sola pantalla, sin desplazarte: la tabla, las gráficas que cambian solas y las cifras de la ronda. Ábrela en el computador del proyector y déjala ahí todo el día."
           />
           {event.judgeCode && (
             <div className={`${cardClass} flex flex-col gap-1`}>
               <span className="font-display font-semibold">Código para los jueces</span>
               <p className="text-sm text-muted">
-                Quien escanee un QR tendrá que escribirlo antes de registrar intentos. Dáselo solo a
-                tus jueces, no lo pegues junto al QR.
+                Quien escanee un QR tendrá que ingresar este código antes de registrar intentos.
+                Compártelo solo con tus jueces y no lo pongas junto al QR.
               </p>
               <code className="mt-1 w-fit rounded bg-stone px-3 py-2 font-display text-xl font-bold tracking-widest">
                 {event.judgeCode}
@@ -343,8 +343,8 @@ export default async function EventDetailPage({
       <div className="w-full max-w-2xl">
         <h2 className="font-display text-xl font-bold">Inscritos</h2>
         <p className="mt-1 text-sm text-muted">
-          Quién se inscribió y con qué dorsal. El dorsal es opcional: si lo dejas vacío, los jueces
-          buscan por nombre, que también funciona.
+          Quién está inscrito y qué dorsal tiene. El dorsal es opcional: si lo dejas vacío, los
+          jueces pueden buscar por nombre.
         </p>
       </div>
 

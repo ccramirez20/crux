@@ -40,7 +40,7 @@ export function AthleteRoster({
   if (entries.length === 0) {
     return (
       <p className="rounded-lg border border-cardborder bg-card px-4 py-6 text-center text-sm text-muted">
-        Todavía no hay nadie inscrito en esta categoría. En cuanto se inscriban aparecerán aquí.
+        Todavía no hay inscritos en esta categoría. Cuando alguien se inscriba, aparecerá aquí.
       </p>
     );
   }

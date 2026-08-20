@@ -113,8 +113,9 @@ export function EventForm({
           className={fieldClass}
         />
         <p className="text-xs text-muted">
-          Con esta fecha se calcula la edad de cada competidor. Cambiarla ahora no vuelve a
-          revisar a quien ya se inscribió: su categoría se decidió con la fecha que había ese día.
+          Esta fecha define las categorías de los competidores. Si la cambias después, no afecta a
+          quienes ya se inscribieron: su categoría se definió con la fecha que estaba vigente al
+          momento de la inscripción.
         </p>
       </div>
 
@@ -130,9 +131,9 @@ export function EventForm({
           className={fieldClass}
         />
         <p className="text-xs text-muted">
-          Último día que el enlace acepta inscripciones, contando el día entero en la zona
-          horaria del evento. Déjalo vacío y no se cierra nunca. Si alguien llega tarde y quieres
-          dejarlo entrar, corre la fecha y el enlace vuelve a abrir.
+          Último día en que el enlace acepta inscripciones, según la zona horaria del evento.
+          Déjalo vacío para que las inscripciones no se cierren. Si alguien llega tarde y quieres
+          dejarlo entrar, cambia la fecha y el enlace volverá a aceptar inscripciones.
         </p>
       </div>
 
@@ -177,19 +178,19 @@ export function EventForm({
           </button>
         </div>
         <p className="text-xs text-muted">
-          Cámbialo si se filtró. Los teléfonos que ya estaban juzgando van a pedirlo otra vez, y
-          los intentos que tengan sin enviar esperan en el teléfono hasta que lo escriban: no se
-          pierde ninguno.
+          Cámbialo si se filtró. Los jueces que ya estaban registrando intentos tendrán que
+          ingresar el nuevo código, y los intentos pendientes se quedan guardados en el teléfono
+          hasta que lo hagan: no se pierde ninguno.
         </p>
       </div>
 
       {/* Lo que no se puede editar, dicho donde se busca. Callar esto manda al
           organizador a buscar un campo que no existe. */}
       <p className="rounded border-l-4 border-bark bg-stone/60 px-3 py-2 text-xs text-muted">
-        El enlace público, la modalidad y la forma de puntuar no se cambian. El enlace vive dentro
-        de cada QR impreso y de lo que ya compartiste; los otros dos reinterpretarían intentos ya
-        capturados. Si alguno quedó mal y todavía no has capturado nada, borra el evento y créalo
-        de nuevo.
+        El enlace público, la modalidad y la forma de puntuar no se pueden cambiar. El enlace ya
+        está en los QR impresos y en lo que hayas compartido, y cambiar la modalidad o el puntaje
+        afectaría los intentos ya registrados. Si algo quedó mal y todavía no has registrado
+        ningún intento, borra el evento y créalo de nuevo.
       </p>
 
       {error && (
@@ -221,7 +222,7 @@ export function EventForm({
             >
               Borrar evento
             </button>
-            Ya tiene intentos capturados: no se puede borrar.
+            Ya tiene intentos registrados, no se puede borrar.
           </span>
         ) : (
           <ConfirmDeleteButton

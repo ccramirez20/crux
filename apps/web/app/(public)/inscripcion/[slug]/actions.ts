@@ -30,7 +30,7 @@ const registerInputSchema = z
   // Ley 1581 de 2012, art. 7: sin este nombre no hay quién responda por la
   // autorización de un menor, así que la inscripción no se puede crear.
   .refine((data) => authorizationSatisfied(data.birthDate, data.minorAuthorizedBy), {
-    message: 'Falta el nombre de quien autoriza, porque el competidor es menor de edad.',
+    message: 'Falta el nombre de quien autoriza. El competidor es menor de edad.',
     path: ['minorAuthorizedBy'],
   });
 type RegisterAthleteInput = z.infer<typeof registerInputSchema>;
@@ -73,7 +73,7 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
     .innerJoin(events, eq(categories.eventId, events.id))
     .where(eq(categories.id, categoryId));
   if (!category || category.eventId !== eventId) {
-    return { ok: false, error: 'Esa categoría no existe para este evento.' };
+    return { ok: false, error: 'Esa categoría no está disponible en este evento.' };
   }
 
   // Se vuelve a mirar aquí y no solo al pintar la página: entre que alguien
@@ -81,7 +81,7 @@ export async function registerAthlete(input: RegisterAthleteInput): Promise<Acti
   // la página es pública, así que el envío puede llegar sin haber pasado por
   // ella.
   if (!isRegistrationOpen(category.registrationDeadline, category.timezone)) {
-    return { ok: false, error: 'Las inscripciones para este evento ya se cerraron.' };
+    return { ok: false, error: 'Las inscripciones para este evento ya están cerradas.' };
   }
 
   const referenceDate = category.eventDate ? parseDateOnly(category.eventDate) : undefined;

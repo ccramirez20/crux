@@ -38,51 +38,51 @@ export default function PrivacidadPage() {
         </section>
 
         <section className={cardClass}>
-          <h2 className="font-display text-lg font-semibold text-pine">Qué datos se recogen</h2>
+          <h2 className="font-display text-lg font-semibold text-pine">Qué datos recopilamos</h2>
           <p className="mt-2 text-sm text-bark">
-            Al inscribirte a una competencia: nombre completo, documento de identidad, fecha de
-            nacimiento, género y la categoría en la que compites. Al crear una cuenta de
-            organizador: tu nombre, correo, contraseña, y el nombre y ciudad de tu gimnasio o
-            liga. Durante un evento, los jueces registran los intentos capturados en cada bloque.
+            Al inscribirte a una competencia, recogemos tu nombre completo, documento de
+            identidad, fecha de nacimiento, género y categoría. Si creas una cuenta de
+            organizador, pedimos tu nombre, correo, contraseña y el nombre y ciudad de tu
+            gimnasio o liga. Durante el evento, los jueces registran los intentos de cada bloque.
           </p>
         </section>
 
         <section className={cardClass}>
           <h2 className="font-display text-lg font-semibold text-pine">Para qué se usan</h2>
           <p className="mt-2 text-sm text-bark">
-            Únicamente para organizar competencias de escalada en CRUX: armar categorías y rondas,
-            calcular resultados, mostrar la tabla pública de una competencia, y mantener el
-            historial de un competidor entre eventos. No se usan para publicidad, no se venden y
-            no se comparten con nadie fuera de CRUX y estas competencias.
+            Únicamente para organizar competencias de escalada en CRUX: crear categorías y rondas,
+            calcular resultados, mostrar la tabla pública de cada competencia y mantener el
+            historial de los competidores entre eventos. No usamos tus datos para publicidad, no
+            los vendemos ni los compartimos con nadie fuera de CRUX y las competencias.
           </p>
         </section>
 
         <section className={cardClass}>
           <h2 className="font-display text-lg font-semibold text-pine">Menores de edad</h2>
           <p className="mt-2 text-sm text-bark">
-            Si el competidor es menor de edad, sus datos solo se tratan con la autorización de su
-            padre, madre o acudiente, dada al inscribirlo y registrada junto a la inscripción.
+            Si el competidor es menor de edad, sus datos solo se usan con la autorización de su
+            padre, madre o acudiente, quien la da al momento de inscribirlo.
           </p>
         </section>
 
         <section className={cardClass}>
           <h2 className="font-display text-lg font-semibold text-pine">Tus derechos</h2>
           <p className="mt-2 text-sm text-bark">
-            Como titular de los datos puedes conocerlos, actualizarlos, corregirlos, pedir que se
-            supriman, y revocar en cualquier momento la autorización dada. Para ejercer cualquiera
-            de estos derechos, escribe a {CONTACTO_DATOS} indicando tu nombre y qué necesitas — se
-            resuelve directamente, sin formulario aparte. Si consideras que tus datos no se están
-            tratando bien, también puedes presentar una queja ante la Superintendencia de
-            Industria y Comercio.
+            Puedes conocer, actualizar y corregir tus datos, pedir que los eliminemos o revocar en
+            cualquier momento la autorización que nos diste. Para ejercer cualquiera de estos
+            derechos, escribe a {CONTACTO_DATOS} con tu nombre y cuéntanos qué necesitas. Lo
+            resolvemos directamente, sin formularios adicionales. Si consideras que tus datos no
+            se están tratando adecuadamente, también puedes presentar una queja ante la
+            Superintendencia de Industria y Comercio.
           </p>
         </section>
 
         <section className={cardClass}>
           <h2 className="font-display text-lg font-semibold text-pine">Vigencia</h2>
           <p className="mt-2 text-sm text-bark">
-            Los datos se conservan mientras tengan una finalidad dentro de CRUX — por ejemplo, tu
-            historial de competidor entre eventos — o hasta que ejerzas tu derecho a que se
-            supriman.
+            Los datos se conservan mientras tengan una finalidad dentro de CRUX —por ejemplo,
+            mantener tu historial como competidor entre eventos— o hasta que solicites que se
+            eliminen.
           </p>
         </section>
       </div>

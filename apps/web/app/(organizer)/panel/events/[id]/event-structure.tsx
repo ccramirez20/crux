@@ -98,8 +98,8 @@ export function EventStructure({
     <div className="flex w-full max-w-2xl flex-col gap-4">
       {categories.length === 0 && (
         <p className={`${cardClass} text-sm text-muted`}>
-          Todavía no hay categorías. Crea la primera abajo — sin categorías nadie puede inscribirse,
-          porque al inscribirse cada persona elige la suya.
+          Todavía no hay categorías. Crea la primera abajo — sin categorías, nadie podrá
+          inscribirse.
         </p>
       )}
 
@@ -162,8 +162,8 @@ export function EventStructure({
                   <div className="relative flex flex-col gap-3 border-l-2 border-sage pl-5">
                     {category.rounds.length === 0 && (
                       <p className="text-sm text-muted">
-                        Esta categoría no tiene rondas. Agrega al menos la clasificatoria: los{' '}
-                        {unit.plural} viven dentro de una ronda.
+                        Esta categoría no tiene rondas. Agrega al menos una clasificatoria: los{' '}
+                        {unit.plural} pertenecen a una ronda.
                       </p>
                     )}
 

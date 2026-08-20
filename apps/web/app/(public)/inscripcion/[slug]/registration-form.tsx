@@ -84,8 +84,8 @@ export function RegistrationForm({
       <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg border-2 border-pine bg-card p-5 text-center">
         <p className="font-display text-xl font-semibold text-pine">{success}</p>
         <p className="text-sm text-muted">
-          El día del evento te asignan un dorsal y con ese número los jueces registran tus
-          intentos. No necesitas crear cuenta ni instalar nada.
+          El día del evento te asignan un dorsal y los jueces registran tus intentos con ese
+          número. No necesitas crear una cuenta ni instalar nada.
         </p>
         {/* Se dice aquí y no solo cuando alguien falla al reintentar: quien se
             equivocó de categoría lo nota justo al leer en cuál quedó, y sin
@@ -223,8 +223,8 @@ export function RegistrationForm({
             className={fieldClass}
           />
           <p className="text-xs text-muted">
-            El competidor es menor de edad: quien lo inscribe debe ser su padre, madre o
-            acudiente, y autoriza el tratamiento de sus datos al escribir su nombre aquí.
+            El competidor es menor de edad. Su padre, madre o acudiente debe hacer la inscripción
+            y autorizar el tratamiento de sus datos escribiendo su nombre aquí.
           </p>
         </div>
       )}

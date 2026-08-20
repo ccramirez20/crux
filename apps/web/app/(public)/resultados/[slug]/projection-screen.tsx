@@ -635,7 +635,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
 
       {!round || !current ? (
         <p className="flex flex-1 items-center justify-center text-3xl text-muted">
-          Todavía no hay nada capturado en este evento.
+          Todavía no hay datos registrados en este evento.
         </p>
       ) : (
         <>

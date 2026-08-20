@@ -196,8 +196,8 @@ export function ProblemCard({
                 </div>
               </div>
               <p className="text-xs text-muted">
-                Cambiar los puntos no reescribe ningún intento: la tabla se vuelve a calcular sola.
-                Si el evento ya empezó, el puesto de la gente puede moverse al guardar.
+                Cambiar los puntos no modifica los intentos registrados: la tabla se recalcula
+                sola. Si el evento ya empezó, las posiciones pueden cambiar al guardar.
               </p>
             </>
           )}

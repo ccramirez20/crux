@@ -22,14 +22,14 @@ const MAX_BYTES = 2 * 1024 * 1024;
 export async function POST(request: Request): Promise<NextResponse<Result>> {
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return NextResponse.json({ ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' }, { status: 401 });
+    return NextResponse.json({ ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' }, { status: 401 });
   }
 
   const form = await request.formData();
   const file = form.get('file');
   const organizationId = form.get('organizationId');
   if (!(file instanceof File) || typeof organizationId !== 'string') {
-    return NextResponse.json({ ok: false, error: 'Faltan datos en la subida.' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Faltan datos para completar el registro.' }, { status: 400 });
   }
   if (!ALLOWED_TYPES.has(file.type)) {
     return NextResponse.json({ ok: false, error: 'El logo debe ser PNG, JPG o WebP.' }, { status: 400 });

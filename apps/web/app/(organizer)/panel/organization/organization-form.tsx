@@ -88,8 +88,8 @@ export function OrganizationLogoForm({
             className="hidden"
           />
           <p className="text-xs text-muted">
-            Aparece junto al nombre del gimnasio en las tarjetas compartibles de resultado. PNG,
-            JPG o WebP, hasta 2 MB.
+            Aparece junto al nombre del gimnasio en la tabla de resultados y en las tarjetas
+            compartibles. PNG, JPG o WebP, hasta 2 MB.
           </p>
         </div>
       </div>

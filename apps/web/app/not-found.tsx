@@ -26,8 +26,8 @@ export default function NotFound() {
           Esta página no existe
         </h1>
         <p className="max-w-[52ch] text-lg leading-relaxed text-muted">
-          Puede que el enlace venga cortado, o que la dirección tenga una letra de más. Los enlaces
-          de una competencia llevan siempre su nombre al final:
+          Puede que el enlace esté cortado o que la dirección tenga una letra de más. Los enlaces
+          de una competencia siempre llevan su nombre al final:
         </p>
         {/* En renglón aparte: dentro del párrafo se partía a mitad de frase a
             390 px y el punto final quedaba flotando después del recuadro. */}

@@ -54,7 +54,7 @@ export default async function TarjetaPage({
         className="w-full max-w-xs rounded-lg border border-cardborder shadow-lg"
       />
       <p className="text-base text-muted">
-        Mantén pulsada la imagen para guardarla, o tócala con el botón derecho en el computador.
+        Mantén pulsada la imagen para guardarla, o haz click derecho sobre ella en el computador.
       </p>
       <a
         href={`/competidor/${athleteId}`}

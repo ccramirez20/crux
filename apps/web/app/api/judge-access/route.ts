@@ -53,7 +53,10 @@ export async function POST(request: Request): Promise<NextResponse<AccessResult>
     const key = clientKey(request.headers);
     if (isRateLimited(key)) {
       return NextResponse.json(
-        { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
+        {
+          ok: false,
+          error: 'Has superado el límite de intentos. Espera unos minutos y vuelve a intentarlo.',
+        },
         { status: 429 },
       );
     }

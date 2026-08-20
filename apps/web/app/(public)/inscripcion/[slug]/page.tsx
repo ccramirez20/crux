@@ -62,7 +62,7 @@ export default async function InscripcionPage({
           {formatEventDate(event.registrationDeadline)
             ? ` el ${formatEventDate(event.registrationDeadline)}`
             : ''}
-          . Si necesitas entrar, habla con quien organiza.
+          . Si necesitas inscribirte, habla con quien organiza.
         </p>
       ) : eventCategories.length === 0 ? (
         <p className="max-w-sm rounded-lg border border-cardborder bg-card px-4 py-5 text-center text-sm text-muted">

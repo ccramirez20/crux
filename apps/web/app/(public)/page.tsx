@@ -13,7 +13,7 @@ const sectionEyebrowClass = 'text-sm font-semibold uppercase tracking-[0.14em] t
 export const metadata: Metadata = {
   title: 'Crux — Competencias de escalada',
   description:
-    'Inscripción por enlace, jueces que puntúan desde el celular aunque se caiga el wifi, y una tabla pública que se actualiza sola.',
+    'Inscripción por enlace, jueces puntuando desde el celular incluso sin wifi, y una tabla pública que se actualiza sola.',
   openGraph: {
     title: 'Crux — Competencias de escalada',
     description: HEADLINE,
@@ -40,7 +40,7 @@ const CONTACT_EMAIL = 'contacto@cruxcompetencias.com';
 const STEPS = [
   {
     title: 'Publicas el enlace',
-    body: 'Creas el evento con sus categorías y rondas, y compartes un enlace. La gente se inscribe sola, sin crear cuenta.',
+    body: 'Creas el evento, defines categorías y rondas, y compartes un enlace. La gente se inscribe sola, sin crear cuenta.',
   },
   {
     title: 'Los jueces puntúan desde el celular',
@@ -48,7 +48,7 @@ const STEPS = [
   },
   {
     title: 'La tabla se actualiza sola',
-    body: 'El puntaje sale de los intentos, no se escribe a mano. Nadie suma en papel y nadie discute un puesto.',
+    body: 'El puntaje sale de los intentos, no se escribe a mano. Nadie suma en papel ni discute un puesto.',
   },
 ];
 
@@ -131,9 +131,9 @@ export default function HomePage() {
             ))}
           </h1>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted md:text-xl">
-            <span className={brandWordClass}>CRUX</span> corre competencias de escalada de principio
-            a fin: inscripción por enlace, jueces que puntúan desde el celular aunque se caiga el
-            wifi, y una tabla pública que se actualiza sola.
+            <span className={brandWordClass}>CRUX</span> gestiona la competencia de principio a fin:
+            inscripción por enlace, jueces puntuando desde el celular incluso sin wifi, y una tabla
+            pública que se actualiza sola.
           </p>
         </div>
 
@@ -153,13 +153,13 @@ export default function HomePage() {
         <div className="flex flex-col gap-3">
           <span className={sectionEyebrowClass}>La pantalla del evento</span>
           <h2 className="max-w-[22ch] font-display text-3xl font-bold leading-tight md:text-4xl">
-            La sala entera sabe quién va ganando, sin preguntarle a nadie.
+            Todos en la sala saben quién va ganando, sin tener que preguntar.
           </h2>
           <p className="max-w-[62ch] text-lg leading-relaxed text-muted">
-            Una pantalla fácil de leer desde lejos durante todo el evento, con colores pensados en
-            el páramo y los desempates a la vista. La proyectas al empezar la ronda y no la vuelves
-            a tocar: se actualiza sola cada vez que un juez registra un intento, así que nadie
-            interrumpe a quien organiza para preguntar en qué puesto va.
+            Una pantalla fácil de leer desde lejos durante todo el evento, con colores inspirados
+            en el páramo y los desempates siempre a la vista. La proyectas al empezar la ronda y
+            listo: se actualiza sola con cada intento registrado por los jueces. Así, nadie tiene
+            que interrumpir a quien organiza para preguntar en qué puesto va.
           </p>
         </div>
 
@@ -261,16 +261,18 @@ export default function HomePage() {
             Gimnasio, club o liga
           </h3>
           <p className="leading-relaxed text-muted">
-            Defines categorías, rondas y el formato de puntaje que ya usas —tops y zonas, puntos
-            IFSC, puntos por bloque, altura máxima— y el día del evento te dedicas al evento.
+            Define las categorías, las rondas y el sistema de puntaje que ya usas —tops y zonas,
+            puntos IFSC, puntos por bloque, altura máxima— y el día del evento preocúpate solo por
+            la competencia.
           </p>
         </div>
         <div className="flex flex-col gap-3">
           <span className={sectionEyebrowClass}>Si compites</span>
           <h3 className="font-display text-2xl font-bold leading-snug">No necesitas cuenta</h3>
           <p className="leading-relaxed text-muted">
-            Te inscribes por el enlace que te pasa quien organiza, y ves los resultados desde el
-            teléfono mientras la ronda corre. Tu historial se acumula entre eventos.
+            Te inscribes desde el enlace que te comparte quien organiza y ves los resultados desde
+            tu teléfono mientras avanza la ronda. Tu historial queda guardado y se acumula entre
+            eventos.
           </p>
         </div>
       </section>
@@ -280,7 +282,7 @@ export default function HomePage() {
           ¿Vas a organizar una competencia?
         </h2>
         <p className="max-w-[52ch] text-lg leading-relaxed text-muted">
-          Está hecho en Colombia y en español, para las competencias que ya se corren aquí.
+          Hecho en Colombia y en español, para las competencias que ya se hacen aquí.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/sign-up" className={primaryButtonClass}>

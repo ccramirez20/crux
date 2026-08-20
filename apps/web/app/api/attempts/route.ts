@@ -96,7 +96,7 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
   const body: unknown = await request.json().catch(() => null);
   const parsed = attemptInputSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: 'Datos de intento inválidos.' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Los datos del intento no son válidos.' }, { status: 400 });
   }
 
   const input: AttemptInput = parsed.data;
@@ -117,7 +117,10 @@ export async function POST(request: Request): Promise<NextResponse<SyncResult>> 
     // the pending attempts wait on the phone and the next tick retries.
     if (isRateLimited(key)) {
       return NextResponse.json(
-        { ok: false, error: 'Demasiados códigos incorrectos. Espera unos minutos.' },
+        {
+          ok: false,
+          error: 'Has superado el límite de intentos. Espera unos minutos y vuelve a intentarlo.',
+        },
         { status: 429 },
       );
     }

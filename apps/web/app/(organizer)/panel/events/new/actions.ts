@@ -41,12 +41,12 @@ type CreateEventResult = { ok: true } | { ok: false; error: string };
 export async function createEvent(input: CreateEventInput): Promise<CreateEventResult> {
   const parsed = createEventInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'Datos del evento inválidos.' };
+    return { ok: false, error: 'Los datos del evento no son válidos.' };
   }
 
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session) {
-    return { ok: false, error: 'Sesión inválida, vuelve a iniciar sesión.' };
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
   }
 
   const db = getDb();
@@ -55,7 +55,7 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
   if (slug === '') {
     return {
       ok: false,
-      error: 'Ese nombre no alcanza para armar un enlace. Usa al menos una letra o un número.',
+      error: 'Ese nombre es demasiado corto para crear un enlace. Usa al menos una letra o un número.',
     };
   }
 
@@ -66,7 +66,7 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
       .from(organizations)
       .where(eq(organizations.id, organization.organizationId));
     if (!org || org.ownerId !== session.user.id) {
-      return { ok: false, error: 'Esa organización no existe o no te pertenece.' };
+      return { ok: false, error: 'Esa organización no existe o no está asociada a tu cuenta.' };
     }
     organizationId = org.id;
   } else {
@@ -83,7 +83,7 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
     if (owned.length > 0) {
       return {
         ok: false,
-        error: 'Tu cuenta ya tiene organización. Escógela en la lista en vez de crear otra.',
+        error: 'Ya tienes una organización asociada a tu cuenta.',
       };
     }
     const [org] = await db
@@ -113,7 +113,7 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
       // cambiar es el nombre, y el mensaje lo dice.
       return {
         ok: false,
-        error: 'Ya tienes un evento con ese nombre. Cámbialo un poco para que el enlace sea distinto.',
+        error: 'Ya tienes un evento con ese nombre. Usa otro para que el enlace sea diferente.',
       };
     }
     throw error;

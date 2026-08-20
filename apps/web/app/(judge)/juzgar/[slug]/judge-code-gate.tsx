@@ -42,7 +42,7 @@ export function JudgeCodeGate({
       );
     } catch {
       setError(
-        'No hay conexión para comprobar el código. Conéctate un momento: la lista de competidores se descarga una sola vez.',
+        'Conéctate a internet para comprobar el código. La lista de competidores se descarga una sola vez.',
       );
     } finally {
       setIsChecking(false);
@@ -54,8 +54,8 @@ export function JudgeCodeGate({
       <div>
         <h2 className="font-display text-xl font-bold">Código del evento</h2>
         <p className="mt-1 text-sm text-muted">
-          Para registrar intentos necesitas el código que da quien organiza. Se pide una sola vez en
-          este teléfono.
+          Para registrar intentos necesitas el código que te da quien organiza. Se pide una sola
+          vez en este teléfono.
         </p>
       </div>
       <input
