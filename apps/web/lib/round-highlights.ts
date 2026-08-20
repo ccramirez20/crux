@@ -43,14 +43,19 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
   const plural = round.problems.length === 1 ? unit : `${unit}s`;
   const conTop = stats.filter((stat) => stat.tops > 0).length;
 
+  // `crux` sale de ordenar por tops y tomar el primero: con cero tops en toda
+  // la ronda esto sigue dando un bloque (el primero del orden), no `undefined`.
+  // Sin el `totalTops > 0` de abajo, una ronda recién creada mostraba "le
+  // hicieron top 0 de N" en el bloque que fuera, como si ya hubiera datos.
+  const hasCrux = crux !== undefined && totalTops > 0;
   const out: Highlight[] = [];
   out.push({
     key: 'crux',
     label: `El ${unit} más duro`,
     what: `Cuál fue el ${unit} que menos gente pudo hacer`,
-    value: crux ? `${unit.slice(0, 1).toUpperCase()}${crux.number}` : '—',
-    detail: crux
-      ? `${problemName(crux.problemId) ?? 'Sin nombre'} · le hicieron top ${crux.tops} de ${crux.field}`
+    value: hasCrux ? `${unit.slice(0, 1).toUpperCase()}${crux!.number}` : '—',
+    detail: hasCrux
+      ? `${problemName(crux!.problemId) ? `${problemName(crux!.problemId)} · ` : ''}le hicieron top ${crux!.tops} de ${crux!.field}`
       : `Todavía no hay ${plural} capturados`,
   });
   if (!isHeight) {

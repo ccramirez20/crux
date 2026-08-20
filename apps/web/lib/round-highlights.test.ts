@@ -51,6 +51,40 @@ const stat = (problemId: string, number: number, tops: number) => ({
   field: 2,
 });
 
+describe('roundHighlights · el bloque más duro', () => {
+  it('sin ningún top todavía, no inventa un bloque "más duro"', () => {
+    const items = roundHighlights(
+      round({
+        rows: [row('a'), row('b')],
+        problemStats: [stat('p1', 1, 0), stat('p2', 2, 0)],
+      }),
+      'bloque',
+      false,
+    );
+    const crux = items.find((i) => i.key === 'crux');
+    expect(crux?.value).toBe('—');
+    expect(crux?.detail).toBe('Todavía no hay bloques capturados');
+  });
+
+  it('con tops, señala el bloque con menos y no dice "Sin nombre" si no tiene', () => {
+    const items = roundHighlights(
+      round({
+        problems: [
+          { id: 'p1', number: 1, name: null, topPoints: null, zonePoints: null },
+          { id: 'p2', number: 2, name: 'Tolima', topPoints: null, zonePoints: null },
+        ],
+        rows: [row('a'), row('b')],
+        problemStats: [stat('p1', 1, 0), stat('p2', 2, 1)],
+      }),
+      'bloque',
+      false,
+    );
+    const crux = items.find((i) => i.key === 'crux');
+    expect(crux?.value).toBe('B1');
+    expect(crux?.detail).toBe('le hicieron top 0 de 2');
+  });
+});
+
 describe('roundHighlights · tops logrados', () => {
   it('sin un solo top lo dice con palabras, no con dos ceros', () => {
     const items = roundHighlights(
