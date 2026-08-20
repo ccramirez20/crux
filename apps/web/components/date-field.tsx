@@ -106,7 +106,7 @@ export function DateField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
-        className={`${className ?? fieldClass} pr-10 [&::-webkit-calendar-picker-indicator]:hidden`}
+        className={`${className ?? fieldClass} w-full pr-10 [&::-webkit-calendar-picker-indicator]:hidden`}
       />
       {/* Firefox y Safari dibujan su propio ícono de calendario dentro del
           input y no tienen el pseudo-elemento `::-webkit-...` que lo esconde
