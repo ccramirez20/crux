@@ -121,7 +121,7 @@ function Row({
 
       {entry.hasAttempts ? (
         <span className="ml-auto shrink-0 text-xs text-muted">
-          Ya tiene intentos capturados: no se puede mover ni quitar.
+          Ya tiene intentos registrados: no se puede mover ni eliminar.
         </span>
       ) : (
         <button
@@ -172,6 +172,7 @@ export function Roster({
   categories: RosterCategory[];
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [startOverride, setStartOverride] = useState<Record<string, number>>({});
   const [isPending, startTransition] = useTransition();
 
   const total = categories.reduce((sum, c) => sum + c.entries.length, 0);
@@ -183,8 +184,8 @@ export function Roster({
   if (total === 0) {
     return (
       <p className="rounded-lg border border-cardborder bg-card p-5 text-sm text-muted">
-        Todavía no se ha inscrito nadie. Cuando alguien abra el enlace de inscripción y se
-        registre, aparece aquí y ya puedes ponerle dorsal.
+        Todavía no hay inscritos. Cuando alguien se registre desde el enlace de inscripción,
+        aparecerá aquí y podrás asignarle un dorsal.
       </p>
     );
   }
@@ -198,7 +199,7 @@ export function Roster({
         <span className="font-display text-base font-bold text-ink">{total}</span> inscrito
         {total === 1 ? '' : 's'} ·{' '}
         {numbered === total ? (
-          <span className="font-semibold text-pine">todos con dorsal</span>
+          <span className="font-semibold text-pine">todos con dorsal asignado</span>
         ) : (
           <span className="font-semibold text-bark">
             {total - numbered} sin dorsal
@@ -219,7 +220,7 @@ export function Roster({
               .map((e) => Number(e.bibNumber))
               .filter((n) => Number.isFinite(n)),
           );
-          const start = highest > 0 ? highest + 1 : DEFAULT_START;
+          const start = startOverride[category.id] ?? (highest > 0 ? highest + 1 : DEFAULT_START);
 
           return (
             <li key={category.id} className="overflow-hidden rounded-lg border border-cardborder bg-card">
@@ -275,6 +276,21 @@ export function Roster({
 
                   {pending > 0 && (
                     <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-cardborder pt-3">
+                      <label className="flex items-center gap-1.5 text-xs text-muted">
+                        Numerar desde
+                        <input
+                          type="number"
+                          min={1}
+                          value={start}
+                          onChange={(event) =>
+                            setStartOverride((prev) => ({
+                              ...prev,
+                              [category.id]: Number(event.target.value) || 1,
+                            }))
+                          }
+                          className={`${fieldClass} w-20 py-1`}
+                        />
+                      </label>
                       <button
                         type="button"
                         disabled={isPending}
@@ -285,11 +301,11 @@ export function Roster({
                         }
                         className="rounded border-[1.5px] border-pine px-3 py-1.5 text-xs font-semibold text-pine transition hover:bg-pine hover:text-white disabled:opacity-50"
                       >
-                        {isPending ? 'Numerando…' : `Numerar desde ${start}`}
+                        {isPending ? 'Numerando…' : 'Numerar'}
                       </button>
                       <span className="text-xs text-muted">
-                        Solo llena los que están vacíos, en orden de inscripción. Lo que ya
-                        escribiste a mano no se toca.
+                        Solo completa los que están vacíos, en orden de inscripción. Los dorsales
+                        que ya escribiste a mano no se modifican.
                       </span>
                     </div>
                   )}
