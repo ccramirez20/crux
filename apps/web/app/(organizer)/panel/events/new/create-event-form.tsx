@@ -34,9 +34,9 @@ const DEFAULT_SCORING_FORMAT: Record<Discipline, ScoringFormat> = {
   lead: 'max_height',
 };
 
-// The full IANA list is ~400 entries and turns a one-second decision into
-// scrolling. Colombia has a single zone and is the only market in stage 1;
-// the rest of the list stays reachable behind "Otra zona horaria".
+// Colombia es el único mercado real hoy; el resto de la lista IANA completa
+// (~400 zonas) queda debajo en su propio grupo, para no obligar a escribir el
+// nombre de la ciudad si ya está entre las comunes.
 const COMMON_TIMEZONES = [
   { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
   { value: 'America/Mexico_City', label: 'México (Ciudad de México)' },
@@ -45,7 +45,10 @@ const COMMON_TIMEZONES = [
   { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
   { value: 'Europe/Madrid', label: 'España (Madrid)' },
 ];
-const ALL_TIMEZONES = Intl.supportedValuesOf('timeZone');
+const COMMON_TIMEZONE_VALUES = new Set(COMMON_TIMEZONES.map((tz) => tz.value));
+const OTHER_TIMEZONES = Intl.supportedValuesOf('timeZone').filter(
+  (tz) => !COMMON_TIMEZONE_VALUES.has(tz),
+);
 
 export function CreateEventForm({
   organizations,
@@ -63,7 +66,6 @@ export function CreateEventForm({
   );
   const [judgeCode, setJudgeCode] = useState(generateCode);
   const [timezone, setTimezone] = useState('America/Bogota');
-  const [showAllTimezones, setShowAllTimezones] = useState(false);
   const [date, setDate] = useState('');
 
   const [error, setError] = useState<string | null>(null);
@@ -179,12 +181,12 @@ export function CreateEventForm({
           {slug ? (
             <span className="font-display font-semibold text-ink">{slug}</span>
           ) : (
-            <span className="italic">se arma con el nombre</span>
+            <span className="italic">se genera con el nombre</span>
           )}
         </p>
         <p className="text-xs text-muted">
-          Sale del nombre del evento y no se edita: va impreso en los QR, así que tiene que
-          quedar fijo. Si quieres otro enlace, cambia el nombre.
+          Se genera a partir del nombre del evento y no se edita: va impreso en los QR, así que
+          tiene que quedar fijo. Si quieres otro enlace, cambia el nombre.
         </p>
       </div>
 
@@ -200,7 +202,7 @@ export function CreateEventForm({
           className={fieldClass}
         />
         <p className="text-xs text-muted">
-          Con esta fecha se calcula la edad de cada competidor para saber en qué categoría entra.
+          Esta fecha define qué categorías están disponibles para cada competidor.
         </p>
       </div>
 
@@ -275,8 +277,8 @@ export function CreateEventForm({
           </button>
         </div>
         <p className="text-xs text-muted">
-          Quien escanee el QR de un bloque tendrá que escribirlo antes de poder registrar intentos.
-          Dáselo solo a tus jueces.
+          Quien escanee el QR de un bloque necesitará este código para poder registrar intentos.
+          Compártelo solo con tus jueces.
         </p>
       </div>
 
@@ -287,32 +289,24 @@ export function CreateEventForm({
         <select
           id="event-timezone"
           value={timezone}
-          onChange={(event) => {
-            if (event.target.value === '__all__') {
-              setShowAllTimezones(true);
-              return;
-            }
-            setTimezone(event.target.value);
-          }}
+          onChange={(event) => setTimezone(event.target.value)}
           required
           className={fieldClass}
         >
-          {showAllTimezones ? (
-            ALL_TIMEZONES.map((tz) => (
+          <optgroup label="Común">
+            {COMMON_TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Otras zonas horarias">
+            {OTHER_TIMEZONES.map((tz) => (
               <option key={tz} value={tz}>
                 {tz}
               </option>
-            ))
-          ) : (
-            <>
-              {COMMON_TIMEZONES.map((tz) => (
-                <option key={tz.value} value={tz.value}>
-                  {tz.label}
-                </option>
-              ))}
-              <option value="__all__">Otra zona horaria…</option>
-            </>
-          )}
+            ))}
+          </optgroup>
         </select>
       </div>
 
