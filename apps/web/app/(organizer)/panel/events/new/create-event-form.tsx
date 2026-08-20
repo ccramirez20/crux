@@ -34,9 +34,9 @@ const DEFAULT_SCORING_FORMAT: Record<Discipline, ScoringFormat> = {
   lead: 'max_height',
 };
 
-// Colombia es el único mercado real hoy; el resto de la lista IANA completa
-// (~400 zonas) queda debajo en su propio grupo, para no obligar a escribir el
-// nombre de la ciudad si ya está entre las comunes.
+// Colombia es el único mercado real hoy, así que estas van primero en la
+// lista con un nombre de país en vez del identificador IANA crudo. El resto
+// de la lista (~400 zonas) sigue debajo, buscable escribiendo.
 const COMMON_TIMEZONES = [
   { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
   { value: 'America/Mexico_City', label: 'México (Ciudad de México)' },
@@ -46,9 +46,14 @@ const COMMON_TIMEZONES = [
   { value: 'Europe/Madrid', label: 'España (Madrid)' },
 ];
 const COMMON_TIMEZONE_VALUES = new Set(COMMON_TIMEZONES.map((tz) => tz.value));
-const OTHER_TIMEZONES = Intl.supportedValuesOf('timeZone').filter(
-  (tz) => !COMMON_TIMEZONE_VALUES.has(tz),
-);
+const TIMEZONE_OPTIONS = [
+  ...COMMON_TIMEZONES,
+  ...Intl.supportedValuesOf('timeZone')
+    .filter((tz) => !COMMON_TIMEZONE_VALUES.has(tz))
+    .map((tz) => ({ value: tz, label: tz })),
+];
+const TIMEZONE_LABEL_TO_VALUE = new Map(TIMEZONE_OPTIONS.map((tz) => [tz.label, tz.value]));
+const TIMEZONE_VALUE_TO_LABEL = new Map(TIMEZONE_OPTIONS.map((tz) => [tz.value, tz.label]));
 
 export function CreateEventForm({
   organizations,
@@ -66,6 +71,7 @@ export function CreateEventForm({
   );
   const [judgeCode, setJudgeCode] = useState(generateCode);
   const [timezone, setTimezone] = useState('America/Bogota');
+  const [timezoneQuery, setTimezoneQuery] = useState('Colombia (Bogotá)');
   const [date, setDate] = useState('');
 
   const [error, setError] = useState<string | null>(null);
@@ -286,28 +292,34 @@ export function CreateEventForm({
         <label htmlFor="event-timezone" className="text-sm font-medium text-bark">
           Zona horaria
         </label>
-        <select
+        <input
           id="event-timezone"
-          value={timezone}
-          onChange={(event) => setTimezone(event.target.value)}
+          list="event-timezone-options"
+          value={timezoneQuery}
+          onChange={(event) => {
+            const text = event.target.value;
+            setTimezoneQuery(text);
+            const match = TIMEZONE_LABEL_TO_VALUE.get(text);
+            if (match) {
+              setTimezone(match);
+            }
+          }}
+          onBlur={() => {
+            // Si lo que quedó escrito no es una zona real, vuelve a la última
+            // válida — así lo que se ve en el campo siempre es lo que se manda.
+            if (!TIMEZONE_LABEL_TO_VALUE.has(timezoneQuery)) {
+              setTimezoneQuery(TIMEZONE_VALUE_TO_LABEL.get(timezone) ?? timezone);
+            }
+          }}
+          autoComplete="off"
           required
           className={fieldClass}
-        >
-          <optgroup label="Común">
-            {COMMON_TIMEZONES.map((tz) => (
-              <option key={tz.value} value={tz.value}>
-                {tz.label}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Otras zonas horarias">
-            {OTHER_TIMEZONES.map((tz) => (
-              <option key={tz} value={tz}>
-                {tz}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+        />
+        <datalist id="event-timezone-options">
+          {TIMEZONE_OPTIONS.map((tz) => (
+            <option key={tz.value} value={tz.label} />
+          ))}
+        </datalist>
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
