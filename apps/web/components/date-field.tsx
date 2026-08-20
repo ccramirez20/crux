@@ -29,13 +29,28 @@ function todayIso(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+// El día se acepta 1-31 sin mirar cuántos tiene el mes en curso (así que
+// "31 de febrero" pasa el tecleo) — el calendario, que sí sabe la grilla
+// real, es de donde sale una fecha siempre válida sin tener que escribir.
+// ponytail: si algún día hace falta validar el mes+día juntos al escribir,
+// ese es el sitio.
+function clampSegment(digits: string, max: number): string {
+  if (digits.length < 2) {
+    return digits;
+  }
+  const n = Math.min(Math.max(Number(digits), 1), max);
+  return String(n).padStart(2, '0');
+}
+
 /**
- * Un `<input type="date">` normal por debajo — así se conserva la escritura
- * a mano con los segmentos día/mes/año del navegador — más un calendario
- * propio en vez del que abre el navegador. El problema que resuelve es
- * puntual: en el calendario nativo, pasar de la vista de mes/año a la de
- * días no es obvio. Aquí las mismas flechas de siempre hacen ese viaje en un
- * clic, sin salir del componente.
+ * Reemplaza por completo el `<input type="date">` nativo — no solo el
+ * calendario, también los segmentos día/mes/año, que ya no se pueden
+ * esconder de fondo. Chrome dejó de respetar `display:none` sobre
+ * `::-webkit-calendar-picker-indicator` (confirmado con `getComputedStyle`
+ * contra el elemento real: reporta `inline-block` sin importar el CSS), así
+ * que el ícono nativo se veía siempre, junto al propio — de ahí "dos
+ * calendarios". Con tres campos de texto en vez del input nativo, no hay
+ * pseudo-elemento del navegador que aparezca: el único ícono es el nuestro.
  */
 export function DateField({
   id,
@@ -55,6 +70,65 @@ export function DateField({
   const [viewYear, setViewYear] = useState(() => parseIsoDate(value)?.year ?? new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => parseIsoDate(value)?.month ?? new Date().getMonth());
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const monthRef = useRef<HTMLInputElement>(null);
+  const dayRef = useRef<HTMLInputElement>(null);
+  const yearRef = useRef<HTMLInputElement>(null);
+
+  const initial = parseIsoDate(value);
+  const [month, setMonthState] = useState(initial ? String(initial.month + 1).padStart(2, '0') : '');
+  const [day, setDayState] = useState(initial ? String(initial.day).padStart(2, '0') : '');
+  const [year, setYearState] = useState(initial ? String(initial.year) : '');
+
+  // Sincroniza cuando `value` cambia desde afuera (se eligió un día en el
+  // calendario, o el formulario se reinició) sin pisar lo que se está
+  // escribiendo cuando el cambio viene de aquí mismo.
+  useEffect(() => {
+    const parsed = parseIsoDate(value);
+    if (parsed) {
+      setMonthState(String(parsed.month + 1).padStart(2, '0'));
+      setDayState(String(parsed.day).padStart(2, '0'));
+      setYearState(String(parsed.year));
+    } else if (value === '') {
+      setMonthState('');
+      setDayState('');
+      setYearState('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  function emit(m: string, d: string, y: string) {
+    if (m.length === 2 && d.length === 2 && y.length === 4) {
+      onChange(`${y}-${m}-${d}`);
+    } else {
+      onChange('');
+    }
+  }
+
+  function setMonth(digits: string) {
+    const next = clampSegment(digits.replace(/\D/g, '').slice(0, 2), 12);
+    setMonthState(next);
+    emit(next, day, year);
+    if (next.length === 2) {
+      dayRef.current?.focus();
+      dayRef.current?.select();
+    }
+  }
+
+  function setDay(digits: string) {
+    const next = clampSegment(digits.replace(/\D/g, '').slice(0, 2), 31);
+    setDayState(next);
+    emit(month, next, year);
+    if (next.length === 2) {
+      yearRef.current?.focus();
+      yearRef.current?.select();
+    }
+  }
+
+  function setYear(digits: string) {
+    const next = digits.replace(/\D/g, '').slice(0, 4);
+    setYearState(next);
+    emit(month, day, next);
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -83,36 +157,98 @@ export function DateField({
   }
 
   function shiftMonth(delta: number) {
-    let month = viewMonth + delta;
-    let year = viewYear;
-    if (month < 0) {
-      month = 11;
-      year -= 1;
-    } else if (month > 11) {
-      month = 0;
-      year += 1;
+    let nextMonth = viewMonth + delta;
+    let nextYear = viewYear;
+    if (nextMonth < 0) {
+      nextMonth = 11;
+      nextYear -= 1;
+    } else if (nextMonth > 11) {
+      nextMonth = 0;
+      nextYear += 1;
     }
-    setViewMonth(month);
-    setViewYear(year);
+    setViewMonth(nextMonth);
+    setViewYear(nextYear);
   }
 
   const today = todayIso();
 
+  const segmentInputClass = 'bg-transparent text-center tabular-nums outline-none placeholder:text-muted';
+
   return (
     <div ref={wrapperRef} className="relative w-fit">
-      <input
-        id={id}
-        type="date"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        required={required}
-        className={`${className ?? fieldClass} pr-7 [&::-webkit-calendar-picker-indicator]:hidden`}
-      />
-      {/* Firefox y Safari dibujan su propio ícono de calendario dentro del
-          input y no tienen el pseudo-elemento `::-webkit-...` que lo esconde
-          en Chrome — sin esto, ahí se veían dos calendarios superpuestos. Este
-          bloque tapa esa esquina con el mismo fondo del campo y encima va el
-          botón propio, así que no importa qué dibuje el navegador debajo. */}
+      <div
+        className={`${className ?? fieldClass} flex w-fit items-center gap-0.5 pr-7 focus-within:outline-none focus-within:ring-2 focus-within:ring-pine`}
+      >
+        <input
+          ref={monthRef}
+          id={id}
+          value={month}
+          onChange={(event) => setMonth(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowRight' && monthRef.current?.selectionStart === month.length) {
+              dayRef.current?.focus();
+            }
+          }}
+          placeholder="mm"
+          inputMode="numeric"
+          autoComplete="off"
+          aria-label="Mes"
+          required={required}
+          maxLength={2}
+          className={`${segmentInputClass} w-7`}
+        />
+        <span className="text-muted">/</span>
+        <input
+          ref={dayRef}
+          value={day}
+          onChange={(event) => setDay(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Backspace' && day === '') {
+              // Sin esto, el navegador borra en el campo al que se acaba de
+              // saltar el foco — el backspace "sobra" un campo.
+              event.preventDefault();
+              monthRef.current?.focus();
+              monthRef.current?.select();
+            } else if (event.key === 'ArrowLeft' && dayRef.current?.selectionStart === 0) {
+              monthRef.current?.focus();
+            } else if (event.key === 'ArrowRight' && dayRef.current?.selectionStart === day.length) {
+              yearRef.current?.focus();
+            }
+          }}
+          placeholder="dd"
+          inputMode="numeric"
+          autoComplete="off"
+          aria-label="Día"
+          required={required}
+          maxLength={2}
+          className={`${segmentInputClass} w-7`}
+        />
+        <span className="text-muted">/</span>
+        <input
+          ref={yearRef}
+          value={year}
+          onChange={(event) => setYear(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Backspace' && year === '') {
+              event.preventDefault();
+              dayRef.current?.focus();
+              dayRef.current?.select();
+            } else if (event.key === 'ArrowLeft' && yearRef.current?.selectionStart === 0) {
+              dayRef.current?.focus();
+            }
+          }}
+          placeholder="yyyy"
+          inputMode="numeric"
+          autoComplete="off"
+          aria-label="Año"
+          required={required}
+          maxLength={4}
+          className={`${segmentInputClass} w-12`}
+        />
+      </div>
+      {/* El campo entero es nuestro ahora, segmentos incluidos — no queda
+          ningún `<input type="date">` nativo cuyo ícono el navegador pueda
+          seguir dibujando por su cuenta. */}
       <div className="absolute inset-y-px right-px flex w-6 items-center justify-center rounded-r-lg bg-card">
         <button
           type="button"
@@ -121,7 +257,24 @@ export function DateField({
           aria-expanded={isOpen}
           className="text-muted hover:text-pine"
         >
-          📅
+          {/* SVG propio y no el emoji 📅: el emoji trae su franja azul fija,
+              sin forma de teñirla del pine de la marca. `currentColor` sí
+              hereda el color del botón (gris, pine al pasar el mouse). */}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="14" height="13" rx="2" />
+            <path d="M3 8h14" />
+            <path d="M7 2.5v3M13 2.5v3" />
+          </svg>
         </button>
       </div>
 
