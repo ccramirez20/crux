@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { createEvent } from './actions';
 import { DateField } from '@/components/date-field';
+import { buildTimezoneOptions } from '@/lib/timezones';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 import { DISCIPLINE_LABEL, labelFor } from '@/lib/labels';
 import { generateCode } from '@/lib/codes';
@@ -35,24 +36,7 @@ const DEFAULT_SCORING_FORMAT: Record<Discipline, ScoringFormat> = {
   lead: 'max_height',
 };
 
-// Colombia es el único mercado real hoy, así que estas van primero en la
-// lista con un nombre de país en vez del identificador IANA crudo. El resto
-// de la lista (~400 zonas) sigue debajo, buscable escribiendo.
-const COMMON_TIMEZONES = [
-  { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
-  { value: 'America/Mexico_City', label: 'México (Ciudad de México)' },
-  { value: 'America/Lima', label: 'Perú (Lima)' },
-  { value: 'America/Santiago', label: 'Chile (Santiago)' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
-  { value: 'Europe/Madrid', label: 'España (Madrid)' },
-];
-const COMMON_TIMEZONE_VALUES = new Set(COMMON_TIMEZONES.map((tz) => tz.value));
-const TIMEZONE_OPTIONS = [
-  ...COMMON_TIMEZONES,
-  ...Intl.supportedValuesOf('timeZone')
-    .filter((tz) => !COMMON_TIMEZONE_VALUES.has(tz))
-    .map((tz) => ({ value: tz, label: tz })),
-];
+const TIMEZONE_OPTIONS = buildTimezoneOptions();
 const TIMEZONE_LABEL_TO_VALUE = new Map(TIMEZONE_OPTIONS.map((tz) => [tz.label, tz.value]));
 const TIMEZONE_VALUE_TO_LABEL = new Map(TIMEZONE_OPTIONS.map((tz) => [tz.value, tz.label]));
 
@@ -72,17 +56,19 @@ export function CreateEventForm({
   );
   const [judgeCode, setJudgeCode] = useState(generateCode);
   const [timezone, setTimezone] = useState('America/Bogota');
-  const [timezoneQuery, setTimezoneQuery] = useState('Colombia (Bogotá)');
+  const [timezoneQuery, setTimezoneQuery] = useState(
+    () => TIMEZONE_VALUE_TO_LABEL.get('America/Bogota') ?? 'America/Bogota',
+  );
   const [isTimezoneOpen, setIsTimezoneOpen] = useState(false);
   const [hasTypedTimezone, setHasTypedTimezone] = useState(false);
   const [timezoneHighlight, setTimezoneHighlight] = useState(0);
   const [date, setDate] = useState('');
 
-  // Sin haber escrito nada, `timezoneQuery` sigue siendo la zona ya elegida
-  // ("Colombia (Bogotá)"), y filtrar por ese texto completo solo encuentra
-  // esa misma fila — el desplegable se abría con un único resultado y nada
-  // que scrollear. Sin escribir, se navega la lista completa (los 6 comunes
-  // ya van primero); al escribir, se filtra de verdad.
+  // Sin haber escrito nada, `timezoneQuery` sigue siendo la zona ya elegida,
+  // y filtrar por ese texto completo solo encuentra esa misma fila — el
+  // desplegable se abría con un único resultado y nada que scrollear. Sin
+  // escribir, se navega la lista completa (ordenada por huso); al escribir,
+  // se filtra de verdad.
   const timezoneMatches = hasTypedTimezone
     ? TIMEZONE_OPTIONS.filter((tz) =>
         tz.label.toLowerCase().includes(timezoneQuery.trim().toLowerCase()),
@@ -308,22 +294,6 @@ export function CreateEventForm({
         <label htmlFor="event-timezone" className="text-sm font-medium text-bark">
           Zona horaria
         </label>
-        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">
-          {COMMON_TIMEZONES.map((tz) => (
-            <button
-              key={tz.value}
-              type="button"
-              onClick={() => selectTimezone(tz)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                timezone === tz.value
-                  ? 'border-pine bg-pine text-white'
-                  : 'border-cardborder text-bark hover:border-pine hover:text-pine'
-              }`}
-            >
-              {tz.label.split(' (')[0]}
-            </button>
-          ))}
-        </div>
         <div className="relative">
           <input
             id="event-timezone"
