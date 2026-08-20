@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { createEvent } from './actions';
+import { DateField } from '@/components/date-field';
 import { fieldClass, primaryButtonClass } from '@/lib/ui';
 import { DISCIPLINE_LABEL, labelFor } from '@/lib/labels';
 import { generateCode } from '@/lib/codes';
@@ -73,18 +74,25 @@ export function CreateEventForm({
   const [timezone, setTimezone] = useState('America/Bogota');
   const [timezoneQuery, setTimezoneQuery] = useState('Colombia (Bogotá)');
   const [isTimezoneOpen, setIsTimezoneOpen] = useState(false);
+  const [hasTypedTimezone, setHasTypedTimezone] = useState(false);
   const [timezoneHighlight, setTimezoneHighlight] = useState(0);
   const [date, setDate] = useState('');
 
-  // Sin esto la lista completa (~400 zonas) se renderiza entera cada tecla;
-  // los primeros ocho resultados ya bastan para reconocer el que se busca.
-  const timezoneMatches = TIMEZONE_OPTIONS.filter((tz) =>
-    tz.label.toLowerCase().includes(timezoneQuery.trim().toLowerCase()),
-  ).slice(0, 8);
+  // Sin haber escrito nada, `timezoneQuery` sigue siendo la zona ya elegida
+  // ("Colombia (Bogotá)"), y filtrar por ese texto completo solo encuentra
+  // esa misma fila — el desplegable se abría con un único resultado y nada
+  // que scrollear. Sin escribir, se navega la lista completa (los 6 comunes
+  // ya van primero); al escribir, se filtra de verdad.
+  const timezoneMatches = hasTypedTimezone
+    ? TIMEZONE_OPTIONS.filter((tz) =>
+        tz.label.toLowerCase().includes(timezoneQuery.trim().toLowerCase()),
+      )
+    : TIMEZONE_OPTIONS;
 
   function selectTimezone(tz: { value: string; label: string }) {
     setTimezone(tz.value);
     setTimezoneQuery(tz.label);
+    setHasTypedTimezone(false);
     setIsTimezoneOpen(false);
   }
 
@@ -214,13 +222,7 @@ export function CreateEventForm({
         <label htmlFor="event-date" className="text-sm font-medium text-bark">
           Fecha del evento
         </label>
-        <input
-          id="event-date"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-          className={fieldClass}
-        />
+        <DateField id="event-date" value={date} onChange={setDate} />
         <p className="text-xs text-muted">
           Esta fecha define qué categorías están disponibles para cada competidor.
         </p>
@@ -306,7 +308,7 @@ export function CreateEventForm({
         <label htmlFor="event-timezone" className="text-sm font-medium text-bark">
           Zona horaria
         </label>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">
           {COMMON_TIMEZONES.map((tz) => (
             <button
               key={tz.value}
@@ -328,11 +330,13 @@ export function CreateEventForm({
             value={timezoneQuery}
             onChange={(event) => {
               setTimezoneQuery(event.target.value);
+              setHasTypedTimezone(true);
               setTimezoneHighlight(0);
               setIsTimezoneOpen(true);
             }}
             onFocus={(event) => {
               setIsTimezoneOpen(true);
+              setHasTypedTimezone(false);
               // Con texto ya escrito, un clic deja el cursor a la mitad y
               // teclear inserta ahí en vez de reemplazar — seleccionar todo
               // hace que escribir empiece siempre de cero.
@@ -378,7 +382,7 @@ export function CreateEventForm({
             <ul
               id="event-timezone-options"
               role="listbox"
-              className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-cardborder bg-card shadow-lg"
+              className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-cardborder bg-card shadow-lg"
             >
               {timezoneMatches.map((tz, index) => (
                 <li key={tz.value} role="option" aria-selected={index === timezoneHighlight}>
