@@ -99,21 +99,21 @@ export function DateField({
   const today = todayIso();
 
   return (
-    <div ref={wrapperRef} className="relative">
+    <div ref={wrapperRef} className="relative w-fit">
       <input
         id={id}
         type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
-        className={`${className ?? fieldClass} w-full pr-10 [&::-webkit-calendar-picker-indicator]:hidden`}
+        className={`${className ?? fieldClass} pr-7 [&::-webkit-calendar-picker-indicator]:hidden`}
       />
       {/* Firefox y Safari dibujan su propio ícono de calendario dentro del
           input y no tienen el pseudo-elemento `::-webkit-...` que lo esconde
           en Chrome — sin esto, ahí se veían dos calendarios superpuestos. Este
           bloque tapa esa esquina con el mismo fondo del campo y encima va el
           botón propio, así que no importa qué dibuje el navegador debajo. */}
-      <div className="absolute inset-y-px right-px flex w-9 items-center justify-center rounded-r-lg bg-card">
+      <div className="absolute inset-y-px right-px flex w-6 items-center justify-center rounded-r-lg bg-card">
         <button
           type="button"
           onClick={() => (isOpen ? setIsOpen(false) : openCalendar())}
