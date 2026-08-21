@@ -16,6 +16,7 @@ import {
   registrations,
   rounds,
 } from '@crux/db';
+import { resolveCurrentAttempts } from '@crux/scoring';
 import { getAuth } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 import { leagueBlockNeedsPoints } from '@/lib/problem-points';
@@ -809,4 +810,104 @@ export async function removeRegistration(input: RemoveRegistrationInput): Promis
   await db.delete(registrations).where(eq(registrations.id, registrationId));
   revalidatePath(`/panel/events/${eventId}`);
   return { ok: true };
+}
+
+export interface AuditAttempt {
+  id: string;
+  athleteFullName: string;
+  bibNumber: string | null;
+  judgeLabel: string;
+  top: boolean;
+  topAttempts: number | null;
+  zone: boolean;
+  zoneAttempts: number | null;
+  height: number | null;
+  capturedAt: string;
+  /** false cuando una corrección posterior (misma inscripción, mismo bloque) la reemplazó. */
+  isCurrent: boolean;
+}
+type ProblemAttemptsResult = { ok: true; attempts: AuditAttempt[] } | { ok: false; error: string };
+
+const problemAttemptsInputSchema = z.object({
+  eventId: z.string().uuid(),
+  problemId: z.string().uuid(),
+});
+
+/**
+ * El historial crudo de un bloque: cada intento que un juez registró, incluidas
+ * las correcciones. El CSV solo trae el vigente por (inscripción, bloque); esto
+ * es para cuando alguien reclama un puesto y hay que ver quién anotó qué y
+ * cuándo.
+ */
+export async function getProblemAttempts(
+  input: z.infer<typeof problemAttemptsInputSchema>,
+): Promise<ProblemAttemptsResult> {
+  const parsed = problemAttemptsInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Datos inválidos.' };
+  }
+
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: 'Tu sesión ha expirado. Vuelve a iniciar sesión.' };
+  }
+
+  const { eventId, problemId } = parsed.data;
+  const db = getDb();
+  const [owner] = await db
+    .select({ ownerId: events.ownerId })
+    .from(problems)
+    .innerJoin(rounds, eq(problems.roundId, rounds.id))
+    .innerJoin(categories, eq(rounds.categoryId, categories.id))
+    .innerJoin(events, eq(categories.eventId, events.id))
+    .where(and(eq(problems.id, problemId), eq(categories.eventId, eventId)));
+  if (!owner || owner.ownerId !== session.user.id) {
+    return { ok: false, error: 'Ese bloque no existe o no tienes acceso a él.' };
+  }
+
+  const rows = await db
+    .select({
+      id: attempts.id,
+      sequence: attempts.sequence,
+      clientAttemptId: attempts.clientAttemptId,
+      registrationId: attempts.registrationId,
+      problemId: attempts.problemId,
+      judgeLabel: attempts.judgeLabel,
+      top: attempts.top,
+      topAttempts: attempts.topAttempts,
+      zone: attempts.zone,
+      zoneAttempts: attempts.zoneAttempts,
+      height: attempts.height,
+      capturedAt: attempts.capturedAt,
+      createdAt: attempts.createdAt,
+      athleteFullName: athletes.fullName,
+      bibNumber: registrations.bibNumber,
+    })
+    .from(attempts)
+    .innerJoin(registrations, eq(attempts.registrationId, registrations.id))
+    .innerJoin(athletes, eq(registrations.athleteId, athletes.id))
+    .where(eq(attempts.problemId, problemId))
+    .orderBy(attempts.sequence);
+
+  const currentIds = new Set(resolveCurrentAttempts(rows, new Set([problemId])).map((a) => a.id));
+
+  return {
+    ok: true,
+    attempts: rows
+      .slice()
+      .reverse()
+      .map((row) => ({
+        id: row.id,
+        athleteFullName: row.athleteFullName,
+        bibNumber: row.bibNumber,
+        judgeLabel: row.judgeLabel,
+        top: row.top,
+        topAttempts: row.topAttempts,
+        zone: row.zone,
+        zoneAttempts: row.zoneAttempts,
+        height: row.height,
+        capturedAt: row.capturedAt.toISOString(),
+        isCurrent: currentIds.has(row.id),
+      })),
+  };
 }

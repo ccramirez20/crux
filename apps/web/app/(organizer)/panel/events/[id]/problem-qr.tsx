@@ -4,7 +4,22 @@ import { useState } from 'react';
 import QRCode from 'qrcode';
 import { eyebrowClass, fieldClass, labelClass, secondaryButtonClass } from '@/lib/ui';
 import { ConfirmDeleteButton } from '@/components/confirm-delete-button';
-import { removeProblem, updateProblem } from './actions';
+import { getProblemAttempts, removeProblem, updateProblem, type AuditAttempt } from './actions';
+
+function formatCapturedAt(iso: string): string {
+  return new Date(iso).toLocaleString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Bogota',
+  });
+}
+
+function cellLabel(done: boolean, tries: number | null): string {
+  if (!done) return '—';
+  return tries === null ? 'Sí' : `en ${tries}`;
+}
 
 // La ficha del bloque tiene dos acciones y ninguna cabe en otra pantalla: sacar
 // el QR que se pega en la pared, y corregir lo que quedó mal escrito. Editar
@@ -34,6 +49,9 @@ export function ProblemCard({
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [url, setUrl] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [auditAttempts, setAuditAttempts] = useState<AuditAttempt[] | null>(null);
+  const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   const [numberValue, setNumberValue] = useState(String(number));
   const [nameValue, setNameValue] = useState(name ?? '');
@@ -78,6 +96,22 @@ export function ProblemCard({
     const judgeUrl = `${window.location.origin}/juzgar/${slug}/${problemId}`;
     setUrl(judgeUrl);
     setDataUrl(await QRCode.toDataURL(judgeUrl, { margin: 1, width: 240 }));
+  }
+
+  async function toggleAudit() {
+    if (auditAttempts !== null) {
+      setAuditAttempts(null);
+      return;
+    }
+    setAuditError(null);
+    setAuditLoading(true);
+    const result = await getProblemAttempts({ eventId, problemId });
+    setAuditLoading(false);
+    if (!result.ok) {
+      setAuditError(result.error);
+      return;
+    }
+    setAuditAttempts(result.attempts);
   }
 
   async function save() {
@@ -126,6 +160,15 @@ export function ProblemCard({
         </button>
         <button
           type="button"
+          onClick={() => void toggleAudit()}
+          aria-expanded={auditAttempts !== null}
+          disabled={auditLoading}
+          className="shrink-0 rounded px-2 py-1.5 text-xs font-semibold text-muted underline transition hover:text-pine"
+        >
+          {auditLoading ? 'Cargando…' : auditAttempts ? 'Ocultar intentos' : 'Ver intentos'}
+        </button>
+        <button
+          type="button"
           onClick={() => void toggle()}
           aria-expanded={dataUrl !== null}
           className="shrink-0 rounded border-[1.5px] border-pine px-3 py-1.5 text-xs font-semibold text-pine transition hover:bg-pine hover:text-white"
@@ -133,6 +176,55 @@ export function ProblemCard({
           {dataUrl ? 'Ocultar QR' : 'QR para juzgar'}
         </button>
       </div>
+
+      {auditError && (
+        <p role="alert" className="text-sm font-medium text-red-700">
+          {auditError}
+        </p>
+      )}
+
+      {auditAttempts && (
+        <div className="overflow-x-auto rounded-lg border border-cardborder bg-stone/40">
+          {auditAttempts.length === 0 ? (
+            <p className="p-3 text-sm text-muted">Sin intentos registrados todavía.</p>
+          ) : (
+            <table className="w-full min-w-[480px] border-collapse text-left text-xs">
+              <thead>
+                <tr className="border-b border-cardborder text-muted">
+                  <th className="px-3 py-2 font-semibold">Competidor</th>
+                  <th className="px-3 py-2 font-semibold">Juez</th>
+                  <th className="px-3 py-2 font-semibold">Top</th>
+                  <th className="px-3 py-2 font-semibold">Zona</th>
+                  <th className="px-3 py-2 font-semibold">Hora</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditAttempts.map((attempt) => (
+                  <tr
+                    key={attempt.id}
+                    className={`border-b border-cardborder/60 last:border-0 ${
+                      attempt.isCurrent ? '' : 'text-muted line-through decoration-1'
+                    }`}
+                  >
+                    <td className="px-3 py-2">
+                      {attempt.athleteFullName}
+                      {attempt.bibNumber && <span className="ml-1 text-muted">#{attempt.bibNumber}</span>}
+                    </td>
+                    <td className="px-3 py-2">{attempt.judgeLabel}</td>
+                    <td className="px-3 py-2">{cellLabel(attempt.top, attempt.topAttempts)}</td>
+                    <td className="px-3 py-2">{cellLabel(attempt.zone, attempt.zoneAttempts)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatCapturedAt(attempt.capturedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="px-3 py-2 text-[11px] text-muted">
+            Tachado: reemplazado por una corrección posterior del mismo competidor en este{' '}
+            {unit.singular}.
+          </p>
+        </div>
+      )}
 
       {isEditing && (
         <div className="flex flex-col gap-3 rounded-lg border border-pine bg-stone/40 p-3">
