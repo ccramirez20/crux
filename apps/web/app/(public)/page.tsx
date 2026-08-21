@@ -180,7 +180,9 @@ export default function HomePage() {
             <thead>
               <tr className="border-b-2 border-cardborder">
                 <th className={`${eyebrowClass} w-16 px-3 py-3 text-center md:w-24 md:px-4`}>Puesto</th>
-                <th className={`${eyebrowClass} px-3 py-3 md:px-4`}>Competidor</th>
+                <th className={`${eyebrowClass} px-3 py-3 md:px-4`}>
+                  <span className="ml-4">Competidor</span>
+                </th>
                 <th className={`${eyebrowClass} px-2 py-3 text-center`}>B1</th>
                 <th className={`${eyebrowClass} px-2 py-3 text-center`}>B2</th>
                 <th className={`${eyebrowClass} px-2 py-3 text-center`}>B3</th>
