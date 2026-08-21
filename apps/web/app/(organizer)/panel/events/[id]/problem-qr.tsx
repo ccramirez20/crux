@@ -195,7 +195,7 @@ export function ProblemCard({
                   <th className="px-3 py-2 font-semibold">Juez</th>
                   <th className="px-3 py-2 font-semibold">Top</th>
                   <th className="px-3 py-2 font-semibold">Zona</th>
-                  <th className="px-3 py-2 font-semibold">Hora</th>
+                  <th className="px-3 py-2 font-semibold">Fecha y hora</th>
                 </tr>
               </thead>
               <tbody>
