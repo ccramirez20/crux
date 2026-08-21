@@ -8,21 +8,11 @@ import { DateField } from '@/components/date-field';
 import { deleteEvent, updateEvent } from './actions';
 import { generateCode } from '@/lib/codes';
 
-const COMMON_TIMEZONES = [
-  { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
-  { value: 'America/Mexico_City', label: 'México (Ciudad de México)' },
-  { value: 'America/Lima', label: 'Perú (Lima)' },
-  { value: 'America/Santiago', label: 'Chile (Santiago)' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
-  { value: 'Europe/Madrid', label: 'España (Madrid)' },
-];
-
 export function EventForm({
   eventId,
   name: initialName,
   date: initialDate,
   registrationDeadline: initialDeadline,
-  timezone: initialTimezone,
   judgeCode: initialJudgeCode,
   hasAttempts,
   registrationCount,
@@ -31,7 +21,6 @@ export function EventForm({
   name: string;
   date: string | null;
   registrationDeadline: string | null;
-  timezone: string;
   judgeCode: string | null;
   hasAttempts: boolean;
   registrationCount: number;
@@ -41,16 +30,9 @@ export function EventForm({
   const [name, setName] = useState(initialName);
   const [date, setDate] = useState(initialDate ?? '');
   const [deadline, setDeadline] = useState(initialDeadline ?? '');
-  const [timezone, setTimezone] = useState(initialTimezone);
   const [judgeCode, setJudgeCode] = useState(initialJudgeCode ?? generateCode());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Una zona horaria que no está entre las comunes (un evento fuera de la
-  // región) no puede desaparecer del select solo por no estar en la lista.
-  const timezones = COMMON_TIMEZONES.some((tz) => tz.value === initialTimezone)
-    ? COMMON_TIMEZONES
-    : [...COMMON_TIMEZONES, { value: initialTimezone, label: initialTimezone }];
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,7 +43,6 @@ export function EventForm({
       name,
       date: date === '' ? null : date,
       registrationDeadline: deadline === '' ? null : deadline,
-      timezone,
       judgeCode,
     });
     setIsSubmitting(false);
@@ -120,28 +101,10 @@ export function EventForm({
         </label>
         <DateField id="event-deadline" value={deadline} onChange={setDeadline} />
         <p className="text-xs text-muted">
-          Último día en que el enlace acepta inscripciones, según la zona horaria del evento.
-          Déjalo vacío para que las inscripciones no se cierren. Si alguien llega tarde y quieres
-          dejarlo entrar, cambia la fecha y el enlace volverá a aceptar inscripciones.
+          Último día en que el enlace acepta inscripciones. Déjalo vacío para que las
+          inscripciones no se cierren. Si alguien llega tarde y quieres dejarlo entrar, cambia la
+          fecha y el enlace volverá a aceptar inscripciones.
         </p>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="event-timezone" className={labelClass}>
-          Zona horaria
-        </label>
-        <select
-          id="event-timezone"
-          value={timezone}
-          onChange={(event) => setTimezone(event.target.value)}
-          className={fieldClass}
-        >
-          {timezones.map((tz) => (
-            <option key={tz.value} value={tz.value}>
-              {tz.label}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="flex flex-col gap-1.5">

@@ -406,7 +406,6 @@ const updateEventInputSchema = z.object({
   eventId: z.string().uuid(),
   name: z.string().min(1),
   judgeCode: z.string().min(4).max(32),
-  timezone: z.string().min(1),
   // `null` es "el evento no tiene fecha", que es un estado que ya existe en el
   // esquema; `undefined` sería "no lo toques" y aquí siempre se manda entero.
   date: z
