@@ -604,12 +604,12 @@ export function LeaderboardScreen({
                       <th colSpan={headers.length} />
                     </tr>
                     <tr className="border-b-2 border-cardborder">
-                      <th className={`${headerClass} w-28 text-center`}>Puesto</th>
+                      <th scope="col" className={`${headerClass} w-28 text-center`}>Puesto</th>
                       {/* Sin ancho fijo y sin partir el nombre: la columna mide
                           exactamente lo que mide el nombre más largo, y todo el
                           sobrante se va a los bloques en vez de quedarse aquí
                           como un hueco. */}
-                      <th className={`${headerClass} w-px whitespace-nowrap text-center`}>Competidor</th>
+                      <th scope="col" className={`${headerClass} w-px whitespace-nowrap text-center`}>Competidor</th>
                       {round.problems.map((problem) => (
                         <th
                           key={problem.id}
