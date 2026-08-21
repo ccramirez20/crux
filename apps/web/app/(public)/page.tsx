@@ -281,9 +281,6 @@ export default function HomePage() {
         <h2 className="max-w-[24ch] font-display text-3xl font-bold leading-tight md:text-4xl">
           ¿Vas a organizar una competencia?
         </h2>
-        <p className="max-w-[52ch] text-lg leading-relaxed text-muted">
-          Hecho en Colombia y en español, para las competencias que ya se hacen aquí.
-        </p>
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/sign-up" className={primaryButtonClass}>
             Crear una cuenta de organizador
@@ -298,6 +295,9 @@ export default function HomePage() {
             Escríbenos
           </a>
         </div>
+        <p className="max-w-[52ch] text-lg leading-relaxed text-muted">
+          Hecho en Colombia y en español, para las competencias que ya se hacen aquí.
+        </p>
       </footer>
     </main>
   );
