@@ -609,7 +609,7 @@ export function LeaderboardScreen({
                           exactamente lo que mide el nombre más largo, y todo el
                           sobrante se va a los bloques en vez de quedarse aquí
                           como un hueco. */}
-                      <th scope="col" className={`${headerClass} w-px whitespace-nowrap text-center`}>Competidor</th>
+                      <th scope="col" className={`${headerClass} w-px whitespace-nowrap`}>Competidor</th>
                       {round.problems.map((problem) => (
                         <th
                           key={problem.id}

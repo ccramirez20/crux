@@ -167,7 +167,7 @@ function ProjectedTable({
         <thead>
           <tr>
             <th className={`${header} w-14 text-center`}>Puesto</th>
-            <th className={`${header} w-px whitespace-nowrap text-center`}>Competidor</th>
+            <th className={`${header} w-px whitespace-nowrap`}>Competidor</th>
             {round.problems.map((problem) => (
               <th key={problem.id} className={`${header} text-center`}>
                 {unit.singular.slice(0, 1).toUpperCase()}
