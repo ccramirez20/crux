@@ -292,6 +292,45 @@ function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
 }
 
 /**
+ * Lo mismo que `bumpLeftover` pero para el panel de dificultad: cuánto le
+ * sobra al contenedor después del muro (y de los intentos al top, si
+ * aplica). No puede compartir el `ref` de `useBumpLane` — ese solo se monta
+ * dentro del turno de puestos, así que cuando `'detail'` es el único turno
+ * (nunca se dibuja el turno de puestos en esta sesión) `bumpLeftover` se
+ * queda clavado en 0 y las curvas no aparecen aunque sobre espacio de sobra.
+ *
+ * Dos `ref`, no uno: `box` es el contenedor `flex-1` (su `clientHeight` es
+ * lo que de verdad hay disponible) y `content` envuelve solo lo que se
+ * dibuja de verdad (el muro, y los intentos al top si aplica). `scrollHeight`
+ * no sirve para esto — cuando el contenido cabe holgado, un `overflow-hidden`
+ * hace que `scrollHeight` sea igual a `clientHeight` (nunca menor), así que
+ * la resta siempre daría cero. `content.offsetHeight` sí es el tamaño real
+ * del contenido, sin que la caja que lo envuelve lo infle.
+ */
+function useLeftoverHeight(box: React.RefObject<HTMLElement | null>, content: React.RefObject<HTMLElement | null>) {
+  const [leftover, setLeftover] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      const element = box.current;
+      const inner = content.current;
+      if (!element || !inner) {
+        return;
+      }
+      setLeftover(element.clientHeight - inner.offsetHeight);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (box.current) {
+      observer.observe(box.current);
+    }
+    return () => observer.disconnect();
+  }, [box, content]);
+
+  return leftover;
+}
+
+/**
  * Qué va en el alto que le sobra a la tabla.
  *
  * Sobra porque la tabla está limitada por el **ancho** —con cuatro bloques y
@@ -460,10 +499,10 @@ function HighlightStrip({
   isHeight,
 }: {
   round: LeaderboardRound;
-  unit: string;
+  unit: { singular: string; plural: string; article: string };
   isHeight: boolean;
 }) {
-  const items = roundHighlights(round, unit, isHeight);
+  const items = roundHighlights(round, unit.singular, isHeight, unit.article === 'la');
   // Tres a la vez, siempre las mismas cuatro y en el mismo orden en toda
   // categoría. Cuando hay una de más la ventana corre de a una: rotar es mejor
   // que esconder la cuarta para siempre y mejor que apretar cuatro en el ancho
@@ -525,6 +564,8 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   // mientras corre una final.
   const [pinned, setPinned] = useState(false);
   const bumpBox = useRef<HTMLDivElement>(null);
+  const detailBox = useRef<HTMLDivElement>(null);
+  const detailContent = useRef<HTMLDivElement>(null);
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
@@ -576,9 +617,16 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   const date = formatEventDate(data.event.date);
   const isPodiumRound = round?.type === 'final';
   const { lane: bumpLane, leftover: bumpLeftover } = useBumpLane(bumpBox, round?.rows.length ?? 0);
+  const detailLeftover = useLeftoverHeight(detailBox, detailContent);
+  const noAttemptsYet = round?.lastAttempts.length === 0;
   const chartTitle = {
     bump: `Puesto ${unit.singular} a ${unit.singular}`,
-    detail: hasAttemptsPerTop ? `Los ${unit.plural} y los intentos al top` : `¿Qué tan duros estaban los ${unit.plural}?`,
+    // Vacío y no otro texto: con cero intentos el placeholder de abajo ya dice
+    // lo que hay que decir, y "¿qué tan duros estaban?" es una pregunta que
+    // todavía no tiene respuesta.
+    detail: noAttemptsYet
+      ? ''
+      : `¿Qué tan dur${unit.article === 'la' ? 'as' : 'os'} estaban l${unit.article === 'la' ? 'as' : 'os'} ${unit.plural}?`,
   };
 
   // Nadie interactúa con una pared. Las gráficas piden estos tres porque en la
@@ -634,9 +682,12 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
       </header>
 
       {!round || !current ? (
-        <p className="flex flex-1 items-center justify-center text-3xl text-muted">
-          Todavía no hay datos registrados en este evento.
-        </p>
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-4 overflow-hidden text-center">
+          <p className="text-3xl text-muted">Todavía no hay datos registrados en este evento.</p>
+          <div className="pointer-events-none absolute inset-x-10 bottom-6 opacity-40" aria-hidden="true">
+            <TopographicMotif />
+          </div>
+        </div>
       ) : (
         <>
           <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] gap-4">
@@ -740,39 +791,72 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                     ) : null}
                   </div>
                 )}
-                {activeSlide === 'detail' && (
+                {activeSlide === 'detail' && noAttemptsYet && (
+                  // Antes del primer intento, `problemStats` ya existe (sale de
+                  // los bloques, no de los intentos) y el muro dibujaría barras
+                  // en cero sin decir nada. En vez de eso, un panel de espera:
+                  // no compite por espacio con ninguna gráfica, así que las
+                  // curvas van siempre, sin depender de `bumpLeftover`.
+                  <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pt-6 text-center">
+                    <div
+                      className="pointer-events-none absolute inset-x-6 top-4 opacity-40"
+                      aria-hidden="true"
+                    >
+                      <TopographicMotif />
+                    </div>
+                    <p className="text-lg font-semibold text-ink">Esperando el primer intento</p>
+                    <div
+                      className="pointer-events-none absolute inset-x-6 bottom-4 opacity-40"
+                      aria-hidden="true"
+                    >
+                      <TopographicMotif />
+                    </div>
+                  </div>
+                )}
+                {activeSlide === 'detail' && !noAttemptsYet && (
                   // `overflow-hidden` en cada bloque y no solo en el contenedor:
                   // en una columna flex los hijos se encogen por debajo de su
                   // contenido, y sin recortar cada uno, el muro se metía encima
                   // del título de los intentos.
-                  <div className="relative flex min-h-0 flex-1 flex-col gap-10 overflow-hidden pt-6">
-                    <div className="min-h-0 shrink-0 overflow-hidden">
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                        Qué tan duros estaban · del más duro al más fácil
-                      </p>
-                      <Wall round={round} unit={unit.singular} isHeight={isHeight} dense />
-                    </div>
-                    {hasAttemptsPerTop && (
+                  <div ref={detailBox} className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-6">
+                    <div ref={detailContent} className="flex flex-col gap-10">
                       <div className="min-h-0 shrink-0 overflow-hidden">
-                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                          Intentos por cada top · menos es mejor
-                        </p>
-                        {/* Cuatro y no diez: aquí comparte panel con el muro, y
-                            lo que esta gráfica hace —comparar— ya se ve con los
-                            cuatro primeros. */}
-                        <AttemptsPerTop round={round} limit={4} fixedWidth={false} {...inert} />
+                        {/* Con las dos gráficas rotando, el título de turno no se
+                            repite en pantalla al mismo tiempo que este subtítulo;
+                            cuando esta es la única gráfica, sí, y decir lo mismo
+                            dos veces seguidas no aporta. */}
+                        {slides.length > 1 && (
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                            Qué tan dur{unit.article === 'la' ? 'as' : 'os'} estaban ·{' '}
+                            {unit.article === 'la' ? 'de la más dura a la' : 'del más duro al'} más fácil
+                          </p>
+                        )}
+                        <Wall round={round} unit={unit.singular} isHeight={isHeight} dense />
                       </div>
-                    )}
+                      {hasAttemptsPerTop && (
+                        <div className="min-h-0 shrink-0 overflow-hidden">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                            Intentos por cada top · menos es mejor
+                          </p>
+                          {/* Cuatro y no diez: aquí comparte panel con el muro, y
+                              lo que esta gráfica hace —comparar— ya se ve con los
+                              cuatro primeros. */}
+                          <AttemptsPerTop round={round} limit={4} fixedWidth={false} {...inert} />
+                        </div>
+                      )}
+                    </div>
                     {/* Con dos gráficas ya hay bastante que leer: lo que sobre
-                        lo cierran las curvas y nada más. La medida es la del
-                        otro turno, que comparte panel y tamaño. */}
+                        lo cierran las curvas y nada más. Medido contra este
+                        mismo contenedor (`useLeftoverHeight`), no contra el
+                        del otro turno: ese solo existe si `'bump'` también
+                        rotó en esta sesión. */}
                     {/* Las curvas al fondo y no como un bloque más: lo que
                         sobraba era blanco suelto debajo de las dos gráficas, y
                         un motivo apoyado ahí abajo seguía siendo una tercera
                         cosa apilada. Puestas de fondo, el panel se cierra solo
                         y las gráficas se apoyan encima. Mismo umbral que el
                         otro turno: si no cabe entero, no aparece. */}
-                    {bumpLeftover >= FILL.motif && (
+                    {detailLeftover >= FILL.motif && (
                       <div
                         className="pointer-events-none absolute inset-x-6 bottom-4 opacity-40"
                         aria-hidden="true"
@@ -786,7 +870,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
             </section>
           </div>
 
-          <HighlightStrip round={round} unit={unit.singular} isHeight={isHeight} />
+          <HighlightStrip round={round} unit={unit} isHeight={isHeight} />
         </>
       )}
 

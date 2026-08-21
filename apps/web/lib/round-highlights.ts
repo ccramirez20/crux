@@ -17,7 +17,15 @@ export interface Highlight {
  * el mismo y no puede vivir dos veces — es de lo poco en esta pantalla que
  * podría dar dos respuestas distintas sin que nadie lo note.
  */
-export function roundHighlights(round: LeaderboardRound, unit: string, isHeight: boolean): Highlight[] {
+// `feminine` porque "ruta" lo es y "bloque" no ("la ruta más dura" vs "el
+// bloque más duro"); lo trae quien llama, que ya tiene `unit.article` a la
+// mano (`problemUnit` en labels.ts), en vez de adivinarlo aquí por el texto.
+export function roundHighlights(
+  round: LeaderboardRound,
+  unit: string,
+  isHeight: boolean,
+  feminine: boolean,
+): Highlight[] {
   const stats = round.problemStats;
   const crux = [...stats].sort((a, b) => a.tops - b.tops)[0];
   const problemName = (id: string) => round.problems.find((p) => p.id === id)?.name;
@@ -51,12 +59,12 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
   const out: Highlight[] = [];
   out.push({
     key: 'crux',
-    label: `El ${unit} más duro`,
-    what: `Cuál fue el ${unit} que menos gente pudo hacer`,
+    label: `${feminine ? 'La' : 'El'} ${unit} más dur${feminine ? 'a' : 'o'}`,
+    what: `Cuál fue ${feminine ? 'la' : 'el'} ${unit} que menos gente pudo hacer`,
     value: hasCrux ? `${unit.slice(0, 1).toUpperCase()}${crux!.number}` : '—',
     detail: hasCrux
       ? `${problemName(crux!.problemId) ? `${problemName(crux!.problemId)} · ` : ''}le hicieron top ${crux!.tops} de ${crux!.field}`
-      : `Todavía no hay ${plural} capturados`,
+      : `Todavía no hay ${plural} capturad${feminine ? 'as' : 'os'}`,
   });
   if (!isHeight) {
     out.push({
@@ -73,30 +81,31 @@ export function roundHighlights(round: LeaderboardRound, unit: string, isHeight:
   out.push({
     key: 'climb',
     label: 'Mayor ascenso en la tabla',
-    what: `Quién más puestos ascendió desde el primer ${unit}`,
+    what: `Quién más puestos ascendió desde ${feminine ? 'la primera' : 'el primer'} ${unit}`,
     value: bestClimb && bestClimb.delta > 0 ? `+${bestClimb.delta}` : '—',
     detail:
       bestClimb && bestClimb.delta > 0
         ? `${bestClimb.name} subió ${bestClimb.delta} puestos en la tabla de posiciones`
         : 'Nadie ha ganado puestos todavía',
   });
-  if (!isHeight) {
-    out.push({
-      key: 'tops',
-      label: 'Tops logrados',
-      what: 'De todos los tops que se podían hacer, cuántos se lograron',
-      value: posibles > 0 ? `${Math.round((totalTops / posibles) * 100)}%` : '—',
-      // El renglón cambia con el momento del evento, que es lo que lo hace útil
-      // en una pared: al empezar no hay ninguno, luego dice en cuántos ya hay y
-      // en cuántos todavía no, y cuando todos tienen al menos uno lo dice.
-      detail:
-        conTop === 0
-          ? `Todavía no hay top en ninguno de los ${round.problems.length} ${plural} · ${posibles} posibles`
-          : conTop === round.problems.length
-            ? `${totalTops} tops · ya hubo top en los ${round.problems.length} ${plural}`
-            : `${totalTops} tops · hay top en ${conTop} de ${round.problems.length} ${plural}, en ${round.problems.length - conTop} todavía no`,
-    });
-  }
+  // Sin nada específico de boulder (a diferencia de "flashes"): topar una ruta
+  // cuenta igual que topar un bloque, así que esta sí aplica también en lead —
+  // y de paso le da un tercer casillero a la tira de highlights en ese formato.
+  out.push({
+    key: 'tops',
+    label: 'Tops logrados',
+    what: 'De todos los tops que se podían hacer, cuántos se lograron',
+    value: posibles > 0 ? `${Math.round((totalTops / posibles) * 100)}%` : '—',
+    // El renglón cambia con el momento del evento, que es lo que lo hace útil
+    // en una pared: al empezar no hay ninguno, luego dice en cuántos ya hay y
+    // en cuántos todavía no, y cuando todos tienen al menos uno lo dice.
+    detail:
+      conTop === 0
+        ? `Todavía no hay top en ningun${feminine ? 'a' : 'o'} de l${feminine ? 'as' : 'os'} ${round.problems.length} ${plural} · ${posibles} posibles`
+        : conTop === round.problems.length
+          ? `${totalTops} tops · ya hubo top en l${feminine ? 'as' : 'os'} ${round.problems.length} ${plural}`
+          : `${totalTops} tops · hay top en ${conTop} de ${round.problems.length} ${plural}, en ${round.problems.length - conTop} todavía no`,
+  });
   return out;
 }
 

@@ -60,6 +60,7 @@ describe('roundHighlights · el bloque más duro', () => {
       }),
       'bloque',
       false,
+      false,
     );
     const crux = items.find((i) => i.key === 'crux');
     expect(crux?.value).toBe('—');
@@ -78,6 +79,7 @@ describe('roundHighlights · el bloque más duro', () => {
       }),
       'bloque',
       false,
+      false,
     );
     const crux = items.find((i) => i.key === 'crux');
     expect(crux?.value).toBe('B1');
@@ -94,6 +96,7 @@ describe('roundHighlights · tops logrados', () => {
       }),
       'bloque',
       false,
+      false,
     );
     const tops = items.find((i) => i.key === 'tops');
     expect(tops?.value).toBe('0%');
@@ -108,6 +111,7 @@ describe('roundHighlights · tops logrados', () => {
       }),
       'bloque',
       false,
+      false,
     );
     const tops = items.find((i) => i.key === 'tops');
     expect(tops?.value).toBe('50%');
@@ -121,6 +125,7 @@ describe('roundHighlights · tops logrados', () => {
         problemStats: [stat('p1', 1, 2), stat('p2', 2, 1)],
       }),
       'bloque',
+      false,
       false,
     );
     const tops = items.find((i) => i.key === 'tops');

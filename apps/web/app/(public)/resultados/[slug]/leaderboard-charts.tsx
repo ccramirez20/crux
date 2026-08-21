@@ -136,13 +136,13 @@ function Headline({
   dense = false,
 }: {
   round: LeaderboardRound;
-  unit: string;
+  unit: { singular: string; plural: string; article: string };
   isHeight: boolean;
   dense?: boolean;
 }) {
   return (
     <div className={`grid grid-cols-1 md:grid-cols-3 ${dense ? 'gap-3' : 'gap-6'}`}>
-      {roundHighlights(round, unit, isHeight).map(({ key, ...item }) => (
+      {roundHighlights(round, unit.singular, isHeight, unit.article === 'la').map(({ key, ...item }) => (
         <StatTile key={key} dense={dense} {...item} />
       ))}
     </div>
@@ -971,7 +971,7 @@ export function LeaderboardCharts({
 
   return (
     <div className="flex flex-col gap-6">
-      <Headline round={round} unit={unit.singular} isHeight={isHeight} />
+      <Headline round={round} unit={unit} isHeight={isHeight} />
 
       <Panel
         title={`Puesto ${unit.singular} a ${unit.singular}`}
@@ -1034,8 +1034,8 @@ export function LeaderboardCharts({
 
       <div className={`grid grid-cols-1 gap-6 ${hasAttemptsPerTop ? 'xl:grid-cols-[3fr_2fr]' : ''}`}>
         <Panel
-          title={`¿Qué tan duros estaban los ${unit.plural}?`}
-          hint={`De los ${round.rows.length} de la categoría, cuántos hicieron top y cuántos se quedaron en zona. Del más duro al más fácil.`}
+          title={`¿Qué tan dur${unit.article === 'la' ? 'as' : 'os'} estaban l${unit.article === 'la' ? 'as' : 'os'} ${unit.plural}?`}
+          hint={`De los ${round.rows.length} de la categoría, cuántos hicieron top y cuántos se quedaron en zona. ${unit.article === 'la' ? 'De la más dura a la' : 'Del más duro al'} más fácil.`}
         >
           <div className="mb-5 flex flex-wrap items-center gap-5 text-sm text-muted">
             <Swatch color={GOLD} label={SCORE_TERM.top} />
@@ -1047,7 +1047,7 @@ export function LeaderboardCharts({
         {hasAttemptsPerTop && (
           <Panel
             title="Cuántos intentos al top"
-            hint={`Promedio de intentos por cada top logrado. Solo cuentan los ${unit.plural} en los que hizo top; entra quien tenga dos tops o más. Menos es mejor.`}
+            hint={`Promedio de intentos por cada top logrado. Solo cuentan l${unit.article === 'la' ? 'as' : 'os'} ${unit.plural} en l${unit.article === 'la' ? 'as' : 'os'} que hizo top; entra quien tenga dos tops o más. Menos es mejor.`}
           >
             {/* El desplazamiento lateral arranca en `sm`: por debajo la fila se
                 parte en dos renglones y no hay nada que arrastrar. */}
