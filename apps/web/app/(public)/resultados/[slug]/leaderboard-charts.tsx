@@ -719,7 +719,7 @@ export function Wall({
                 {/* El bloque más duro se llama crux, y la plataforma se llama
                     igual por eso mismo. Va con la marca: es el único sitio
                     donde el nombre significa las dos cosas a la vez. */}
-                {index === 0 && (
+                {index === 0 && round.lastAttempts.length > 0 && (
                   <span className={`ml-2 align-middle text-[11px] uppercase ${brandWordClass}`}>crux</span>
                 )}
               </span>
