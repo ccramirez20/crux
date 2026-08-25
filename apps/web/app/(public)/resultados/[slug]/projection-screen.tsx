@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TopographicMotif } from '@/components/topographic-motif';
+import { hasAttemptsPerTop } from '@/lib/attempts-per-top';
 import {
   DISCIPLINE_LABEL,
   ROUND_TYPE_LABEL,
@@ -10,11 +11,14 @@ import {
   labelFor,
   problemUnit,
 } from '@/lib/labels';
-import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound } from '@/lib/leaderboard';
+import type { LeaderboardCategory, LeaderboardPayload, LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 import { liveState } from '@/lib/live-status';
+import { podiumSlots } from '@/lib/podium';
+import { shortName } from '@/lib/short-name';
 import { brandWordClass } from '@/lib/ui';
 import { useLeaderboard } from '@/lib/use-leaderboard';
-import { AttemptsPerTop, BumpChart, Wall, roundHighlights } from './leaderboard-charts';
+import { FILL, useLeftoverHeight } from '@/lib/use-leftover-height';
+import { AttemptsPerTop, BumpChart, RouteProfile, Wall, roundHighlights } from './leaderboard-charts';
 import { BlockBadge, SCORE_HEADERS, podiumStyle, scoreCells } from './leaderboard-screen';
 
 /**
@@ -134,6 +138,11 @@ function useRowTier(box: React.RefObject<HTMLElement | null>, rows: number) {
   return { ...tier, free };
 }
 
+// A partir de aquí un nombre completo empieza a empujar la fila — es tabla
+// HTML normal, sin `ResizeObserver` por celda: un umbral de caracteres basta
+// para decidir "cabe vs no cabe" sin medir cada celda con JS.
+const NAME_CHAR_LIMIT = 22;
+
 function ProjectedTable({
   round,
   unit,
@@ -198,7 +207,13 @@ function ProjectedTable({
                   </span>
                 </td>
                 <td className={`${scale.row} whitespace-nowrap px-1.5`}>
-                  <span className={`font-display font-semibold ${scale.name}`}>{row.athleteName}</span>
+                  <span className={`font-display font-semibold ${scale.name}`} title={row.athleteName}>
+                    {/* Solo se abrevia lo que de verdad no cabe: esta tabla se
+                        proyecta a la sala, no es el registro oficial (esa es
+                        la tabla pública, que se queda con el nombre
+                        completo). */}
+                    {row.athleteName.length > NAME_CHAR_LIMIT ? shortName(row.athleteName) : row.athleteName}
+                  </span>
                   {row.bibNumber && (
                     <span className="ml-2 text-sm text-muted tabular-nums">#{row.bibNumber}</span>
                   )}
@@ -255,79 +270,44 @@ function ProjectedTable({
  * 90% y el carril tiene tope de 145: con cuatro finalistas, llenar el panel deja
  * las líneas a media pantalla una de otra y la gráfica se ve estirada. Mejor que
  * mida lo que mide, y que debajo vaya el podio.
+ *
+ * Fuera de una final, ese mismo tope deja un margen de aire debajo de la
+ * gráfica. Se probó rellenarlo con las curvas de marca y se revirtió: ese
+ * margen solo existe cuando la gráfica ya tiene espacio de sobra por diseño,
+ * así que las curvas ahí se leían apretadas justo en el caso donde menos
+ * hacen falta. Ahora se deja el aire así, sin rellenar.
  */
 const BUMP_VIEWBOX_WIDTH = 1250;
 const BUMP_PAD = 78 + 82;
 
-function useBumpLane(box: React.RefObject<HTMLElement | null>, rows: number) {
+function useBumpLane(rows: number) {
+  // Estado, no `useRef`: esta caja vive detrás del turno `bump`, que no
+  // siempre es el primero en montarse (si alguien fija `detail` primero).
+  // Con `useRef` el efecto solo corre una vez, en el primer render — si la
+  // caja no existía todavía ahí, el observer nunca se conectaba a nada. Ver
+  // el mismo arreglo en `useLeftoverHeight`.
+  const [box, setBox] = useState<HTMLElement | null>(null);
   const [lane, setLane] = useState<number | undefined>(undefined);
-  // Lo que le sobra al panel después de dibujar. El carril tiene tope, así que
-  // con cuatro finalistas la gráfica llega hasta donde llega y debajo queda un
-  // hueco — el mismo problema de la tabla, y aquí sí lo cierran las olas,
-  // porque en este panel no compiten con nada.
-  const [leftover, setLeftover] = useState(0);
 
   useEffect(() => {
+    if (!box) {
+      return;
+    }
     const measure = () => {
-      const element = box.current;
-      if (!element || rows < 2 || element.clientWidth === 0) {
+      if (rows < 2 || box.clientWidth === 0) {
         return;
       }
-      const targetHeight = BUMP_VIEWBOX_WIDTH * (element.clientHeight / element.clientWidth) * 0.9;
+      const targetHeight = BUMP_VIEWBOX_WIDTH * (box.clientHeight / box.clientWidth) * 0.9;
       const ideal = (targetHeight - BUMP_PAD) / (rows - 1);
-      const chosen = Math.round(Math.max(22, Math.min(145, ideal)));
-      setLane(chosen);
-      const drawn = BUMP_PAD + (rows - 1) * chosen;
-      setLeftover(element.clientHeight - (element.clientWidth * drawn) / BUMP_VIEWBOX_WIDTH);
+      setLane(Math.round(Math.max(22, Math.min(145, ideal))));
     };
     measure();
     const observer = new ResizeObserver(measure);
-    if (box.current) {
-      observer.observe(box.current);
-    }
+    observer.observe(box);
     return () => observer.disconnect();
   }, [box, rows]);
 
-  return { lane, leftover };
-}
-
-/**
- * Lo mismo que `bumpLeftover` pero para el panel de dificultad: cuánto le
- * sobra al contenedor después del muro (y de los intentos al top, si
- * aplica). No puede compartir el `ref` de `useBumpLane` — ese solo se monta
- * dentro del turno de puestos, así que cuando `'detail'` es el único turno
- * (nunca se dibuja el turno de puestos en esta sesión) `bumpLeftover` se
- * queda clavado en 0 y las curvas no aparecen aunque sobre espacio de sobra.
- *
- * Dos `ref`, no uno: `box` es el contenedor `flex-1` (su `clientHeight` es
- * lo que de verdad hay disponible) y `content` envuelve solo lo que se
- * dibuja de verdad (el muro, y los intentos al top si aplica). `scrollHeight`
- * no sirve para esto — cuando el contenido cabe holgado, un `overflow-hidden`
- * hace que `scrollHeight` sea igual a `clientHeight` (nunca menor), así que
- * la resta siempre daría cero. `content.offsetHeight` sí es el tamaño real
- * del contenido, sin que la caja que lo envuelve lo infle.
- */
-function useLeftoverHeight(box: React.RefObject<HTMLElement | null>, content: React.RefObject<HTMLElement | null>) {
-  const [leftover, setLeftover] = useState(0);
-
-  useEffect(() => {
-    const measure = () => {
-      const element = box.current;
-      const inner = content.current;
-      if (!element || !inner) {
-        return;
-      }
-      setLeftover(element.clientHeight - inner.offsetHeight);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    if (box.current) {
-      observer.observe(box.current);
-    }
-    return () => observer.disconnect();
-  }, [box, content]);
-
-  return leftover;
+  return { boxRef: setBox, lane };
 }
 
 /**
@@ -349,32 +329,58 @@ function useLeftoverHeight(box: React.RefObject<HTMLElement | null>, content: Re
  * Nada de esto aparece si no cabe entero, así que una clasificatoria de
  * veinticinco no ve ninguno y la tabla se queda con toda la tarjeta.
  */
-/** Lo que ocupa cada pieza, medido contra lo que ocupa de verdad en pantalla. */
-const FILL = { capturesHeader: 34, capture: 44, podium: 250, motif: 76 };
+
+interface PodiumColumn {
+  rows: LeaderboardRow[];
+  height: string;
+  from: string;
+  to: string;
+  rank: number;
+  ink: string;
+}
 
 function Podium({ round }: { round: LeaderboardRound }) {
-  const three = round.rows.slice(0, 3);
-  if (three.length < 3) {
+  if (round.rows.length < 3) {
+    return null;
+  }
+  const { gold, silver, bronze } = podiumSlots(round.rows);
+  if (gold.length === 0) {
     return null;
   }
   // Plata, oro, bronce — en ese orden, que es como se para un podio. La altura
-  // de cada cajón dice el puesto sin necesidad de leer el número.
+  // de cada cajón dice el puesto sin necesidad de leer el número. Con empate
+  // en oro el ranking salta plata y/o bronce (quedan vacíos y su cajón no se
+  // dibuja) y cualquier cajón trae más de un nombre si ese puesto también
+  // quedó empatado — no solo el de oro.
   // Degradado y no color plano: al lado de las curvas de nivel y de las líneas
   // de la gráfica, tres rectángulos macizos se leen como un cuerpo extraño. El
   // tono baja hacia el pie de cada cajón, que es como cae la luz en un podio de
   // verdad.
-  const order = [
-    { row: three[1]!, height: 'h-24', from: '#A6B7C0', to: '#7B8F9B', rank: 2, ink: 'text-white' },
-    { row: three[0]!, height: 'h-36', from: '#EFC069', to: '#D89A2A', rank: 1, ink: 'text-ink' },
-    { row: three[2]!, height: 'h-16', from: '#9A6740', to: '#6B4224', rank: 3, ink: 'text-white' },
-  ];
+  const columns: PodiumColumn[] = [
+    silver.length > 0 && { rows: silver, height: 'h-24', from: '#A6B7C0', to: '#7B8F9B', rank: 2, ink: 'text-white' },
+    { rows: gold, height: 'h-36', from: '#EFC069', to: '#D89A2A', rank: 1, ink: 'text-ink' },
+    bronze.length > 0 && { rows: bronze, height: 'h-16', from: '#9A6740', to: '#6B4224', rank: 3, ink: 'text-white' },
+  ].filter((column): column is PodiumColumn => column !== false);
+
   return (
+    // Ancho fijo por columna y no `flex-1`: con un empate grande sin plata
+    // ni bronce, la de oro sola quedaba `flex-1` de un contenedor de 34rem y
+    // se veía como un rectángulo dorado gigante, no como un podio.
     <div className="mx-auto flex w-full max-w-[34rem] items-end justify-center gap-3">
-      {order.map(({ row, height, from, to, rank, ink }) => (
-        <div key={row.registrationId} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-          <span className="text-balance text-center font-display text-base font-semibold leading-tight text-ink">
-            {row.athleteName}
-          </span>
+      {columns.map(({ rows, height, from, to, rank, ink }) => (
+        <div key={rank} className="flex w-40 shrink-0 flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-0.5">
+            {rows.map((row) => (
+              <span
+                key={row.registrationId}
+                className={`text-balance text-center font-display font-semibold leading-tight text-ink ${
+                  rows.length > 1 ? 'text-sm' : 'text-base'
+                }`}
+              >
+                {row.athleteName}
+              </span>
+            ))}
+          </div>
           <div
             className={`flex w-full items-start justify-center rounded-t-xl pt-3 ${height}`}
             style={{ background: `linear-gradient(180deg, ${from} 0%, ${to} 100%)` }}
@@ -563,9 +569,6 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   // Una gráfica fija deja de turnarse: sirve para dejar la de puestos puesta
   // mientras corre una final.
   const [pinned, setPinned] = useState(false);
-  const bumpBox = useRef<HTMLDivElement>(null);
-  const detailBox = useRef<HTMLDivElement>(null);
-  const detailContent = useRef<HTMLDivElement>(null);
 
   const unit = useMemo(() => problemUnit(data.event.discipline), [data.event.discipline]);
   const isHeight = data.event.scoringFormat === 'max_height';
@@ -592,8 +595,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
   // El mismo criterio que la tabla pública, a propósito: que una pantalla
   // muestre esta gráfica y la otra no, para la misma ronda, es un defecto que
   // se ve desde el otro lado del salón.
-  const hasAttemptsPerTop =
-    (round?.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length ?? 0) >= 2;
+  const showAttemptsPerTop = round ? hasAttemptsPerTop(round) : false;
   // Dos turnos, no tres: la de puestos es la nuestra y se queda con su tiempo;
   // el muro y los intentos al top son la misma pregunta —cómo se comportó la
   // ronda— y juntos se leen en diez segundos.
@@ -616,8 +618,8 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
 
   const date = formatEventDate(data.event.date);
   const isPodiumRound = round?.type === 'final';
-  const { lane: bumpLane, leftover: bumpLeftover } = useBumpLane(bumpBox, round?.rows.length ?? 0);
-  const detailLeftover = useLeftoverHeight(detailBox, detailContent);
+  const { boxRef: bumpBoxRef, lane: bumpLane } = useBumpLane(round?.rows.length ?? 0);
+  const { boxRef: detailBoxRef, contentRef: detailContentRef, leftover: detailLeftover } = useLeftoverHeight();
   const noAttemptsYet = round?.lastAttempts.length === 0;
   const chartTitle = {
     bump: `Puesto ${unit.singular} a ${unit.singular}`,
@@ -757,8 +759,15 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   nuevo y la animación de entrada vuelve a correr. */}
               <div key={activeSlide} className="crux-fade flex min-h-0 flex-1 flex-col overflow-hidden">
                 {activeSlide === 'bump' && (
-                  <div ref={bumpBox} className="flex min-h-0 flex-1 flex-col">
-                    <div className="flex min-h-0 flex-1 items-center">
+                  <div className="flex min-h-0 flex-1 flex-col">
+                    {/* El ref va en esta caja y no en la de afuera: la de
+                        afuera también carga el podio, así que medirla ahí
+                        le hacía creer a la gráfica que tenía más alto real
+                        del que le queda una vez que flexbox le resta el
+                        podio — de ahí que con pocos finalistas la gráfica
+                        se viera pequeña y encogida en vez de llenar su
+                        espacio real. */}
+                    <div ref={bumpBoxRef} className="flex min-h-0 flex-1 items-center">
                     {/* `w-full max-h-full` y no `h-full`: con `h-full` el SVG se
                         ajusta al alto y deja franjas de aire a los lados —
                         pequeño en el centro de un panel ancho. Así usa todo el
@@ -775,18 +784,18 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                     </div>
                     {/* Lo que sobra debajo de la gráfica: el podio si esto es
                         una final —es el momento del día y aquí tiene sitio
-                        propio— y si no, las olas. La gráfica no se estira para
-                        taparlo: con cuatro finalistas, estirada se ve peor. */}
+                        propio. Fuera de una final se deja el aire así, sin
+                        rellenar: ese sobrante es el mismo margen de centrado
+                        que deja el tope de 145px de `useBumpLane` cuando la
+                        gráfica ya tiene espacio de sobra por diseño — meterle
+                        las curvas ahí se veía apretado precisamente en el
+                        caso donde la gráfica menos lo necesita. */}
                     {isPodiumRound && round.rows.length >= 3 ? (
                       // Sitio reservado, no lo que sobre: medir primero y
                       // decidir después dejaba el podio fuera justo en las
                       // pantallas grandes, que es donde más sitio hay.
                       <div className="mt-4 shrink-0 pb-2">
                         <Podium round={round} />
-                      </div>
-                    ) : bumpLeftover >= FILL.motif ? (
-                      <div className="pointer-events-none mt-6 px-10 opacity-45" aria-hidden="true">
-                        <TopographicMotif />
                       </div>
                     ) : null}
                   </div>
@@ -796,7 +805,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   // los bloques, no de los intentos) y el muro dibujaría barras
                   // en cero sin decir nada. En vez de eso, un panel de espera:
                   // no compite por espacio con ninguna gráfica, así que las
-                  // curvas van siempre, sin depender de `bumpLeftover`.
+                  // curvas van siempre, sin depender de cuánto sobre.
                   <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pt-6 text-center">
                     <div
                       className="pointer-events-none absolute inset-x-6 top-4 opacity-40"
@@ -818,8 +827,8 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                   // en una columna flex los hijos se encogen por debajo de su
                   // contenido, y sin recortar cada uno, el muro se metía encima
                   // del título de los intentos.
-                  <div ref={detailBox} className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-6">
-                    <div ref={detailContent} className="flex flex-col gap-10">
+                  <div ref={detailBoxRef} className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-6">
+                    <div ref={detailContentRef} className="flex flex-col gap-10">
                       <div className="min-h-0 shrink-0 overflow-hidden">
                         {/* Con las dos gráficas rotando, el título de turno no se
                             repite en pantalla al mismo tiempo que este subtítulo;
@@ -833,7 +842,7 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                         )}
                         <Wall round={round} unit={unit.singular} isHeight={isHeight} dense />
                       </div>
-                      {hasAttemptsPerTop && (
+                      {showAttemptsPerTop && (
                         <div className="min-h-0 shrink-0 overflow-hidden">
                           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                             Intentos por cada top · menos es mejor
@@ -842,6 +851,14 @@ export function ProjectionScreen({ initial, slug }: { initial: LeaderboardPayloa
                               lo que esta gráfica hace —comparar— ya se ve con los
                               cuatro primeros. */}
                           <AttemptsPerTop round={round} limit={4} fixedWidth={false} {...inert} />
+                        </div>
+                      )}
+                      {!showAttemptsPerTop && isHeight && (
+                        <div className="min-h-0 shrink-0 overflow-hidden">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                            Hasta dónde llegaron · altura máxima por ruta
+                          </p>
+                          <RouteProfile round={round} unit={unit.singular} />
                         </div>
                       )}
                     </div>

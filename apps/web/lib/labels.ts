@@ -62,6 +62,11 @@ export function problemUnit(discipline: string): { singular: string; plural: str
     : { singular: 'ruta', plural: 'rutas', article: 'la' };
 }
 
+/** "escaladores" / "escaladoras" según el género real de la categoría. Mixto y sin dato caen al genérico. */
+export function climberWord(gender: 'male' | 'female' | 'mixed' | null): string {
+  return gender === 'female' ? 'escaladoras' : 'escaladores';
+}
+
 // Vocabulario de puntaje. En el gimnasio nadie dice "toparon" — se dice que
 // alguien "hizo top", y un top a primer intento es un flash, no "un top a
 // primer intento". La tabla y las gráficas comparten estas palabras, así que

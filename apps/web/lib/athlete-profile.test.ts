@@ -75,7 +75,7 @@ function payload(rounds: LeaderboardRound[], category: Partial<LeaderboardCatego
       timezone: 'America/Bogota',
       organizationLogo: null,
     },
-    categories: [{ id: 'cat-1', name: 'Open Femenina', rounds, ...category }],
+    categories: [{ id: 'cat-1', name: 'Open Femenina', gender: 'female', rounds, ...category }],
     updatedAt: '2026-08-12T00:00:00Z',
     lastActivityAt: null,
   };

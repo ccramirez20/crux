@@ -34,6 +34,7 @@ export interface LeaderboardEventInfo {
 export interface TreeRow {
   categoryId: string;
   categoryName: string;
+  categoryGender: 'male' | 'female' | 'mixed' | null;
   roundId: string | null;
   roundType: string | null;
   roundOrder: number | null;
@@ -116,6 +117,8 @@ interface ProblemStats {
   flashes: number;
   /** Cuántos compiten en esa ronda — el denominador. En una final son los finalistas, no la categoría entera. */
   field: number;
+  /** Intentos crudos registrados en este bloque, toparan o no. Sin esto no hay forma de distinguir "nadie lo ha intentado" de "todos fallaron". */
+  attempts: number;
 }
 
 /**
@@ -199,6 +202,7 @@ function buildTimeline(
 export interface LeaderboardCategory {
   id: string;
   name: string;
+  gender: 'male' | 'female' | 'mixed' | null;
   rounds: LeaderboardRound[];
 }
 
@@ -224,6 +228,7 @@ interface RoundDraft {
 interface CategoryDraft {
   id: string;
   name: string;
+  gender: 'male' | 'female' | 'mixed' | null;
   rounds: RoundDraft[];
 }
 
@@ -267,7 +272,7 @@ export function buildLeaderboard(
   for (const row of treeRows) {
     let category = drafts.find((c) => c.id === row.categoryId);
     if (!category) {
-      category = { id: row.categoryId, name: row.categoryName, rounds: [] };
+      category = { id: row.categoryId, name: row.categoryName, gender: row.categoryGender, rounds: [] };
       drafts.push(category);
     }
     if (row.roundId === null || row.roundType === null || row.roundOrder === null) {
@@ -404,6 +409,7 @@ export function buildLeaderboard(
           zones: onProblem.filter((a) => a.zone && !a.top).length,
           flashes: onProblem.filter((a) => a.top && (a.topAttempts ?? 1) === 1).length,
           field: roundField.length,
+          attempts: onProblem.length,
         };
       });
 
@@ -448,7 +454,7 @@ export function buildLeaderboard(
       };
     }
 
-    return { id: category.id, name: category.name, rounds };
+    return { id: category.id, name: category.name, gender: category.gender, rounds };
   });
 
   // El más reciente entre todas las rondas — es lo que decide si la pantalla
@@ -489,6 +495,7 @@ async function loadLeaderboard(slug: string): Promise<LeaderboardPayload | null>
       .select({
         categoryId: categories.id,
         categoryName: categories.name,
+        categoryGender: categories.gender,
         roundId: rounds.id,
         roundType: rounds.type,
         roundOrder: rounds.order,

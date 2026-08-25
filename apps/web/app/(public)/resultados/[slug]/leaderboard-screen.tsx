@@ -743,6 +743,7 @@ export function LeaderboardScreen({
               <LeaderboardCharts
                 round={round}
                 unit={unit}
+                categoryGender={category?.gender ?? null}
                 hovered={focused}
                 onHover={setHovered}
                 onSelect={toggleSelected}

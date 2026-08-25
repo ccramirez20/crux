@@ -1,8 +1,11 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { SCORE_TERM } from '@/lib/labels';
+import { hasAttemptsPerTop, topSummary } from '@/lib/attempts-per-top';
+import { heightDistribution } from '@/lib/height-distribution';
+import { SCORE_TERM, climberWord } from '@/lib/labels';
 import { roundHighlights } from '@/lib/round-highlights';
+import { shortName } from '@/lib/short-name';
 import { brandWordClass } from '@/lib/ui';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 
@@ -245,14 +248,17 @@ function bumpLayout(compact: boolean, fieldSize: number, laneOverride?: number) 
     // cuatro llenando el alto). Dentro de la página el carril nunca pasa de 38,
     // así que ahí ganan los 82 de siempre y no se mueve nada.
     padBottom: Math.max(82, Math.round(lane / 2) + 62),
-    // El área de dibujo se come el aire de los dos costados: la etiqueta más
-    // larga mide 168 px y arrancaba en x=88, y del otro lado sobraba otro tanto
-    // antes del chip. La gráfica es el foco de esta pantalla, así que el ancho
-    // que sobraba es suyo y no de los márgenes.
-    plotLeft: 224,
-    plotRight: 880,
+    // El área de dibujo se come el aire de los dos costados. Estos márgenes se
+    // calibraron para nombres completos ("la etiqueta más larga mide 168px");
+    // con `shortName()` acotando toda etiqueta a "Nombre I. I." (máximo tres
+    // palabras) ese margen sobra, y el ancho liberado es de la gráfica, no de
+    // los márgenes. El nombre está anclado por la derecha y crece hacia la
+    // izquierda según su propio ancho — con nombres cortos, el presupuesto
+    // que sobra entre el nombre y el borde real es hueco muerto, no texto.
+    plotLeft: 170,
+    plotRight: 960,
     startRankX: 190,
-    endRankX: 956,
+    endRankX: 1036,
     rankSize: lane >= 32 ? 18 : 15,
     tickSize: 15,
     gap: Math.min(26, lane - 2),
@@ -287,18 +293,39 @@ export function BumpChart({
   // para cualquier largo de nombre sin adivinar.
   const nameRefs = useRef(new Map<string, SVGTextElement>());
   const [nameWidths, setNameWidths] = useState<Record<string, number>>({});
+  // La etiqueta del extremo izquierdo (puesto + nombre en un solo `<text>`,
+  // creciendo hacia la izquierda) tiene el mismo problema que la del extremo
+  // derecho — un nombre largo se dibuja encima de las líneas de la gráfica —
+  // así que se mide y se comprime con el mismo mecanismo, en un mapa aparte
+  // porque es un elemento distinto.
+  const startLabelRefs = useRef(new Map<string, SVGTextElement>());
+  const [startLabelWidths, setStartLabelWidths] = useState<Record<string, number>>({});
   useEffect(() => {
-    const measured: Record<string, number> = {};
-    for (const [id, element] of nameRefs.current) {
-      measured[id] = element.getComputedTextLength();
-    }
+    const measure = (refs: Map<string, SVGTextElement>) => {
+      const measured: Record<string, number> = {};
+      for (const [id, element] of refs) {
+        // Un nombre ya comprimido con `textLength` reporta esa medida
+        // comprimida, no la natural — remedirlo aquí oscilaría para siempre
+        // (comprime → se mide más corto → deja de hacer falta comprimir →
+        // se expande → vuelve a medir largo → comprime de nuevo). Se conserva
+        // la primera medición (la natural) y ya no se toca.
+        if (element.hasAttribute('textLength')) {
+          continue;
+        }
+        measured[id] = element.getComputedTextLength();
+      }
+      return measured;
+    };
     // Sin comparar, cada medición dispararía otro render que vuelve a medir.
-    setNameWidths((previous) => {
-      const ids = Object.keys(measured);
+    const merge = (previous: Record<string, number>, measured: Record<string, number>) => {
+      const merged = { ...previous, ...measured };
+      const ids = Object.keys(merged);
       const same =
-        ids.length === Object.keys(previous).length && ids.every((id) => previous[id] === measured[id]);
-      return same ? previous : measured;
-    });
+        ids.length === Object.keys(previous).length && ids.every((id) => previous[id] === merged[id]);
+      return same ? previous : merged;
+    };
+    setNameWidths((previous) => merge(previous, measure(nameRefs.current)));
+    setStartLabelWidths((previous) => merge(previous, measure(startLabelRefs.current)));
   });
 
   const points = round.timeline;
@@ -333,6 +360,17 @@ export function BumpChart({
   } = bumpLayout(compact, shown.length, laneOverride);
   const roomy = lane >= 32;
   const endNameX = plotRight + 88;
+  // Sin esto el nombre se dibujaba sin límite y el borde del viewBox lo
+  // recortaba en seco en cuanto pasaba de las 282 unidades que quedan hasta
+  // el borde — un nombre largo se perdía del todo, no se veía "algo cortado".
+  const nameMargin = 16;
+  const availableNameWidth = width - endNameX - nameMargin;
+  // El extremo izquierdo crece hacia la izquierda desde `startNameEndX`: sin
+  // comprimirlo, un nombre largo no se recorta contra ningún borde, se dibuja
+  // encima de las líneas de la gráfica, que es peor que perderse.
+  const startNameEndX = plotLeft - 34;
+  const startNameMargin = 16;
+  const availableStartWidth = startNameEndX - startNameMargin;
   // El centro de cada columna de etiquetas, medido sobre el bloque de texto que
   // ocupan y no sobre el ancho disponible: el título tiene que quedar encima de
   // los nombres, no encima del aire que sobra al lado.
@@ -432,6 +470,7 @@ export function BumpChart({
         const endRank = rankAt(row, points.at(-1)!);
         const delta = startRank - endRank;
         const nameWidth = nameWidths[row.registrationId];
+        const startLabelWidth = startLabelWidths[row.registrationId];
 
         return (
           <g
@@ -532,7 +571,7 @@ export function BumpChart({
                     strokeWidth={4}
                     paintOrder="stroke"
                   >
-                    {row.athleteName}
+                    {shortName(row.athleteName)}
                   </text>
                 )}
               </>
@@ -565,17 +604,27 @@ export function BumpChart({
             {!compact && (
               <>
                 <text
-                  x={plotLeft - 34}
+                  ref={(element) => {
+                    if (element) {
+                      startLabelRefs.current.set(row.registrationId, element);
+                    } else {
+                      startLabelRefs.current.delete(row.registrationId);
+                    }
+                  }}
+                  x={startNameEndX}
                   y={startYs[index]! + 5}
                   textAnchor="end"
                   fontSize={roomy ? 16 : 13}
                   fontWeight={500}
                   fill={focused ? INK : MUTED}
+                  {...(startLabelWidth !== undefined && startLabelWidth > availableStartWidth
+                    ? { textLength: availableStartWidth, lengthAdjust: 'spacingAndGlyphs' as const }
+                    : {})}
                 >
                   <tspan fontWeight={700} className="tabular-nums">
                     {startRank}.
                   </tspan>
-                  <tspan dx={6}>{row.athleteName}</tspan>
+                  <tspan dx={6}>{shortName(row.athleteName)}</tspan>
                 </text>
                 {/* A la derecha el puesto va en su propia columna: pegado al
                     nombre, "12 Manuela" se leía como una sola cosa larga. Y
@@ -606,8 +655,11 @@ export function BumpChart({
                   fontSize={roomy ? 18 : 15}
                   fontWeight={500}
                   fill={podium ? INK : MUTED}
+                  {...(nameWidth !== undefined && nameWidth > availableNameWidth
+                    ? { textLength: availableNameWidth, lengthAdjust: 'spacingAndGlyphs' as const }
+                    : {})}
                 >
-                  {row.athleteName}
+                  {shortName(row.athleteName)}
                 </text>
               </>
             )}
@@ -718,8 +770,11 @@ export function Wall({
                 {stat.number}
                 {/* El bloque más duro se llama crux, y la plataforma se llama
                     igual por eso mismo. Va con la marca: es el único sitio
-                    donde el nombre significa las dos cosas a la vez. */}
-                {index === 0 && round.lastAttempts.length > 0 && (
+                    donde el nombre significa las dos cosas a la vez.
+                    Exige intentos en TODOS los bloques: con datos parciales
+                    el sort empata en cero y gana el de menor número, que no
+                    mide nada. */}
+                {index === 0 && stats.every((s) => s.attempts > 0) && (
                   <span className={`ml-2 align-middle text-[11px] uppercase ${brandWordClass}`}>crux</span>
                 )}
               </span>
@@ -732,9 +787,9 @@ export function Wall({
             <span className={`relative flex flex-1 overflow-hidden rounded-lg ${dense ? 'h-8' : 'h-9'}`} style={{ background: LANE }}>
               {(
                 [
-                  { kind: 'top', width: (stat.tops / stat.field) * 100, background: GOLD },
-                  { kind: 'zone', width: (stat.zones / stat.field) * 100, background: PINE },
-                  { kind: 'none', width: null, background: 'transparent' },
+                  { kind: 'top', width: (stat.tops / stat.field) * 100, background: GOLD, restOpacity: 1 },
+                  { kind: 'zone', width: (stat.zones / stat.field) * 100, background: PINE, restOpacity: 1 },
+                  { kind: 'none', width: null, background: 'transparent', restOpacity: 1 },
                 ] as const
               ).map((segment) => (
                 <Fragment key={segment.kind}>
@@ -748,7 +803,9 @@ export function Wall({
                       flex: segment.width === null ? '1 1 0%' : undefined,
                       background: segment.background,
                       opacity:
-                        hover !== null && hover.problemId === stat.problemId && hover.kind !== segment.kind ? 0.35 : 1,
+                        hover !== null && hover.problemId === stat.problemId
+                          ? (hover.kind === segment.kind ? 1 : 0.35)
+                          : segment.restOpacity,
                     }}
                     // Mismo problema que en las otras dos gráficas: en el
                     // teléfono el toque enciende el tramo y nunca llega el
@@ -794,6 +851,150 @@ export function Wall({
   );
 }
 
+/* --------------------------------------------------- route profile (lead) */
+
+/** Qué tramo de qué perfil está señalado. */
+interface ProfileHover {
+  problemId: string;
+  kind: 'top' | 'bucket-0' | 'bucket-1' | 'bucket-2' | 'rest';
+}
+
+/**
+ * Perfil vertical por ruta, exclusivo de lead: de la base a la cima, con la
+ * densidad de dónde se quedó quien no topó. En lead cada ruta es un objeto
+ * vertical de verdad, y leerlo acostado (como hace `Wall` para boulder) es
+ * menos directo que respetar esa orientación.
+ *
+ * Por bandas apiladas y no por posición continua: trece competidores en el
+ * mismo tramo se encimarían como puntos sueltos. El alto de cada banda
+ * codifica cuántos cayeron ahí — mismos tramos que ya calcula
+ * `heightDistribution`, solo que de arriba (cima) a abajo (base) en vez de
+ * izquierda a derecha.
+ */
+export function RouteProfile({ round, unit }: { round: LeaderboardRound; unit: string }) {
+  const [hover, setHover] = useState<ProfileHover | null>(null);
+  // Mismo desempate que `Wall`: menos tops es más duro, y con los mismos
+  // tops manda el flash.
+  const stats = [...round.problemStats].sort(
+    (a, b) => a.tops - b.tops || a.flashes - b.flashes,
+  );
+  if (stats.length === 0) {
+    return null;
+  }
+  const dists = heightDistribution(round);
+  const problemName = (id: string) => round.problems.find((p) => p.id === id)?.name;
+  const crux = stats.every((s) => s.attempts > 0);
+
+  const hoveredStat = stats.find((s) => s.problemId === hover?.problemId);
+  const hoveredDist = dists.find((d) => d.problemId === hover?.problemId);
+  const hoveredBuckets = hoveredDist?.mode === 'buckets' ? hoveredDist.buckets : null;
+  // Etiquetas cortas y sin verbo conjugado: "9 · Mitad de la vía" en vez de
+  // "9 se quedaron a mitad de vía". Más simple, y no hace falta la variante
+  // singular/plural que sí usa `Wall`.
+  const profileLabel = {
+    top: 'Top',
+    'bucket-0': 'Cerca al top',
+    'bucket-1': 'Mitad de la vía',
+    'bucket-2': 'Parte baja de la vía',
+    rest: 'Sin top',
+  } as const;
+  const reading =
+    hoveredStat && hover
+      ? `${
+          {
+            top: hoveredStat.tops,
+            'bucket-0': hoveredBuckets?.[0] ?? 0,
+            'bucket-1': hoveredBuckets?.[1] ?? 0,
+            'bucket-2': hoveredBuckets?.[2] ?? 0,
+            rest: hoveredStat.field - hoveredStat.tops,
+          }[hover.kind]
+        } · ${profileLabel[hover.kind]}`
+      : null;
+
+  return (
+    <div>
+      <p className="mb-3 min-h-6 text-[15px] font-semibold text-ink">{reading}</p>
+      <ul className="flex flex-wrap gap-6">
+        {stats.map((stat, index) => {
+          const dist = dists.find((d) => d.problemId === stat.problemId);
+          const buckets = dist?.mode === 'buckets' ? dist.buckets : null;
+          const segments = [
+            { kind: 'top' as const, count: stat.tops, background: GOLD, restOpacity: 1 },
+            ...(buckets
+              ? [
+                  { kind: 'bucket-0' as const, count: buckets[0], background: PINE, restOpacity: 0.85 },
+                  { kind: 'bucket-1' as const, count: buckets[1], background: PINE, restOpacity: 0.55 },
+                  { kind: 'bucket-2' as const, count: buckets[2], background: PINE, restOpacity: 0.3 },
+                ]
+              : [{ kind: 'rest' as const, count: stat.field - stat.tops, background: PINE, restOpacity: 0.3 }]),
+          ];
+          return (
+            <li key={stat.problemId} className="flex w-20 flex-col items-center gap-2">
+              <span className="text-center">
+                <span className="block font-display text-lg font-bold leading-tight">
+                  {unit.slice(0, 1).toUpperCase()}
+                  {stat.number}
+                  {/* En línea con el número y no en su propio renglón: un
+                      renglón aparte solo en la columna más dura le suma alto
+                      a ese encabezado y desalinea su barra contra las demás
+                      (mismo defecto que ya resolvió `Wall`). */}
+                  {index === 0 && crux && (
+                    <span className={`ml-1 align-middle text-[9px] uppercase ${brandWordClass}`}>crux</span>
+                  )}
+                </span>
+                <span className="block truncate text-xs text-muted">{problemName(stat.problemId) ?? '—'}</span>
+              </span>
+              <div className="flex h-36 w-14 flex-col overflow-hidden rounded-t-2xl" style={{ background: LANE }}>
+                {segments.map((segment) => (
+                  <div
+                    key={segment.kind}
+                    className="w-full transition-opacity duration-150"
+                    style={{
+                      height: `${(segment.count / stat.field) * 100}%`,
+                      background: segment.background,
+                      opacity:
+                        hover !== null && hover.problemId === stat.problemId
+                          ? hover.kind === segment.kind
+                            ? 1
+                            : 0.35
+                          : segment.restOpacity,
+                    }}
+                    // Mismo problema que en `Wall`: en el teléfono el toque
+                    // enciende el tramo y nunca llega el evento que lo apaga.
+                    onPointerEnter={(event) => {
+                      if (event.pointerType === 'mouse') {
+                        setHover({ problemId: stat.problemId, kind: segment.kind });
+                      }
+                    }}
+                    onPointerLeave={(event) => {
+                      if (event.pointerType === 'mouse') {
+                        setHover(null);
+                      }
+                    }}
+                    onClick={() =>
+                      setHover((current) =>
+                        current?.problemId === stat.problemId && current.kind === segment.kind
+                          ? null
+                          : { problemId: stat.problemId, kind: segment.kind },
+                      )
+                    }
+                  />
+                ))}
+                {/* Quien todavía no ha intentado esta ruta: mismo criterio que
+                    el tramo "none" de `Wall`, un relleno sin ancho fijo. */}
+                <div className="flex-1" />
+              </div>
+              <span className="font-display text-sm font-bold tabular-nums text-muted">
+                {stat.tops}/{stat.field}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------ attempts/top */
 
 /**
@@ -827,23 +1028,25 @@ export function AttemptsPerTop({
   minClimbers?: number;
 } & HoverProps) {
   const minWidth = fixedWidth ? 'sm:min-w-[33rem]' : '';
-  const climbers = round.rows.flatMap((row) =>
+  const climbers = round.rows.flatMap((row) => {
     // Two tops minimum. Otherwise a single lucky flash scores 1.0 and outranks
     // someone who sent five, which is the exact opposite of the point.
-    row.result.format === 'classic_tops_zones' && row.result.tops >= minTops
-      ? [{
-          id: row.registrationId,
-          name: row.athleteName,
-          rank: row.result.rank,
-          tops: row.result.tops,
-          // Intentos de los bloques que sí topó. Un bloque que se le quedó no
-          // entra al promedio: mediría otra cosa, cuánto peleó, no cuánto le
-          // costó cada top.
-          topAttempts: row.result.topAttempts,
-          ratio: row.result.topAttempts / row.result.tops,
-        }]
-      : [],
-  );
+    const summary = topSummary(row);
+    if (!summary || summary.tops < minTops) {
+      return [];
+    }
+    return [{
+      id: row.registrationId,
+      name: row.athleteName,
+      rank: row.result.rank,
+      tops: summary.tops,
+      // Intentos de los bloques que sí topó. Un bloque que se le quedó no
+      // entra al promedio: mediría otra cosa, cuánto peleó, no cuánto le
+      // costó cada top.
+      topAttempts: summary.topAttempts,
+      ratio: summary.topAttempts / summary.tops,
+    }];
+  });
   if (climbers.length < minClimbers) {
     return null;
   }
@@ -955,19 +1158,20 @@ function Swatch({ color, label }: { color: string; label: string }) {
 export function LeaderboardCharts({
   round,
   unit,
+  categoryGender,
   hovered,
   onHover,
   onSelect,
 }: {
   round: LeaderboardRound;
   unit: { singular: string; plural: string; article: string };
+  categoryGender: 'male' | 'female' | 'mixed' | null;
 } & HoverProps) {
   if (round.timeline.length === 0) {
     return null;
   }
   const isHeight = round.rows[0]?.result.format === 'max_height';
-  const hasAttemptsPerTop =
-    round.rows.filter((r) => r.result.format === 'classic_tops_zones' && r.result.tops >= 2).length >= 2;
+  const showAttemptsPerTop = hasAttemptsPerTop(round);
 
   return (
     <div className="flex flex-col gap-6">
@@ -1032,10 +1236,12 @@ export function LeaderboardCharts({
         <ProblemLegend round={round} unit={unit.singular} />
       </Panel>
 
-      <div className={`grid grid-cols-1 gap-6 ${hasAttemptsPerTop ? 'xl:grid-cols-[3fr_2fr]' : ''}`}>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[3fr_2fr]">
         <Panel
           title={`¿Qué tan dur${unit.article === 'la' ? 'as' : 'os'} estaban l${unit.article === 'la' ? 'as' : 'os'} ${unit.plural}?`}
-          hint={`De los ${round.rows.length} de la categoría, cuántos hicieron top y cuántos se quedaron en zona. ${unit.article === 'la' ? 'De la más dura a la' : 'Del más duro al'} más fácil.`}
+          hint={`De l${categoryGender === 'female' ? 'as' : 'os'} ${round.rows.length} ${climberWord(categoryGender)} de la categoría, cuánt${categoryGender === 'female' ? 'as' : 'os'} hicieron top${
+            isHeight ? '' : ` y cuánt${categoryGender === 'female' ? 'as' : 'os'} se quedaron en zona`
+          }. ${unit.article === 'la' ? 'De la más dura a la' : 'Del más duro al'} más fácil.`}
         >
           <div className="mb-5 flex flex-wrap items-center gap-5 text-sm text-muted">
             <Swatch color={GOLD} label={SCORE_TERM.top} />
@@ -1044,7 +1250,7 @@ export function LeaderboardCharts({
           <Wall round={round} unit={unit.singular} isHeight={isHeight} />
         </Panel>
 
-        {hasAttemptsPerTop && (
+        {showAttemptsPerTop ? (
           <Panel
             title="Cuántos intentos al top"
             hint={`Promedio de intentos por cada top logrado. Solo cuentan l${unit.article === 'la' ? 'as' : 'os'} ${unit.plural} en l${unit.article === 'la' ? 'as' : 'os'} que hizo top; entra quien tenga dos tops o más. Menos es mejor.`}
@@ -1055,7 +1261,14 @@ export function LeaderboardCharts({
               <AttemptsPerTop round={round} hovered={hovered} onHover={onHover} onSelect={onSelect} />
             </div>
           </Panel>
-        )}
+        ) : isHeight ? (
+          <Panel
+            title="¿Hasta dónde llegaron?"
+            hint="Altura máxima alcanzada en cada ruta: cuántos llegaron al top y en qué sección se quedaron quienes no la completaron."
+          >
+            <RouteProfile round={round} unit={unit.singular} />
+          </Panel>
+        ) : null}
       </div>
     </div>
   );

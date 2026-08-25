@@ -49,6 +49,7 @@ const stat = (problemId: string, number: number, tops: number) => ({
   zones: 0,
   flashes: 0,
   field: 2,
+  attempts: tops,
 });
 
 describe('roundHighlights · el bloque más duro', () => {

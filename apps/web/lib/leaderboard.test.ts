@@ -7,6 +7,7 @@ import {
   type RegistrationRow,
   type TreeRow,
 } from './leaderboard';
+import { hasAttemptsPerTop } from './attempts-per-top';
 
 // Solo importa el puesto: `advancingIds` decide por rank y nada más.
 function fila(registrationId: string, rank: number): LeaderboardRow {
@@ -88,6 +89,7 @@ function treeRow(overrides: Partial<TreeRow>): TreeRow {
   return {
     categoryId: 'cat-1',
     categoryName: 'Avanzados',
+    categoryGender: null,
     roundId: 'round-clasi',
     roundType: 'qualification',
     roundOrder: 1,
@@ -224,9 +226,14 @@ describe('buildLeaderboard', () => {
     ]);
 
     const p1 = round.problemStats.find((s) => s.problemId === 'p1')!;
-    expect(p1).toMatchObject({ tops: 1, zones: 1, field: 2 });
-    // Nadie tocó el segundo bloque: sigue en la gráfica, en cero.
-    expect(round.problemStats.find((s) => s.problemId === 'p2')).toMatchObject({ tops: 0, zones: 0, field: 2 });
+    expect(p1).toMatchObject({ tops: 1, zones: 1, field: 2, attempts: 2 });
+    // Nadie tocó el segundo bloque: sigue en la gráfica, en cero, y sin intentos.
+    expect(round.problemStats.find((s) => s.problemId === 'p2')).toMatchObject({
+      tops: 0,
+      zones: 0,
+      field: 2,
+      attempts: 0,
+    });
   });
 
   it('no inventa un podio en una ronda que todavía no tiene bloques', () => {
@@ -236,5 +243,54 @@ describe('buildLeaderboard', () => {
     expect(round.problems).toEqual([]);
     expect(round.rows).toEqual([]);
     expect(round.error).toBeNull();
+  });
+});
+
+describe('hasAttemptsPerTop', () => {
+  // El caso real reportado: una ronda IFSC con tops de sobra no mostraba la
+  // gráfica porque antes se leía de `row.result.tops`, que solo existe en el
+  // formato clásico. Ahora se lee de los intentos crudos (`cells`), que
+  // existen sin importar el formato de puntaje.
+  it('IFSC con suficientes tops sí la habilita', () => {
+    const payload = buildLeaderboard(
+      { ...event, scoringFormat: 'ifsc_boulder' },
+      tree,
+      registrations,
+      [
+        attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
+        attempt({ registrationId: 'reg-ana', problemId: 'p2', sequence: 2, top: true, topAttempts: 2 }),
+        attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 3, top: true, topAttempts: 3 }),
+        attempt({ registrationId: 'reg-beto', problemId: 'p2', sequence: 4, top: true, topAttempts: 1 }),
+      ],
+    );
+    const round = payload.categories[0]!.rounds.find((r) => r.id === 'round-clasi')!;
+    expect(round.rows[0]!.result.format).toBe('ifsc_boulder');
+    expect(hasAttemptsPerTop(round)).toBe(true);
+  });
+
+  it('lead (max_height) nunca la habilita, así haya tops', () => {
+    const payload = buildLeaderboard(
+      { ...event, scoringFormat: 'max_height' },
+      tree,
+      registrations,
+      [
+        attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
+        attempt({ registrationId: 'reg-ana', problemId: 'p2', sequence: 2, top: true, topAttempts: 1 }),
+        attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 3, top: true, topAttempts: 1 }),
+        attempt({ registrationId: 'reg-beto', problemId: 'p2', sequence: 4, top: true, topAttempts: 1 }),
+      ],
+    );
+    const round = payload.categories[0]!.rounds.find((r) => r.id === 'round-clasi')!;
+    expect(round.rows[0]!.result.format).toBe('max_height');
+    expect(hasAttemptsPerTop(round)).toBe(false);
+  });
+
+  it('menos de dos competidores con dos o más tops la deja apagada', () => {
+    const round = qualification([
+      attempt({ registrationId: 'reg-ana', problemId: 'p1', sequence: 1, top: true, topAttempts: 1 }),
+      attempt({ registrationId: 'reg-ana', problemId: 'p2', sequence: 2, top: true, topAttempts: 1 }),
+      attempt({ registrationId: 'reg-beto', problemId: 'p1', sequence: 3, top: true, topAttempts: 1 }),
+    ]);
+    expect(hasAttemptsPerTop(round)).toBe(false);
   });
 });

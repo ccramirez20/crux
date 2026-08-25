@@ -28,6 +28,7 @@ describe('buildLeaderboardCsv', () => {
           {
             id: 'cat-1',
             name: 'Open, Nombre con "comillas", y coma',
+            gender: null,
             rounds: [
               {
                 id: 'round-1',
@@ -88,6 +89,7 @@ describe('buildLeaderboardCsv', () => {
           {
             id: 'cat-1',
             name: 'Open',
+            gender: null,
             rounds: [
               {
                 id: 'round-1',
