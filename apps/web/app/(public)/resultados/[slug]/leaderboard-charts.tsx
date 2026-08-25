@@ -5,7 +5,7 @@ import { hasAttemptsPerTop, topSummary } from '@/lib/attempts-per-top';
 import { heightDistribution } from '@/lib/height-distribution';
 import { SCORE_TERM, climberWord } from '@/lib/labels';
 import { roundHighlights } from '@/lib/round-highlights';
-import { shortName } from '@/lib/short-name';
+import { fitName, shortName } from '@/lib/short-name';
 import { brandWordClass } from '@/lib/ui';
 import type { LeaderboardRound, LeaderboardRow } from '@/lib/leaderboard';
 
@@ -273,6 +273,7 @@ export function BumpChart({
   plural,
   article,
   compact = false,
+  fullNames = false,
   className,
   laneOverride,
   hovered,
@@ -284,9 +285,11 @@ export function BumpChart({
   plural: string;
   article: string;
   compact?: boolean;
+  fullNames?: boolean;
   className?: string;
   laneOverride?: number;
 } & HoverProps) {
+  const nameFor = (name: string) => (fullNames ? fitName(name) : shortName(name));
   // Cuánto mide cada nombre ya dibujado. Un contra-trazo alcanzaba para tapar la
   // guía, pero seguía pasando por debajo de las letras; medir el texto es la
   // única forma de que la guía empiece donde el nombre termina, y de paso sirve
@@ -360,11 +363,14 @@ export function BumpChart({
   } = bumpLayout(compact, shown.length, laneOverride);
   const roomy = lane >= 32;
   const endNameX = plotRight + 88;
-  // Sin esto el nombre se dibujaba sin límite y el borde del viewBox lo
-  // recortaba en seco en cuanto pasaba de las 282 unidades que quedan hasta
-  // el borde — un nombre largo se perdía del todo, no se veía "algo cortado".
+  const deltaX = 1240;
+  // El límite real no es el borde del viewBox, es el chip de cambio de puesto
+  // (▲/▼), que vive fijo en `deltaX - 54`: con `shortName()` el nombre nunca
+  // llegaba tan lejos y este tope no se notaba, pero con nombre completo
+  // (`fullNames`) un nombre normal ya alcanza esa zona antes que el borde —
+  // sin este tope se dibuja encima del chip en vez de comprimirse contra él.
   const nameMargin = 16;
-  const availableNameWidth = width - endNameX - nameMargin;
+  const availableNameWidth = deltaX - 54 - endNameX - nameMargin;
   // El extremo izquierdo crece hacia la izquierda desde `startNameEndX`: sin
   // comprimirlo, un nombre largo no se recorta contra ningún borde, se dibuja
   // encima de las líneas de la gráfica, que es peor que perderse.
@@ -373,10 +379,36 @@ export function BumpChart({
   const availableStartWidth = startNameEndX - startNameMargin;
   // El centro de cada columna de etiquetas, medido sobre el bloque de texto que
   // ocupan y no sobre el ancho disponible: el título tiene que quedar encima de
-  // los nombres, no encima del aire que sobra al lado.
-  const startLabelMid = plotLeft - 118;
-  const endLabelMid = plotRight + 150;
-  const deltaX = 1240;
+  // los nombres, no encima del aire que sobra al lado. Constantes fijas aquí se
+  // desalinean en cuanto el ancho real de las etiquetas cambia (nombre completo
+  // vs. iniciales, un nombre largo vs. uno corto), así que se centra sobre el
+  // ancho ya medido por `getComputedTextLength()` (mismo dato que decide la
+  // compresión con `textLength`), no sobre un número adivinado.
+  const startWidthValues = Object.values(startLabelWidths);
+  const endWidthValues = Object.values(nameWidths);
+  const startBlockWidth = Math.min(
+    availableStartWidth,
+    startWidthValues.length > 0 ? Math.max(...startWidthValues) : availableStartWidth * 0.7,
+  );
+  const endBlockWidth = Math.min(
+    availableNameWidth,
+    endWidthValues.length > 0 ? Math.max(...endWidthValues) : availableNameWidth * 0.7,
+  );
+  const startLabelMid = startNameEndX - startBlockWidth / 2;
+  // Sin este tope, el título del extremo final persigue al nombre más largo
+  // hasta pegarse contra "CAMBIO" — no es un problema de nombres largos (pasa
+  // igual con iniciales cortas, confirmado comparando contra `main`), es que
+  // los dos títulos comparten muy poco aire ahí. "CAMBIO" y "PUESTO LUEGO" son
+  // texto fijo (no dependen del competidor), así que su ancho se mide una vez
+  // contra la página real en vez de adivinarse: 55 y 105 unidades de viewBox a
+  // este tamaño de letra. `endTitleGap` es el aire mínimo entre los dos.
+  const cambioTitleWidth = 55;
+  const endTitleWidth = 105;
+  const endTitleGap = 36;
+  const endLabelMid = Math.min(
+    endNameX + endBlockWidth / 2,
+    deltaX - cambioTitleWidth - endTitleGap - endTitleWidth / 2,
+  );
   const height = padTop + (maxRank - 1) * lane + padBottom;
   const laneTop = padTop - lane / 2;
   const laneBottom = padTop + (maxRank - 1) * lane + lane / 2;
@@ -571,7 +603,7 @@ export function BumpChart({
                     strokeWidth={4}
                     paintOrder="stroke"
                   >
-                    {shortName(row.athleteName)}
+                    {nameFor(row.athleteName)}
                   </text>
                 )}
               </>
@@ -581,11 +613,15 @@ export function BumpChart({
                 lejos y con dos vecinas quietas no había nada que dijera de quién
                 era ese ▼12. Va del color de su propio chip, para que se lea como
                 el rastro de ese chip y no como un renglón de tabla. Arranca en
-                el final medido del nombre, así que no lo toca por largo que
-                sea; hasta que la medida existe, no se dibuja. */}
+                el final *visible* del nombre —el ancho natural comprimido con
+                `Math.min`, no el medido antes de comprimir— porque con nombre
+                completo (`fullNames`) el ancho natural puede superar por mucho
+                lo que el texto realmente ocupa una vez comprimido con
+                `textLength`, y la línea arrancaba más allá del chip. Hasta que
+                la medida existe, no se dibuja. */}
             {!compact && delta !== 0 && nameWidth !== undefined && (
               <line
-                x1={endNameX + nameWidth + 12}
+                x1={endNameX + Math.min(nameWidth, availableNameWidth) + 12}
                 y1={endYs[index]!}
                 x2={deltaX - 62}
                 y2={endYs[index]!}
@@ -614,9 +650,9 @@ export function BumpChart({
                   x={startNameEndX}
                   y={startYs[index]! + 5}
                   textAnchor="end"
-                  fontSize={roomy ? 16 : 13}
+                  fontSize={roomy ? 18 : 15}
                   fontWeight={500}
-                  fill={focused ? INK : MUTED}
+                  fill={focused || podium ? INK : MUTED}
                   {...(startLabelWidth !== undefined && startLabelWidth > availableStartWidth
                     ? { textLength: availableStartWidth, lengthAdjust: 'spacingAndGlyphs' as const }
                     : {})}
@@ -624,7 +660,7 @@ export function BumpChart({
                   <tspan fontWeight={700} className="tabular-nums">
                     {startRank}.
                   </tspan>
-                  <tspan dx={6}>{shortName(row.athleteName)}</tspan>
+                  <tspan dx={6}>{nameFor(row.athleteName)}</tspan>
                 </text>
                 {/* A la derecha el puesto va en su propia columna: pegado al
                     nombre, "12 Manuela" se leía como una sola cosa larga. Y
@@ -637,7 +673,7 @@ export function BumpChart({
                   textAnchor="end"
                   fontSize={roomy ? 18 : 15}
                   fontWeight={700}
-                  fill={podium ? INK : MUTED}
+                  fill={focused || podium ? INK : MUTED}
                   className="tabular-nums"
                 >
                   {endRank}.
@@ -654,12 +690,12 @@ export function BumpChart({
                   y={endYs[index]! + 5}
                   fontSize={roomy ? 18 : 15}
                   fontWeight={500}
-                  fill={podium ? INK : MUTED}
+                  fill={focused || podium ? INK : MUTED}
                   {...(nameWidth !== undefined && nameWidth > availableNameWidth
                     ? { textLength: availableNameWidth, lengthAdjust: 'spacingAndGlyphs' as const }
                     : {})}
                 >
-                  {shortName(row.athleteName)}
+                  {nameFor(row.athleteName)}
                 </text>
               </>
             )}
@@ -1206,6 +1242,7 @@ export function LeaderboardCharts({
             plural={unit.plural}
             article={unit.article}
             compact
+            fullNames
             hovered={hovered}
             onHover={onHover}
             onSelect={onSelect}
@@ -1217,6 +1254,7 @@ export function LeaderboardCharts({
             unit={unit.singular}
             plural={unit.plural}
             article={unit.article}
+            fullNames
             hovered={hovered}
             onHover={onHover}
             onSelect={onSelect}
