@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ROUND_TYPE_LABEL, labelFor } from '@/lib/labels';
 import { fieldClass } from '@/lib/ui';
 import type { JudgeCategory } from './capture-app';
 
@@ -40,7 +41,7 @@ export function BlockPicker({
           <option value="">Elige ronda</option>
           {category.rounds.map((r) => (
             <option key={r.id} value={r.id}>
-              {r.type}
+              {labelFor(ROUND_TYPE_LABEL, r.type)}
             </option>
           ))}
         </select>
