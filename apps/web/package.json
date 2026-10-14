@@ -17,7 +17,7 @@
     "@vercel/blob": "^2.8.0",
     "@vercel/speed-insights": "^2.0.0",
     "better-auth": "^1.6.26",
-    "next": "^15.5.22",
+    "next": "^15.5.27",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
