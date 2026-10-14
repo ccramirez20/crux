@@ -1,5 +1,10 @@
 # CRUX
 
+> **English summary.** Sports-competition platform starting with climbing: link-based registration,
+> judges scoring from their phones (offline-tolerant), a live public leaderboard and a projection
+> view for the venue. TypeScript monorepo (Next.js, Postgres, Drizzle). All data in the demo and
+> in the seed scripts is synthetic: no real events or athletes. Spanish documentation below.
+
 **Plataforma de competencias deportivas, entrando por escalada.**
 
 Una competencia de escalada en Colombia se administra hoy con WhatsApp, un
@@ -14,7 +19,7 @@ intercambiables, historial por competidor entre eventos— es el que exige una
 federación.
 
 **Demo en vivo:** https://cruxcompetencias.com ·
-[tabla de un evento real](https://cruxcompetencias.com/resultados/liga-paramo) ·
+[tabla de un evento demo con datos sintéticos](https://cruxcompetencias.com/resultados/liga-paramo) ·
 [la misma, en modo proyección](https://cruxcompetencias.com/resultados/liga-paramo/proyectar)
 
 ![Tabla pública de resultados](docs/img/tabla-publica.png)
