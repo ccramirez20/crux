@@ -132,3 +132,17 @@ ancha que scrollea sola no es un defecto). Sale con código 1 si hay desbordo.
 ## Definición de terminado (etapa 1)
 
 Un organizador crea un evento, publica el enlace, inscribe 20+ atletas en dos o más categorías, tres jueces capturan intentos desde el teléfono con red intermitente, la tabla pública se actualiza en menos de 10 segundos, y el resultado final resiste una revisión manual de desempates.
+
+## Agent skills
+
+### Issue tracker
+
+Markdown local bajo `.scratch/<feature>/`. Ver `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Vocabulario por defecto (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). Ver `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` y `docs/adr/` en la raíz. Ver `docs/agents/domain.md`.
